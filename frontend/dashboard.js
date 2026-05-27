@@ -46,10 +46,10 @@ function renderDashboard(data) {
   document.getElementById("signal-desc").textContent = signal.signal_desc;
   document.getElementById("hedge-rec").textContent   = signal.hedge_rec;
 
-  // 마지막 갱신
-  const dt = new Date(data.meta.generated_at);
+  // ── 마지막 갱신: 사용자가 새로고침한 현재 시각으로 표시 ──
+  const now = new Date();
   document.getElementById("last-updated").textContent =
-    `마지막 갱신: ${dt.toLocaleString("ko-KR")}`;
+    `마지막 갱신: ${now.toLocaleString("ko-KR")}`;
 
   // 퍼펙트 스톰 배너
   document.getElementById("storm-section").style.display =
@@ -109,7 +109,6 @@ function renderWarningCard(prefix, warn) {
     scoreBadge.style.color  = warn.grade_color;
   }
 
-  // 지표
   const metricsEl = document.getElementById(`metrics-${prefix}`);
   if (metricsEl && warn.key_metrics) {
     metricsEl.innerHTML = Object.entries(warn.key_metrics).map(([k, v]) => `
@@ -119,7 +118,6 @@ function renderWarningCard(prefix, warn) {
       </div>`).join("");
   }
 
-  // 시그널
   const signalsEl = document.getElementById(`signals-${prefix}`);
   if (signalsEl) {
     signalsEl.innerHTML = (warn.signals && warn.signals.length > 0)
