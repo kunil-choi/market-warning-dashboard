@@ -7,11 +7,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def collect_liquidity_funnel_data() -> Dict[str, Any]:
     try:
-        end_date = datetime.today()
+        end_date   = datetime.today()
         start_date = end_date - timedelta(days=252)
-        tickers = ["SPY", "RSP", "QQQ", "DIA", "IWM", "NVDA"]
+        tickers    = ["SPY", "RSP", "QQQ", "DIA", "IWM", "NVDA"]
 
         raw = yf.download(
             tickers,
@@ -27,28 +28,28 @@ def collect_liquidity_funnel_data() -> Dict[str, Any]:
         else:
             data = raw
 
-        # NaN 제거
-        data = data.dropna()
+        # ── 전체 dropna 대신 ffill → dropna (한 티커 NaN이 다른 티커에 영향 안 줌) ──
+        data = data.ffill().dropna()
 
         normalized = (data / data.iloc[0]) * 100
 
-        spy_rsp_spread   = normalized["SPY"] - normalized["RSP"]
-        rsp_20d_return   = (data["RSP"].iloc[-1] / data["RSP"].iloc[-20] - 1) * 100
-        spy_20d_return   = (data["SPY"].iloc[-1] / data["SPY"].iloc[-20] - 1) * 100
+        spy_rsp_spread      = normalized["SPY"] - normalized["RSP"]
+        rsp_20d_return      = (data["RSP"].iloc[-1] / data["RSP"].iloc[-20] - 1) * 100
+        spy_20d_return      = (data["SPY"].iloc[-1] / data["SPY"].iloc[-20] - 1) * 100
         concentration_score = spy_20d_return - rsp_20d_return
 
-        spy_ytd  = (data["SPY"].iloc[-1] / data["SPY"].iloc[0] - 1) * 100
-        rsp_ytd  = (data["RSP"].iloc[-1] / data["RSP"].iloc[0] - 1) * 100
-        qqq_ytd  = (data["QQQ"].iloc[-1] / data["QQQ"].iloc[0] - 1) * 100
-        dia_ytd  = (data["DIA"].iloc[-1] / data["DIA"].iloc[0] - 1) * 100
-        iwm_ytd  = (data["IWM"].iloc[-1] / data["IWM"].iloc[0] - 1) * 100
+        spy_ytd  = (data["SPY"].iloc[-1]  / data["SPY"].iloc[0]  - 1) * 100
+        rsp_ytd  = (data["RSP"].iloc[-1]  / data["RSP"].iloc[0]  - 1) * 100
+        qqq_ytd  = (data["QQQ"].iloc[-1]  / data["QQQ"].iloc[0]  - 1) * 100
+        dia_ytd  = (data["DIA"].iloc[-1]  / data["DIA"].iloc[0]  - 1) * 100
+        iwm_ytd  = (data["IWM"].iloc[-1]  / data["IWM"].iloc[0]  - 1) * 100
         nvda_ytd = (data["NVDA"].iloc[-1] / data["NVDA"].iloc[0] - 1) * 100
 
-        rsp_1w_return  = (data["RSP"].iloc[-1] / data["RSP"].iloc[-5] - 1) * 100
+        rsp_1w_return   = (data["RSP"].iloc[-1] / data["RSP"].iloc[-5] - 1) * 100
         rsp_is_negative = bool(rsp_1w_return < 0 and spy_20d_return > 0)
 
-        current_spread     = float(spy_rsp_spread.iloc[-1])
-        spread_percentile  = float(spy_rsp_spread.rank(pct=True).iloc[-1]) * 100
+        current_spread    = float(spy_rsp_spread.iloc[-1])
+        spread_percentile = float(spy_rsp_spread.rank(pct=True).iloc[-1]) * 100
 
         # ── 히스토리: float() 캐스팅으로 JSON 직렬화 오류 방지 ──
         tail90 = data.tail(90)
@@ -64,29 +65,29 @@ def collect_liquidity_funnel_data() -> Dict[str, Any]:
         }
 
         return {
-            "timestamp":   datetime.now().isoformat(),
-            "spy_ytd":     round(float(spy_ytd), 2),
-            "rsp_ytd":     round(float(rsp_ytd), 2),
-            "qqq_ytd":     round(float(qqq_ytd), 2),
-            "dia_ytd":     round(float(dia_ytd), 2),
-            "iwm_ytd":     round(float(iwm_ytd), 2),
-            "nvda_ytd":    round(float(nvda_ytd), 2),
-            "spy_20d_return":  round(float(spy_20d_return), 2),
-            "rsp_20d_return":  round(float(rsp_20d_return), 2),
-            "rsp_1w_return":   round(float(rsp_1w_return), 2),
+            "timestamp":           datetime.now().isoformat(),
+            "spy_ytd":             round(float(spy_ytd), 2),
+            "rsp_ytd":             round(float(rsp_ytd), 2),
+            "qqq_ytd":             round(float(qqq_ytd), 2),
+            "dia_ytd":             round(float(dia_ytd), 2),
+            "iwm_ytd":             round(float(iwm_ytd), 2),
+            "nvda_ytd":            round(float(nvda_ytd), 2),
+            "spy_20d_return":      round(float(spy_20d_return), 2),
+            "rsp_20d_return":      round(float(rsp_20d_return), 2),
+            "rsp_1w_return":       round(float(rsp_1w_return), 2),
             "concentration_score": round(float(concentration_score), 2),
             "current_spread":      round(current_spread, 2),
             "spread_percentile":   round(spread_percentile, 1),
             "rsp_is_negative_while_spy_positive": rsp_is_negative,
-            "history_90d": history_90d,
+            "history_90d":         history_90d,
             "status": "ok"
         }
 
     except Exception as e:
         logger.error(f"[경고등1] 데이터 수집 실패: {e}")
         return {
-            "status": "error",
-            "message": str(e),
+            "status":    "error",
+            "message":   str(e),
             "timestamp": datetime.now().isoformat()
         }
 
