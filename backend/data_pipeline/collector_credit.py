@@ -18,8 +18,8 @@ def collect_credit_data() -> Dict[str, Any]:
 
         # ── FRED 스프레드 시리즈 ──
         series_ids = {
-            "hy_spread": "BAMLH0A0HYM2",   # HY OAS 스프레드
-            "ig_spread": "BAMLC0A0CM",      # IG OAS 스프레드
+            "hy_spread": "BAMLH0A0HYM2",
+            "ig_spread": "BAMLC0A0CM",
         }
 
         spread_data = {}
@@ -46,15 +46,15 @@ def collect_credit_data() -> Dict[str, Any]:
                 return float(s.iloc[-n])
             return fallback if fallback is not None else latest_spread(name)
 
-        hy_now      = latest_spread("hy_spread", 400.0)
-        ig_now      = latest_spread("ig_spread", 120.0)
-        hy_1m_ago   = prev_spread("hy_spread", n=22)
-        ig_1m_ago   = prev_spread("ig_spread", n=22)
+        hy_now     = latest_spread("hy_spread", 400.0)
+        ig_now     = latest_spread("ig_spread", 120.0)
+        hy_1m_ago  = prev_spread("hy_spread", n=22)
+        ig_1m_ago  = prev_spread("ig_spread", n=22)
 
         hy_change_1m = hy_now - hy_1m_ago
         ig_change_1m = ig_now - ig_1m_ago
 
-        # 1년 min/max 및 퍼센타일
+        # 1년 퍼센타일
         hy_series = spread_data.get("hy_spread")
         ig_series = spread_data.get("ig_spread")
 
@@ -74,7 +74,7 @@ def collect_credit_data() -> Dict[str, Any]:
         else:
             ig_1y_min, ig_1y_max, ig_pct = 0.0, 0.0, 50.0
 
-        # ── HYG / LQD ETF 다운로드 (MultiIndex 처리) ──
+        # ── HYG / LQD ETF 다운로드 ──
         raw_etf = yf.download(
             ["HYG", "LQD"],
             start=start_date.strftime("%Y-%m-%d"),
@@ -83,14 +83,21 @@ def collect_credit_data() -> Dict[str, Any]:
             auto_adjust=True
         )
 
+        # MultiIndex 처리
         if isinstance(raw_etf.columns, pd.MultiIndex):
-            etf_close  = raw_etf["Close"].dropna(how="all").fillna(method="ffill")
-            etf_volume = raw_etf["Volume"].dropna(how="all").fillna(0)
+            etf_close  = raw_etf["Close"]
+            etf_volume = raw_etf["Volume"]
         else:
-            etf_close  = raw_etf.dropna(how="all")
+            etf_close  = raw_etf
             etf_volume = pd.DataFrame()
 
-        # HYG 30일 수익률
+        # fillna(method=) 대신 .ffill() 사용 (pandas 2.x 호환)
+        etf_close  = etf_close.dropna(how="all")
+        etf_close  = etf_close.ffill()
+        etf_volume = etf_volume.dropna(how="all")
+        etf_volume = etf_volume.fillna(0)
+
+        # HYG / LQD 30일 수익률
         hyg_30d_return = 0.0
         lqd_30d_return = 0.0
         if "HYG" in etf_close.columns and len(etf_close["HYG"].dropna()) > 30:
@@ -102,10 +109,9 @@ def collect_credit_data() -> Dict[str, Any]:
                 (etf_close["LQD"].iloc[-1] / etf_close["LQD"].iloc[-30] - 1) * 100
             )
 
-        # HYG vs LQD 상대 성과 (HYG가 LQD보다 크게 하락하면 위험 신호)
         hyg_lqd_relative = hyg_30d_return - lqd_30d_return
 
-        # HYG 거래량 급증 비율 (최근 5일 평균 / 60일 평균)
+        # HYG 거래량 급증 비율
         volume_spike_ratio = 1.0
         if "HYG" in etf_volume.columns:
             hyg_vol = etf_volume["HYG"].dropna()
@@ -115,14 +121,14 @@ def collect_credit_data() -> Dict[str, Any]:
                 if vol_60d > 0:
                     volume_spike_ratio = round(vol_5d / vol_60d, 2)
 
-        # ── 환매 위험 플래그 ──
+        # 환매 위험 플래그
         rollover_risk_elevated = bool(
-            hy_change_1m > 50      # HY 스프레드 1달 새 50bps 이상 급등
-            or hy_pct > 80         # HY 스프레드 역대 상위 20%
-            or volume_spike_ratio > 1.5  # HYG 거래량 1.5배 이상 급증
+            hy_change_1m > 50
+            or hy_pct > 80
+            or volume_spike_ratio > 1.5
         )
 
-        # ── 히스토리 ──
+        # 히스토리
         def to_hist(s, n=180):
             if s is None or len(s) == 0:
                 return {"dates": [], "values": []}
@@ -133,22 +139,22 @@ def collect_credit_data() -> Dict[str, Any]:
             }
 
         return {
-            "timestamp":             datetime.now().isoformat(),
-            "hy_spread_current":     round(hy_now, 2),
-            "ig_spread_current":     round(ig_now, 2),
-            "hy_change_1m":          round(hy_change_1m, 2),
-            "ig_change_1m":          round(ig_change_1m, 2),
-            "hy_1y_min":             round(hy_1y_min, 2),
-            "hy_1y_max":             round(hy_1y_max, 2),
-            "hy_percentile":         round(hy_pct, 1),
-            "ig_1y_min":             round(ig_1y_min, 2),
-            "ig_1y_max":             round(ig_1y_max, 2),
-            "ig_percentile":         round(ig_pct, 1),
-            "hyg_30d_return":        round(hyg_30d_return, 2),
-            "lqd_30d_return":        round(lqd_30d_return, 2),
-            "hyg_lqd_relative":      round(hyg_lqd_relative, 2),
-            "volume_spike_ratio":    round(volume_spike_ratio, 2),
-            "rollover_risk_elevated": rollover_risk_elevated,  # ← scoring_engine 필수 키
+            "timestamp":              datetime.now().isoformat(),
+            "hy_spread_current":      round(hy_now, 2),
+            "ig_spread_current":      round(ig_now, 2),
+            "hy_change_1m":           round(hy_change_1m, 2),
+            "ig_change_1m":           round(ig_change_1m, 2),
+            "hy_1y_min":              round(hy_1y_min, 2),
+            "hy_1y_max":              round(hy_1y_max, 2),
+            "hy_percentile":          round(hy_pct, 1),
+            "ig_1y_min":              round(ig_1y_min, 2),
+            "ig_1y_max":              round(ig_1y_max, 2),
+            "ig_percentile":          round(ig_pct, 1),
+            "hyg_30d_return":         round(hyg_30d_return, 2),
+            "lqd_30d_return":         round(lqd_30d_return, 2),
+            "hyg_lqd_relative":       round(hyg_lqd_relative, 2),
+            "volume_spike_ratio":     round(volume_spike_ratio, 2),
+            "rollover_risk_elevated": rollover_risk_elevated,
             "history": {
                 "hy_spread": to_hist(spread_data.get("hy_spread")),
                 "ig_spread": to_hist(spread_data.get("ig_spread")),
@@ -162,18 +168,23 @@ def collect_credit_data() -> Dict[str, Any]:
             "status":                 "error",
             "message":                str(e),
             "timestamp":              datetime.now().isoformat(),
-            "rollover_risk_elevated": False,  # ← 에러 시에도 키 보장
+            "rollover_risk_elevated": False,
         }
 
 
 def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
     if data.get("status") == "error":
-        return {"raw_score": 50, "grade": "UNKNOWN", "signals": [], "key_metrics": {}}
+        return {
+            "raw_score":   50,
+            "grade":       "UNKNOWN",
+            "grade_color": "#888888",
+            "signals":     [],
+            "key_metrics": {}
+        }
 
     score   = 0.0
     signals = []
 
-    # HY 스프레드 퍼센타일
     hy_pct = data.get("hy_percentile", 50)
     if hy_pct > 80:
         score += 35
@@ -185,7 +196,6 @@ def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
         score += 12
         signals.append({"level": "YELLOW", "msg": f"HY 스프레드 중간 이상 ({hy_pct:.0f}%ile)"})
 
-    # 1개월 스프레드 변화
     hy_change = data.get("hy_change_1m", 0)
     if hy_change > 100:
         score += 30
@@ -197,12 +207,10 @@ def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
         score += 10
         signals.append({"level": "ORANGE", "msg": f"HY 스프레드 확대 +{hy_change:.0f}bps"})
 
-    # 환매 위험
     if data.get("rollover_risk_elevated"):
         score += 20
         signals.append({"level": "RED",    "msg": "🚨 사모 크레딧 환매 위험 — 복합 지표 임계값 초과"})
 
-    # HYG vs LQD 상대 성과
     relative = data.get("hyg_lqd_relative", 0)
     if relative < -5:
         score += 15
@@ -211,7 +219,6 @@ def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
         score += 8
         signals.append({"level": "ORANGE", "msg": f"HYG 상대 약세 ({relative:.1f}%)"})
 
-    # 거래량 급증
     vol_spike = data.get("volume_spike_ratio", 1.0)
     if vol_spike > 2.0:
         score += 10
@@ -237,9 +244,9 @@ def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
         "grade_color": grade_color,
         "signals":     signals,
         "key_metrics": {
-            "HY 스프레드":      f"{data.get('hy_spread_current', 0):.0f}bps",
-            "IG 스프레드":      f"{data.get('ig_spread_current', 0):.0f}bps",
-            "HY 1개월 변화":    f"+{data.get('hy_change_1m', 0):.0f}bps",
-            "HYG 거래량 배율":  f"{data.get('volume_spike_ratio', 1):.1f}배",
+            "HY 스프레드":     f"{data.get('hy_spread_current', 0):.0f}bps",
+            "IG 스프레드":     f"{data.get('ig_spread_current', 0):.0f}bps",
+            "HY 1개월 변화":   f"+{data.get('hy_change_1m', 0):.0f}bps",
+            "HYG 거래량 배율": f"{data.get('volume_spike_ratio', 1):.1f}배",
         }
     }
