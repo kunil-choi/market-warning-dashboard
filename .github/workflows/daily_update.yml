@@ -31,6 +31,7 @@ jobs:
       - name: Run Data Pipeline
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          PYTHONPATH: ${{ github.workspace }}
         run: python -m backend.data_pipeline.run_pipeline
 
       - name: Commit Updated Data
