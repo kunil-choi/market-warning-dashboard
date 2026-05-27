@@ -25,19 +25,51 @@ def load_latest() -> dict:
     if not DATA_PATH.exists():
         raise HTTPException(
             status_code=503,
-            detail="데이터가 아직 없습니다. 파이프라인을 먼저 실행하세요."
+            detail=(
+                "데이터 파일이 없습니다. "
+                "먼저 파이프라인을 실행하세요: "
+                "python -m backend.data_pipeline.run_pipeline"
+            )
         )
-    with open(DATA_PATH, encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(DATA_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"데이터 파일 파싱 오류: {e}"
+        )
 
+
+def load_history(days: int = 90) -> list:
+    if not HISTORY_PATH.exists():
+        return []
+
+    lines = HISTORY_PATH.read_text(encoding="utf-8").strip().split("\n")
+    history = []
+
+    for line in lines:
+        # ── 손상된 줄은 건너뜀 ──
+        try:
+            if line.strip():
+                history.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+
+    return history[-days:]
+
+
+# ── 엔드포인트 ──
 
 @app.get("/api/scores")
 def get_scores():
+    """전체 스코어 JSON 반환"""
     return load_latest()
 
 
 @app.get("/api/composite")
 def get_composite():
+    """종합 스코어 요약"""
     data = load_latest()
     return {
         "score":        data["composite"]["final_score"],
@@ -51,8 +83,12 @@ def get_composite():
 
 @app.get("/api/warning/{warning_id}")
 def get_warning(warning_id: str):
-    data = load_latest()
+    """개별 경고등 데이터 반환
+    - warning_id: w1_liquidity, w2_rates, w3_credit, w4_ipo
+    """
+    data     = load_latest()
     warnings = data.get("warnings", {})
+
     if warning_id not in warnings:
         raise HTTPException(
             status_code=404,
@@ -63,19 +99,23 @@ def get_warning(warning_id: str):
 
 @app.get("/api/history")
 def get_history(days: int = 90):
-    if not HISTORY_PATH.exists():
-        return {"history": []}
-    lines = HISTORY_PATH.read_text(encoding="utf-8").strip().split("\n")
-    history = [json.loads(l) for l in lines if l.strip()]
-    return {"history": history[-days:]}
+    """히스토리 데이터 반환 (최대 days일)"""
+    return {"history": load_history(days)}
 
 
 @app.get("/api/signal")
 def get_signal():
-    data = load_latest()
-    return data.get("algo_signal", {})
+    """알고 트레이딩 시그널 반환"""
+    return load_latest().get("algo_signal", {})
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    """헬스 체크"""
+    data_exists = DATA_PATH.exists()
+    return {
+        "status":      "ok",
+        "timestamp":   datetime.now().isoformat(),
+        "data_exists": data_exists,
+        "data_path":   str(DATA_PATH),
+    }
