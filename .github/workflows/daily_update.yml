@@ -2,7 +2,7 @@ name: Daily Market Warning Dashboard Update
 
 on:
   schedule:
-    - cron: "0 23 * * 1-5"
+    - cron: "0 22 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -24,6 +24,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+          cache-dependency-path: "backend/requirements.txt"
 
       - name: Install Dependencies
         run: pip install -r backend/requirements.txt
