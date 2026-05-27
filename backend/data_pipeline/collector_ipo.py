@@ -8,11 +8,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 MEGA_IPO_WATCHLIST = [
-    {"company": "SpaceX",      "est_valuation_bn": 350, "status": "Considering", "sector": "AI/Space"},
-    {"company": "OpenAI",      "est_valuation_bn": 300, "status": "Considering", "sector": "AI"},
-    {"company": "Anthropic",   "est_valuation_bn": 60,  "status": "Considering", "sector": "AI"},
-    {"company": "Stripe",      "est_valuation_bn": 65,  "status": "Considering", "sector": "Fintech"},
-    {"company": "Databricks",  "est_valuation_bn": 62,  "status": "Considering", "sector": "AI/Data"},
+    {"company": "SpaceX",     "est_valuation_bn": 350, "status": "Considering", "sector": "AI/Space"},
+    {"company": "OpenAI",     "est_valuation_bn": 300, "status": "Considering", "sector": "AI"},
+    {"company": "Anthropic",  "est_valuation_bn": 60,  "status": "Considering", "sector": "AI"},
+    {"company": "Stripe",     "est_valuation_bn": 65,  "status": "Considering", "sector": "Fintech"},
+    {"company": "Databricks", "est_valuation_bn": 62,  "status": "Considering", "sector": "AI/Data"},
 ]
 
 
@@ -39,12 +39,13 @@ def collect_ipo_data() -> Dict[str, Any]:
 
         ipo_etf_90d = {}
         for t in ["IPO", "IPOS"]:
-            if t in ipo_etf.columns and len(ipo_etf[t].dropna()) > 5:
+            if t in ipo_etf.columns:
                 s = ipo_etf[t].dropna()
-                lookback = min(63, len(s) - 1)
-                ipo_etf_90d[t] = round(
-                    float(s.iloc[-1] / s.iloc[-lookback] - 1) * 100, 2
-                )
+                if len(s) > 5:
+                    lookback = min(63, len(s) - 1)
+                    ipo_etf_90d[t] = round(
+                        float(s.iloc[-1] / s.iloc[-lookback] - 1) * 100, 2
+                    )
 
         # ── 최근 대형 IPO 성과 ──
         recent_large_ipos = {
@@ -77,20 +78,32 @@ def collect_ipo_data() -> Dict[str, Any]:
         korea_gdp_bn               = 1700
         pipeline_vs_korea_gdp      = total_pipeline_bn / korea_gdp_bn
 
-        # ── VIX (NaN 처리 추가) ──
-        raw_vix = yf.download("^VIX", period="3mo", progress=False, auto_adjust=True)
+        # ── VIX 다운로드 (.squeeze()로 DataFrame→Series 강제 변환) ──
+        raw_vix = yf.download(
+            "^VIX",
+            period="3mo",
+            progress=False,
+            auto_adjust=True
+        )
 
+        # MultiIndex 처리
         if isinstance(raw_vix.columns, pd.MultiIndex):
-            vix_series = raw_vix["Close"].dropna()
+            vix_col = raw_vix["Close"]
         else:
-            vix_series = raw_vix["Close"].dropna() if "Close" in raw_vix.columns else raw_vix.iloc[:, 0].dropna()
+            vix_col = raw_vix["Close"] if "Close" in raw_vix.columns else raw_vix.iloc[:, 0]
+
+        # DataFrame일 경우 Series로 압축
+        if isinstance(vix_col, pd.DataFrame):
+            vix_col = vix_col.squeeze()
+
+        vix_series = vix_col.dropna()
 
         if len(vix_series) == 0:
             raise ValueError("VIX 데이터가 비어 있습니다.")
 
-        vix_current  = float(vix_series.iloc[-1])
-        vix_avg_3m   = float(vix_series.mean())
-        vix_is_low   = vix_current < 15
+        vix_current = float(vix_series.iloc[-1])
+        vix_avg_3m  = float(vix_series.mean())
+        vix_is_low  = vix_current < 15
 
         # ── IPO 과열 지수 ──
         ipo_heat_index = 0
@@ -101,7 +114,7 @@ def collect_ipo_data() -> Dict[str, Any]:
         if total_pipeline_bn > 500:
             ipo_heat_index += 30
 
-        active_count     = sum(1 for c in MEGA_IPO_WATCHLIST if c["status"] == "Filed")
+        active_count      = sum(1 for c in MEGA_IPO_WATCHLIST if c["status"] == "Filed")
         considering_count = sum(1 for c in MEGA_IPO_WATCHLIST if c["status"] == "Considering")
 
         return {
@@ -132,7 +145,13 @@ def collect_ipo_data() -> Dict[str, Any]:
 
 def calculate_ipo_score(data: Dict[str, Any]) -> Dict[str, Any]:
     if data.get("status") == "error":
-        return {"raw_score": 50, "grade": "UNKNOWN", "signals": [], "key_metrics": {}}
+        return {
+            "raw_score":   50,
+            "grade":       "UNKNOWN",
+            "grade_color": "#888888",
+            "signals":     [],
+            "key_metrics": {}
+        }
 
     score   = 0.0
     signals = []
@@ -188,9 +207,9 @@ def calculate_ipo_score(data: Dict[str, Any]) -> Dict[str, Any]:
         "grade_color": grade_color,
         "signals":     signals,
         "key_metrics": {
-            "IPO 파이프라인":  f"${pipeline:.0f}Bn",
-            "한국 GDP 대비":   f"{data.get('pipeline_vs_korea_gdp_ratio', 0):.1f}배",
-            "VIX":            f"{data.get('vix_current', 0):.1f}",
-            "IPO ETF 90일":   f"+{ipo_ret:.1f}%",
+            "IPO 파이프라인": f"${pipeline:.0f}Bn",
+            "한국 GDP 대비":  f"{data.get('pipeline_vs_korea_gdp_ratio', 0):.1f}배",
+            "VIX":           f"{data.get('vix_current', 0):.1f}",
+            "IPO ETF 90일":  f"+{ipo_ret:.1f}%",
         }
     }
