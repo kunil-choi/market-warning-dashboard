@@ -1,0 +1,32 @@
+name: Init Project Structure
+
+on:
+  workflow_dispatch:  # 수동 실행
+
+jobs:
+  create-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Create folder structure
+        run: |
+          mkdir -p backend/data_pipeline
+          mkdir -p backend/scoring
+          mkdir -p backend/api
+          mkdir -p frontend
+          mkdir -p data
+          touch backend/__init__.py
+          touch backend/data_pipeline/__init__.py
+          touch backend/scoring/__init__.py
+          touch backend/api/__init__.py
+          touch data/.gitkeep
+          touch frontend/.gitkeep
+
+      - name: Commit structure
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "feat: init project folder structure"
+          git push
