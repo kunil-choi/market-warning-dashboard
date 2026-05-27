@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-05-27T07:50:03.420388",
+    "generated_at": "2026-05-27T07:57:57.679766",
     "version": "2.0",
     "source": "김효진 박사 강연 기반 매크로 대시보드"
   },
@@ -35,7 +35,7 @@
         "RSP YTD": "11.66%"
       },
       "raw_data": {
-        "timestamp": "2026-05-27T07:49:59.833329",
+        "timestamp": "2026-05-27T07:57:54.407144",
         "spy_ytd": 14.83,
         "rsp_ytd": 11.66,
         "qqq_ytd": 24.24,
@@ -403,7 +403,7 @@
             114.69,
             114.47,
             115.96,
-            118.37,
+            118.36,
             118.22,
             121.0,
             121.35,
@@ -633,7 +633,7 @@
         "CPI YoY": "4.0%"
       },
       "raw_data": {
-        "timestamp": "2026-05-27T07:50:01.524981",
+        "timestamp": "2026-05-27T07:57:55.840029",
         "t10y_current": 4.56,
         "t2y_current": 4.13,
         "fed_funds_current": 3.64,
@@ -1819,7 +1819,7 @@
         "HYG 거래량 배율": "0.7배"
       },
       "raw_data": {
-        "timestamp": "2026-05-27T07:50:02.430639",
+        "timestamp": "2026-05-27T07:57:56.707901",
         "hy_spread_current": 2.74,
         "ig_spread_current": 0.74,
         "hy_change_1m": -0.12,
@@ -2595,7 +2595,7 @@
         "IPO ETF 90일": "+19.4%"
       },
       "raw_data": {
-        "timestamp": "2026-05-27T07:50:03.420282",
+        "timestamp": "2026-05-27T07:57:57.679653",
         "mega_ipo_pipeline": [
           {
             "company": "SpaceX",
@@ -2652,7 +2652,7 @@
             "6m_return": 102.27
           }
         },
-        "vix_current": 17.0,
+        "vix_current": 17.01,
         "vix_avg_3m": 21.12,
         "vix_is_extreme_low": false,
         "ipo_heat_index": 30,
@@ -2672,6 +2672,6 @@
       "bond_vigilante_trigger": false,
       "credit_rollover_trigger": false
     },
-    "generated_at": "2026-05-27T07:50:03.420385"
+    "generated_at": "2026-05-27T07:57:57.679763"
   }
 }
