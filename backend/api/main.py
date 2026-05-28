@@ -5,8 +5,8 @@ from pathlib import Path
 from datetime import datetime
 
 app = FastAPI(
-    title="맹목적 강세장 경고 대시보드 API",
-    description="김효진 박사 강연 기반 4대 매크로 경고등 시스템",
+    title="글로벌 증시 위기 경고 대시보드 API",
+    description="4대 매크로 경고등 자동 분석 시스템",
     version="2.0.0"
 )
 
@@ -49,7 +49,6 @@ def load_history(days: int = 90) -> list:
     history = []
 
     for line in lines:
-        # ── 손상된 줄은 건너뜀 ──
         try:
             if line.strip():
                 history.append(json.loads(line))
