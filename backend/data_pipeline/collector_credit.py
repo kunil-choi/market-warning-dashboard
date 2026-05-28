@@ -9,6 +9,9 @@ import os
 
 logger = logging.getLogger(__name__)
 
+# ── FRED는 % 단위로 반환 → bps 변환 상수 ──
+PCT_TO_BPS = 100.0
+
 
 def collect_credit_data() -> Dict[str, Any]:
     try:
@@ -16,7 +19,6 @@ def collect_credit_data() -> Dict[str, Any]:
         end_date   = datetime.today()
         start_date = end_date - timedelta(days=365 * 2)
 
-        # ── FRED 스프레드 시리즈 ──
         series_ids = {
             "hy_spread": "BAMLH0A0HYM2",
             "ig_spread": "BAMLC0A0CM",
@@ -30,6 +32,8 @@ def collect_credit_data() -> Dict[str, Any]:
                     observation_start=start_date.strftime("%Y-%m-%d"),
                     observation_end=end_date.strftime("%Y-%m-%d")
                 ).dropna()
+                # ── % → bps 변환 (FRED 단위: Percent) ──
+                s = s * PCT_TO_BPS
                 spread_data[name] = s
             except Exception as e:
                 logger.warning(f"FRED {sid} 수집 실패: {e}")
@@ -46,10 +50,10 @@ def collect_credit_data() -> Dict[str, Any]:
                 return float(s.iloc[-n])
             return fallback if fallback is not None else latest_spread(name)
 
-        hy_now     = latest_spread("hy_spread", 400.0)
-        ig_now     = latest_spread("ig_spread", 120.0)
-        hy_1m_ago  = prev_spread("hy_spread", n=22)
-        ig_1m_ago  = prev_spread("ig_spread", n=22)
+        hy_now    = latest_spread("hy_spread", 400.0)
+        ig_now    = latest_spread("ig_spread", 120.0)
+        hy_1m_ago = prev_spread("hy_spread", n=22)
+        ig_1m_ago = prev_spread("ig_spread", n=22)
 
         hy_change_1m = hy_now - hy_1m_ago
         ig_change_1m = ig_now - ig_1m_ago
@@ -83,7 +87,6 @@ def collect_credit_data() -> Dict[str, Any]:
             auto_adjust=True
         )
 
-        # MultiIndex 처리
         if isinstance(raw_etf.columns, pd.MultiIndex):
             etf_close  = raw_etf["Close"]
             etf_volume = raw_etf["Volume"]
@@ -91,13 +94,9 @@ def collect_credit_data() -> Dict[str, Any]:
             etf_close  = raw_etf
             etf_volume = pd.DataFrame()
 
-        # fillna(method=) 대신 .ffill() 사용 (pandas 2.x 호환)
-        etf_close  = etf_close.dropna(how="all")
-        etf_close  = etf_close.ffill()
-        etf_volume = etf_volume.dropna(how="all")
-        etf_volume = etf_volume.fillna(0)
+        etf_close  = etf_close.dropna(how="all").ffill()
+        etf_volume = etf_volume.dropna(how="all").fillna(0)
 
-        # HYG / LQD 30일 수익률
         hyg_30d_return = 0.0
         lqd_30d_return = 0.0
         if "HYG" in etf_close.columns and len(etf_close["HYG"].dropna()) > 30:
@@ -111,7 +110,6 @@ def collect_credit_data() -> Dict[str, Any]:
 
         hyg_lqd_relative = hyg_30d_return - lqd_30d_return
 
-        # HYG 거래량 급증 비율
         volume_spike_ratio = 1.0
         if "HYG" in etf_volume.columns:
             hyg_vol = etf_volume["HYG"].dropna()
@@ -121,34 +119,38 @@ def collect_credit_data() -> Dict[str, Any]:
                 if vol_60d > 0:
                     volume_spike_ratio = round(vol_5d / vol_60d, 2)
 
-        # 환매 위험 플래그
         rollover_risk_elevated = bool(
             hy_change_1m > 50
             or hy_pct > 80
             or volume_spike_ratio > 1.5
         )
 
-        # 히스토리
         def to_hist(s, n=180):
             if s is None or len(s) == 0:
                 return {"dates": [], "values": []}
             tail = s.tail(n)
             return {
                 "dates":  [d.strftime("%Y-%m-%d") for d in tail.index],
-                "values": [round(float(v), 3) for v in tail.values]
+                "values": [round(float(v), 2) for v in tail.values]
             }
+
+        logger.info(
+            f"[경고등3] HY 스프레드: {hy_now:.1f}bps | "
+            f"IG 스프레드: {ig_now:.1f}bps | "
+            f"HY 1개월 변화: {hy_change_1m:+.1f}bps"
+        )
 
         return {
             "timestamp":              datetime.now().isoformat(),
-            "hy_spread_current":      round(hy_now, 2),
-            "ig_spread_current":      round(ig_now, 2),
-            "hy_change_1m":           round(hy_change_1m, 2),
-            "ig_change_1m":           round(ig_change_1m, 2),
-            "hy_1y_min":              round(hy_1y_min, 2),
-            "hy_1y_max":              round(hy_1y_max, 2),
+            "hy_spread_current":      round(hy_now, 1),
+            "ig_spread_current":      round(ig_now, 1),
+            "hy_change_1m":           round(hy_change_1m, 1),
+            "ig_change_1m":           round(ig_change_1m, 1),
+            "hy_1y_min":              round(hy_1y_min, 1),
+            "hy_1y_max":              round(hy_1y_max, 1),
             "hy_percentile":          round(hy_pct, 1),
-            "ig_1y_min":              round(ig_1y_min, 2),
-            "ig_1y_max":              round(ig_1y_max, 2),
+            "ig_1y_min":              round(ig_1y_min, 1),
+            "ig_1y_max":              round(ig_1y_max, 1),
             "ig_percentile":          round(ig_pct, 1),
             "hyg_30d_return":         round(hyg_30d_return, 2),
             "lqd_30d_return":         round(lqd_30d_return, 2),
@@ -185,6 +187,7 @@ def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
     score   = 0.0
     signals = []
 
+    # HY 스프레드 퍼센타일 (bps 단위 기준)
     hy_pct = data.get("hy_percentile", 50)
     if hy_pct > 80:
         score += 35
@@ -196,6 +199,7 @@ def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
         score += 12
         signals.append({"level": "YELLOW", "msg": f"HY 스프레드 중간 이상 ({hy_pct:.0f}%ile)"})
 
+    # 1개월 변화 (bps 기준)
     hy_change = data.get("hy_change_1m", 0)
     if hy_change > 100:
         score += 30
@@ -246,7 +250,7 @@ def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
         "key_metrics": {
             "HY 스프레드":     f"{data.get('hy_spread_current', 0):.0f}bps",
             "IG 스프레드":     f"{data.get('ig_spread_current', 0):.0f}bps",
-            "HY 1개월 변화":   f"+{data.get('hy_change_1m', 0):.0f}bps",
+            "HY 1개월 변화":   f"{data.get('hy_change_1m', 0):+.0f}bps",
             "HYG 거래량 배율": f"{data.get('volume_spike_ratio', 1):.1f}배",
         }
     }
