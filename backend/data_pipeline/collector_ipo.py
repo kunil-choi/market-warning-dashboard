@@ -21,133 +21,138 @@ MEGA_IPO_FALLBACK = [
 
 # ── 상태별 가중치 ──
 STATUS_WEIGHT = {
-    "Filed":       1.0,   # S-1 실제 제출
-    "Priced":      1.0,   # 공모가 확정
-    "Considering": 0.3,   # 검토 중 (언론 추정)
-    "Rumored":     0.1,   # 루머
-    "Trading":     0.0,   # 이미 상장 완료
+    "Filed":       1.0,
+    "Priced":      1.0,
+    "Considering": 0.3,
+    "Rumored":     0.1,
+    "Trading":     0.0,
 }
 
-# ── IPO 관련 키워드 ──
-IPO_KEYWORDS = [
-    "IPO", "initial public offering", "going public",
-    "S-1", "filed with SEC", "public listing",
-    "valuation", "billion", "unicorn"
-]
-
-# ── 대형 테크 기업 감지 키워드 ──
+# ── 감시 대상 기업 ──
 MEGA_COMPANIES = [
     "SpaceX", "OpenAI", "Anthropic", "Stripe", "Databricks",
-    "Klarna", "Chime", "Plaid", "Instacart", "Reddit",
-    "Discord", "Canva", "Shein", "ByteDance", "TikTok"
+    "Klarna", "Chime", "Plaid", "Discord", "Canva",
+    "Shein", "ByteDance", "TikTok", "Instacart", "Reddit"
 ]
 
 
-def fetch_sec_edgar_ipo_rss() -> List[Dict]:
-    """SEC EDGAR에서 실제 S-1 제출 건 감지"""
+def fetch_sec_edgar_ipo() -> List[Dict]:
+    """SEC EDGAR에서 실제 S-1 제출 건 감지 (수정된 API URL + 필드명)"""
     results = []
     try:
-        url = "https://efts.sec.gov/LATEST/search-index?q=%22S-1%22&dateRange=custom&startdt={}&enddt={}&forms=S-1".format(
-            (datetime.today() - timedelta(days=90)).strftime("%Y-%m-%d"),
-            datetime.today().strftime("%Y-%m-%d")
+        start = (datetime.today() - timedelta(days=90)).strftime("%Y-%m-%d")
+        end   = datetime.today().strftime("%Y-%m-%d")
+
+        url = (
+            "https://efts.sec.gov/LATEST/search-index"
+            f"?q=%22S-1%22&forms=S-1"
+            f"&dateRange=custom&startdt={start}&enddt={end}"
         )
-        headers = {"User-Agent": "market-dashboard research@example.com"}
+        headers = {"User-Agent": "market-dashboard contact@example.com"}
         resp = requests.get(url, headers=headers, timeout=10)
 
-        if resp.status_code == 200:
-            data = resp.json()
-            hits = data.get("hits", {}).get("hits", [])
-            for hit in hits[:10]:
-                src = hit.get("_source", {})
-                entity = src.get("entity_name", "")
-                filed  = src.get("file_date", "")
+        if resp.status_code != 200:
+            logger.warning(f"SEC EDGAR API 응답 오류: {resp.status_code}")
+            return results
 
-                # 대형 기업 여부 확인
-                for company in MEGA_COMPANIES:
-                    if company.lower() in entity.lower():
-                        results.append({
-                            "company":          company,
-                            "est_valuation_bn": 0,   # 별도 파싱
-                            "status":           "Filed",
-                            "sector":           "Unknown",
-                            "source":           "SEC EDGAR",
-                            "filed_date":       filed,
-                        })
-                        logger.info(f"[IPO감지] SEC S-1 제출: {entity} ({filed})")
+        data = resp.json()
+        hits = data.get("hits", {}).get("hits", [])
+
+        for hit in hits[:20]:
+            src = hit.get("_source", {})
+
+            # ── 수정: display_names는 리스트 형태 ──
+            display_names = src.get("display_names", [])
+            entity = display_names[0] if display_names else ""
+            filed  = src.get("file_date", "")
+            form   = src.get("form", "")
+
+            # 감시 기업 여부 확인
+            for company in MEGA_COMPANIES:
+                if company.lower() in entity.lower():
+                    results.append({
+                        "company":          company,
+                        "est_valuation_bn": 0,
+                        "status":           "Filed",
+                        "sector":           "Unknown",
+                        "source":           "SEC EDGAR",
+                        "filed_date":       filed,
+                        "form_type":        form,
+                    })
+                    logger.info(f"[IPO감지] SEC S-1 제출: {entity} ({filed})")
 
     except Exception as e:
-        logger.warning(f"SEC EDGAR RSS 수집 실패: {e}")
+        logger.warning(f"SEC EDGAR 수집 실패: {e}")
 
     return results
 
 
-def fetch_yahoo_finance_ipo_news() -> List[Dict]:
-    """Yahoo Finance RSS에서 IPO 관련 뉴스 파싱"""
+def fetch_google_news_ipo() -> List[Dict]:
+    """Google News RSS에서 IPO 관련 뉴스 파싱 (Yahoo RSS 대체)"""
     results = []
-    try:
-        rss_urls = [
-            "https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC&region=US&lang=en-US",
-            "https://finance.yahoo.com/rss/topstories",
-        ]
 
-        headers = {"User-Agent": "Mozilla/5.0"}
+    rss_queries = [
+        "IPO+billion+valuation+2026",
+        "initial+public+offering+unicorn+billion",
+        "SpaceX+OR+OpenAI+OR+Anthropic+OR+Stripe+IPO",
+    ]
 
-        for rss_url in rss_urls:
-            try:
-                resp = requests.get(rss_url, headers=headers, timeout=8)
-                if resp.status_code != 200:
-                    continue
+    headers = {"User-Agent": "Mozilla/5.0"}
 
-                root = ET.fromstring(resp.content)
-                items = root.findall(".//item")
+    for query in rss_queries:
+        try:
+            url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+            resp = requests.get(url, headers=headers, timeout=8)
 
-                for item in items[:30]:
-                    title = item.findtext("title", "")
-                    desc  = item.findtext("description", "")
-                    text  = f"{title} {desc}".lower()
+            if resp.status_code != 200:
+                continue
 
-                    # IPO 키워드 포함 여부
-                    has_ipo_keyword = any(
-                        kw.lower() in text for kw in IPO_KEYWORDS
-                    )
-                    if not has_ipo_keyword:
+            root = ET.fromstring(resp.content)
+            items = root.findall(".//item")
+
+            for item in items[:20]:
+                title = item.findtext("title", "")
+                desc  = item.findtext("description", "") or ""
+                text  = f"{title} {desc}".lower()
+
+                # 기업명 감지
+                for company in MEGA_COMPANIES:
+                    if company.lower() not in text:
                         continue
 
-                    # 기업명 감지
-                    for company in MEGA_COMPANIES:
-                        if company.lower() in text:
-                            # 기업가치 파싱 (예: "$350 billion", "350B")
-                            valuation = parse_valuation(text)
+                    # IPO 관련 키워드 확인
+                    ipo_keywords = [
+                        "ipo", "initial public offering", "going public",
+                        "s-1", "public listing", "valuation"
+                    ]
+                    if not any(kw in text for kw in ipo_keywords):
+                        continue
 
-                            # 상태 판단
-                            status = "Considering"
-                            if any(w in text for w in ["filed s-1", "s-1 filing", "filed with sec"]):
-                                status = "Filed"
-                            elif any(w in text for w in ["priced", "set price", "ipo price"]):
-                                status = "Priced"
-                            elif any(w in text for w in ["rumor", "consider", "explore"]):
-                                status = "Considering"
+                    # 기업가치 파싱
+                    valuation = parse_valuation(text)
 
-                            results.append({
-                                "company":          company,
-                                "est_valuation_bn": valuation,
-                                "status":           status,
-                                "sector":           "Unknown",
-                                "source":           "Yahoo Finance RSS",
-                                "title":            title[:80],
-                            })
-                            logger.info(
-                                f"[IPO감지] {company} | "
-                                f"상태:{status} | "
-                                f"기업가치:${valuation}Bn | "
-                                f"제목:{title[:50]}"
-                            )
+                    # 상태 판단
+                    status = "Considering"
+                    if any(w in text for w in ["filed s-1", "s-1 filing", "filed with sec", "prospectus"]):
+                        status = "Filed"
+                    elif any(w in text for w in ["priced", "set ipo price", "ipo price"]):
+                        status = "Priced"
 
-            except Exception as e:
-                logger.warning(f"Yahoo RSS 파싱 실패 ({rss_url}): {e}")
+                    results.append({
+                        "company":          company,
+                        "est_valuation_bn": valuation,
+                        "status":           status,
+                        "sector":           "Unknown",
+                        "source":           "Google News RSS",
+                        "title":            title[:80],
+                    })
+                    logger.info(
+                        f"[IPO감지] {company} | 상태:{status} | "
+                        f"기업가치:${valuation}Bn | 제목:{title[:50]}"
+                    )
 
-    except Exception as e:
-        logger.warning(f"Yahoo Finance 뉴스 수집 실패: {e}")
+        except Exception as e:
+            logger.warning(f"Google News RSS 파싱 실패 ({query}): {e}")
 
     return results
 
@@ -155,7 +160,6 @@ def fetch_yahoo_finance_ipo_news() -> List[Dict]:
 def parse_valuation(text: str) -> float:
     """텍스트에서 기업가치 파싱 (단위: Bn USD)"""
     try:
-        # 패턴 1: "$350 billion" / "$350B"
         patterns = [
             r'\$\s*(\d+(?:\.\d+)?)\s*(?:billion|bn)\b',
             r'(\d+(?:\.\d+)?)\s*(?:billion|bn)\s*(?:valuation|dollar)',
@@ -166,44 +170,38 @@ def parse_valuation(text: str) -> float:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 val = float(match.group(1))
-                if 1 < val < 2000:   # 1Bn ~ 2000Bn 범위만 유효
+                if 1 < val < 2000:
                     return round(val, 1)
     except Exception:
         pass
     return 0.0
 
 
-def merge_ipo_lists(
-    news_items: List[Dict],
-    fallback: List[Dict]
-) -> List[Dict]:
+def merge_ipo_lists(news_items: List[Dict], fallback: List[Dict]) -> List[Dict]:
     """뉴스 파싱 결과와 백업 리스트 병합 (중복 제거, 뉴스 우선)"""
     merged = {}
 
-    # 백업 리스트 먼저 추가
+    # 백업 리스트 먼저
     for item in fallback:
         key = item["company"].lower()
         merged[key] = item.copy()
         merged[key]["source"] = "manual"
 
-    # 뉴스 항목으로 덮어쓰기 (더 최신 정보)
+    # 뉴스로 덮어쓰기
     for item in news_items:
         key = item["company"].lower()
         if key in merged:
-            # 기존 항목 업데이트
             if item["status"] in ["Filed", "Priced"]:
                 merged[key]["status"] = item["status"]
             if item.get("est_valuation_bn", 0) > 0:
                 merged[key]["est_valuation_bn"] = item["est_valuation_bn"]
-            merged[key]["source"] = item.get("source", "news")
+            merged[key]["source"]    = item.get("source", "news")
             merged[key]["last_news"] = item.get("title", "")
         else:
-            # 새로운 기업 추가 (기업가치 0이면 제외)
             if item.get("est_valuation_bn", 0) > 0:
                 merged[key] = item
 
     result = list(merged.values())
-    # Trading 상태 제외
     result = [r for r in result if r.get("status") != "Trading"]
     return result
 
@@ -214,20 +212,19 @@ def collect_ipo_data() -> Dict[str, Any]:
         start = end - timedelta(days=180)
 
         # ── 1. 뉴스 자동 수집 ──
-        sec_items   = fetch_sec_edgar_ipo_rss()
-        yahoo_items = fetch_yahoo_finance_ipo_news()
-        all_news    = sec_items + yahoo_items
+        sec_items    = fetch_sec_edgar_ipo()
+        google_items = fetch_google_news_ipo()
+        all_news     = sec_items + google_items
 
         # ── 2. 백업 리스트와 병합 ──
         pipeline = merge_ipo_lists(all_news, MEGA_IPO_FALLBACK)
 
-        # ── 3. 상태별 가중치 적용 파이프라인 집계 ──
-        total_pipeline_bn   = sum(
+        # ── 3. 파이프라인 집계 ──
+        total_pipeline_bn = sum(
             c["est_valuation_bn"]
             for c in pipeline
             if c["status"] in ["Considering", "Filed", "Priced"]
         )
-        # 가중치 적용 유효 파이프라인
         weighted_pipeline_bn = sum(
             c["est_valuation_bn"] * STATUS_WEIGHT.get(c["status"], 0.1)
             for c in pipeline
@@ -315,8 +312,10 @@ def collect_ipo_data() -> Dict[str, Any]:
         news_detected     = len([c for c in pipeline if c.get("source") != "manual"])
 
         logger.info(
-            f"[경고등4] 파이프라인: ${total_pipeline_bn:.0f}Bn (가중: ${weighted_pipeline_bn:.0f}Bn) | "
-            f"Filed:{active_count} | 뉴스감지:{news_detected}건 | VIX:{vix_current:.1f}"
+            f"[경고등4] 파이프라인: ${total_pipeline_bn:.0f}Bn "
+            f"(가중: ${weighted_pipeline_bn:.0f}Bn) | "
+            f"Filed:{active_count} | 뉴스감지:{news_detected}건 | "
+            f"VIX:{vix_current:.1f}"
         )
 
         return {
@@ -361,7 +360,6 @@ def calculate_ipo_score(data: Dict[str, Any]) -> Dict[str, Any]:
     score   = 0.0
     signals = []
 
-    # ── 가중 파이프라인 기준으로 점수 계산 ──
     weighted = data.get("weighted_pipeline_bn", 0)
     total    = data.get("total_pipeline_bn", 0)
 
@@ -375,7 +373,6 @@ def calculate_ipo_score(data: Dict[str, Any]) -> Dict[str, Any]:
         score += 12
         signals.append({"level": "YELLOW", "msg": f"IPO 파이프라인 주목 (유효 ${weighted:.0f}Bn)"})
 
-    # Filed/Priced 건수 (즉각적 위험)
     active = data.get("active_ipo_count", 0)
     if active >= 2:
         score += 25
@@ -399,13 +396,11 @@ def calculate_ipo_score(data: Dict[str, Any]) -> Dict[str, Any]:
         score += 12
         signals.append({"level": "ORANGE", "msg": f"IPO 시장 과열 (+{ipo_ret:.0f}%)"})
 
-    # 뉴스 자동 감지 건수
     news_count = data.get("news_detected_count", 0)
     if news_count >= 3:
         score += 10
         signals.append({"level": "ORANGE", "msg": f"IPO 관련 뉴스 {news_count}건 자동 감지"})
 
-    # 데이터 신선도 표시
     freshness = data.get("data_freshness", "manual_fallback")
     if freshness == "manual_fallback":
         signals.append({"level": "YELLOW", "msg": "ℹ️ 뉴스 자동 감지 없음 — 수동 백업 리스트 사용 중"})
