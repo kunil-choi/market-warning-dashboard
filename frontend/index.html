@@ -14,12 +14,11 @@
       <span class="logo">🚨</span>
       <div>
         <h1>글로벌 증시 위기 경고 대시보드</h1>
-        <p class="subtitle">4대 매크로 경고등 · 자동 갱신</p>
+        <p class="subtitle">4대 매크로 경고등 · 매일 오전 7시 자동 갱신</p>
       </div>
     </div>
     <div class="header-right">
       <div id="last-updated" class="last-updated">로딩 중...</div>
-      <button class="refresh-btn" onclick="loadData()">↺ 새로고침</button>
     </div>
   </header>
 
@@ -50,79 +49,105 @@
       </div>
     </section>
 
-    <!-- 4개 경고등 -->
+    <!-- 4개 경고등 (플립 카드 구조) -->
     <section class="warnings-grid">
 
-      <div class="warning-card" id="card-w1">
-        <div class="card-header">
-          <span class="card-icon">🔽</span>
-          <div>
-            <div class="card-title">경고등 1</div>
-            <div class="card-subtitle">주도주 압축</div>
+      <!-- 경고등 1 -->
+      <div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
+        <div class="card-flip-inner">
+          <!-- 앞면 -->
+          <div class="card-front warning-card" id="card-w1">
+            <div class="card-header">
+              <span class="card-icon">🔽</span>
+              <div>
+                <div class="card-title">경고등 1</div>
+                <div class="card-subtitle">주도주 압축</div>
+              </div>
+              <div class="card-score-badge" id="score-w1">--</div>
+            </div>
+            <div class="metrics-grid" id="metrics-w1"></div>
+            <div class="signals-list" id="signals-w1"></div>
+            <div id="explain-w1" class="explain-container"></div>
+            <div class="chart-wrapper">
+              <canvas id="chart-w1" height="120"></canvas>
+            </div>
+            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
-          <div class="card-score-badge" id="score-w1">--</div>
-        </div>
-        <div class="metrics-grid" id="metrics-w1"></div>
-        <div class="signals-list" id="signals-w1"></div>
-        <div class="chart-wrapper">
-          <canvas id="chart-w1" height="120"></canvas>
+          <!-- 뒷면 -->
+          <div class="card-back" id="back-w1"></div>
         </div>
       </div>
 
-      <div class="warning-card" id="card-w2">
-        <div class="card-header">
-          <span class="card-icon">📈</span>
-          <div>
-            <div class="card-title">경고등 2</div>
-            <div class="card-subtitle">채권 자경단 & 금리</div>
+      <!-- 경고등 2 -->
+      <div class="card-flip-wrapper" id="flip-w2" onclick="toggleFlip('w2')">
+        <div class="card-flip-inner">
+          <div class="card-front warning-card" id="card-w2">
+            <div class="card-header">
+              <span class="card-icon">📈</span>
+              <div>
+                <div class="card-title">경고등 2</div>
+                <div class="card-subtitle">채권 자경단 & 금리</div>
+              </div>
+              <div class="card-score-badge" id="score-w2">--</div>
+            </div>
+            <div class="metrics-grid" id="metrics-w2"></div>
+            <div class="signals-list" id="signals-w2"></div>
+            <div id="explain-w2" class="explain-container"></div>
+            <div class="chart-wrapper">
+              <canvas id="chart-w2" height="120"></canvas>
+            </div>
+            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
-          <div class="card-score-badge" id="score-w2">--</div>
-        </div>
-        <div class="metrics-grid" id="metrics-w2"></div>
-        <div class="signals-list" id="signals-w2"></div>
-        <div class="chart-wrapper">
-          <canvas id="chart-w2" height="120"></canvas>
+          <div class="card-back" id="back-w2"></div>
         </div>
       </div>
 
-      <div class="warning-card" id="card-w3">
-        <div class="card-header">
-          <span class="card-icon">🔒</span>
-          <div>
-            <div class="card-title">경고등 3</div>
-            <div class="card-subtitle">사모 크레딧 환매</div>
+      <!-- 경고등 3 -->
+      <div class="card-flip-wrapper" id="flip-w3" onclick="toggleFlip('w3')">
+        <div class="card-flip-inner">
+          <div class="card-front warning-card" id="card-w3">
+            <div class="card-header">
+              <span class="card-icon">🔒</span>
+              <div>
+                <div class="card-title">경고등 3</div>
+                <div class="card-subtitle">사모 크레딧 환매</div>
+              </div>
+              <div class="card-score-badge" id="score-w3">--</div>
+            </div>
+            <div class="metrics-grid" id="metrics-w3"></div>
+            <div class="signals-list" id="signals-w3"></div>
+            <div id="explain-w3" class="explain-container"></div>
+            <div class="chart-wrapper">
+              <canvas id="chart-w3" height="120"></canvas>
+            </div>
+            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
-          <div class="card-score-badge" id="score-w3">--</div>
-        </div>
-        <div class="metrics-grid" id="metrics-w3"></div>
-        <div class="signals-list" id="signals-w3"></div>
-        <div class="chart-wrapper">
-          <canvas id="chart-w3" height="120"></canvas>
+          <div class="card-back" id="back-w3"></div>
         </div>
       </div>
 
-      <div class="warning-card" id="card-w4">
-        <div class="card-header">
-          <span class="card-icon">🐳</span>
-          <div>
-            <div class="card-title">경고등 4</div>
-            <div class="card-subtitle">대어급 IPO 유동성</div>
+      <!-- 경고등 4 -->
+      <div class="card-flip-wrapper" id="flip-w4" onclick="toggleFlip('w4')">
+        <div class="card-flip-inner">
+          <div class="card-front warning-card" id="card-w4">
+            <div class="card-header">
+              <span class="card-icon">🐳</span>
+              <div>
+                <div class="card-title">경고등 4</div>
+                <div class="card-subtitle">대어급 IPO 유동성</div>
+              </div>
+              <div class="card-score-badge" id="score-w4">--</div>
+            </div>
+            <div class="metrics-grid" id="metrics-w4"></div>
+            <div class="signals-list" id="signals-w4"></div>
+            <div id="explain-w4" class="explain-container"></div>
+            <div class="ipo-table-wrapper" id="ipo-table"></div>
+            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
-          <div class="card-score-badge" id="score-w4">--</div>
+          <div class="card-back" id="back-w4"></div>
         </div>
-        <div class="metrics-grid" id="metrics-w4"></div>
-        <div class="signals-list" id="signals-w4"></div>
-        <div class="ipo-table-wrapper" id="ipo-table"></div>
       </div>
 
-    </section>
-
-    <!-- 히스토리 차트 -->
-    <section class="history-section">
-      <h2 class="section-title">📅 위험 스코어 히스토리</h2>
-      <div class="history-chart-wrapper">
-        <canvas id="history-chart" height="80"></canvas>
-      </div>
     </section>
 
     <!-- 퍼펙트 스톰 배너 -->
@@ -140,9 +165,17 @@
       </div>
     </section>
 
+    <!-- 위험 스코어 히스토리 -->
+    <section class="history-section">
+      <h2 class="section-title">📅 위험 스코어 히스토리</h2>
+      <div class="history-chart-wrapper">
+        <canvas id="history-chart" height="80"></canvas>
+      </div>
+    </section>
+
     <footer class="site-footer">
       <p>본 대시보드는 투자 참고용이며 투자 권유가 아닙니다.</p>
-      <p>데이터: Yahoo Finance · FRED (Federal Reserve) | 자동 갱신: 매일 오전 6시 (KST)</p>
+      <p>데이터: Yahoo Finance · FRED (Federal Reserve) | 자동 갱신: 매일 오전 7시 (KST, 평일)</p>
     </footer>
 
   </main>
