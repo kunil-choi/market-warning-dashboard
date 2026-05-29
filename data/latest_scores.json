@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-05-29T10:29:23.248652",
+    "generated_at": "2026-05-29T10:40:13.636514",
     "version": "2.0",
     "source": "김효진 박사 강연 기반 매크로 대시보드"
   },
@@ -35,7 +35,7 @@
         "RSP YTD": "11.46%"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:29:19.533058",
+        "timestamp": "2026-05-29T10:40:06.654795",
         "spy_ytd": 14.34,
         "rsp_ytd": 11.46,
         "qqq_ytd": 23.19,
@@ -633,7 +633,7 @@
         "부채/GDP": "122.6%"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:29:20.694456",
+        "timestamp": "2026-05-29T10:40:08.262440",
         "t10y_current": 4.48,
         "t2y_current": 4.0,
         "fed_funds_current": 3.64,
@@ -1847,7 +1847,7 @@
         "HYG 거래량 배율": "0.6배"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:29:21.269870",
+        "timestamp": "2026-05-29T10:40:09.502252",
         "hy_spread_current": 271.0,
         "ig_spread_current": 74.0,
         "hy_change_1m": -14.0,
@@ -2609,7 +2609,7 @@
       "signals": [
         {
           "level": "RED",
-          "msg": "⚠️ 가중 IPO 파이프라인 $4199Bn — 역사적 유동성 블랙홀"
+          "msg": "⚠️ 가중 IPO 파이프라인 $3946Bn — 역사적 유동성 블랙홀"
         },
         {
           "level": "ORANGE",
@@ -2621,19 +2621,19 @@
         },
         {
           "level": "YELLOW",
-          "msg": "IPO 관련 뉴스 자동 감지 33건"
+          "msg": "IPO 관련 뉴스 자동 감지 30건"
         }
       ],
       "key_metrics": {
-        "총 IPO 파이프라인": "$5596Bn",
-        "가중 파이프라인": "$4199Bn",
-        "한국 GDP 대비": "3.3배",
-        "VIX": "15.9",
+        "총 IPO 파이프라인": "$4754Bn",
+        "가중 파이프라인": "$3946Bn",
+        "한국 GDP 대비": "2.8배",
+        "VIX": "15.8",
         "IPO ETF 90일": "+28.2%",
         "S-1 제출 건수": "1건"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:29:23.248515",
+        "timestamp": "2026-05-29T10:40:13.636383",
         "mega_ipo_pipeline": [
           {
             "company": "SpaceX",
@@ -2643,7 +2643,7 @@
           },
           {
             "company": "OpenAI",
-            "est_valuation_bn": 852,
+            "est_valuation_bn": 10.0,
             "status": "Considering",
             "sector": "AI"
           },
@@ -2666,10 +2666,10 @@
             "sector": "AI/Data"
           }
         ],
-        "total_pipeline_bn": 5596.0,
-        "weighted_pipeline_bn": 4199.0,
-        "estimated_market_impact_bn": 840.0,
-        "pipeline_vs_korea_gdp_ratio": 3.29,
+        "total_pipeline_bn": 4754.0,
+        "weighted_pipeline_bn": 3946.0,
+        "estimated_market_impact_bn": 789.0,
+        "pipeline_vs_korea_gdp_ratio": 2.8,
         "ipo_etf_90d_returns": {
           "IPO": 28.19,
           "IPOS": 12.96
@@ -2696,13 +2696,13 @@
             "6m_return": -41.94
           }
         },
-        "vix_current": 15.86,
+        "vix_current": 15.85,
         "vix_avg_3m": 20.96,
         "vix_is_extreme_low": false,
         "ipo_heat_index": 70,
         "active_ipo_count": 1,
         "considering_ipo_count": 4,
-        "auto_detected_count": 33,
+        "auto_detected_count": 30,
         "status": "ok"
       }
     }
@@ -2717,6 +2717,6 @@
       "bond_vigilante_trigger": false,
       "credit_rollover_trigger": false
     },
-    "generated_at": "2026-05-29T10:29:23.248649"
+    "generated_at": "2026-05-29T10:40:13.636512"
   }
 }
