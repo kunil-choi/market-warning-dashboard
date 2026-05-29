@@ -49,14 +49,15 @@
       </div>
     </section>
 
-    <!-- 4개 경고등 (플립 카드 구조) -->
+    <!-- 4개 경고등 (플립 카드) -->
+    <!-- warnings-grid 에 align-items:stretch 가 적용되어
+         모든 카드가 가장 긴 카드 높이에 맞춰 자동으로 늘어납니다 -->
     <section class="warnings-grid">
 
-      <!-- 경고등 1 -->
+      <!-- 경고등 1 — 주도주 압축 -->
       <div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
         <div class="card-flip-inner">
-          <!-- 앞면 -->
-          <div class="card-front warning-card" id="card-w1">
+          <div class="card-front" id="card-w1">
             <div class="card-header">
               <span class="card-icon">🔽</span>
               <div>
@@ -69,19 +70,18 @@
             <div class="signals-list" id="signals-w1"></div>
             <div id="explain-w1" class="explain-container"></div>
             <div class="chart-wrapper">
-              <canvas id="chart-w1" height="120"></canvas>
+              <canvas id="chart-w1"></canvas>
             </div>
             <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
-          <!-- 뒷면 -->
           <div class="card-back" id="back-w1"></div>
         </div>
       </div>
 
-      <!-- 경고등 2 -->
+      <!-- 경고등 2 — 채권 자경단 & 금리 -->
       <div class="card-flip-wrapper" id="flip-w2" onclick="toggleFlip('w2')">
         <div class="card-flip-inner">
-          <div class="card-front warning-card" id="card-w2">
+          <div class="card-front" id="card-w2">
             <div class="card-header">
               <span class="card-icon">📈</span>
               <div>
@@ -94,7 +94,7 @@
             <div class="signals-list" id="signals-w2"></div>
             <div id="explain-w2" class="explain-container"></div>
             <div class="chart-wrapper">
-              <canvas id="chart-w2" height="120"></canvas>
+              <canvas id="chart-w2"></canvas>
             </div>
             <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
@@ -102,10 +102,10 @@
         </div>
       </div>
 
-      <!-- 경고등 3 -->
+      <!-- 경고등 3 — 사모 크레딧 환매 -->
       <div class="card-flip-wrapper" id="flip-w3" onclick="toggleFlip('w3')">
         <div class="card-flip-inner">
-          <div class="card-front warning-card" id="card-w3">
+          <div class="card-front" id="card-w3">
             <div class="card-header">
               <span class="card-icon">🔒</span>
               <div>
@@ -118,7 +118,7 @@
             <div class="signals-list" id="signals-w3"></div>
             <div id="explain-w3" class="explain-container"></div>
             <div class="chart-wrapper">
-              <canvas id="chart-w3" height="120"></canvas>
+              <canvas id="chart-w3"></canvas>
             </div>
             <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
@@ -126,10 +126,10 @@
         </div>
       </div>
 
-      <!-- 경고등 4 -->
+      <!-- 경고등 4 — 대어급 IPO 유동성 -->
       <div class="card-flip-wrapper" id="flip-w4" onclick="toggleFlip('w4')">
         <div class="card-flip-inner">
-          <div class="card-front warning-card" id="card-w4">
+          <div class="card-front" id="card-w4">
             <div class="card-header">
               <span class="card-icon">🐳</span>
               <div>
@@ -165,11 +165,11 @@
       </div>
     </section>
 
-    <!-- 위험 스코어 히스토리 -->
+    <!-- 위험 스코어 히스토리 — 카드 섹션 완전히 끝난 뒤 배치 -->
     <section class="history-section">
       <h2 class="section-title">📅 위험 스코어 히스토리</h2>
       <div class="history-chart-wrapper">
-        <canvas id="history-chart" height="80"></canvas>
+        <canvas id="history-chart"></canvas>
       </div>
     </section>
 
