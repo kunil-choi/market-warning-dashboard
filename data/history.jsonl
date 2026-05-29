@@ -4,3 +4,4 @@
 {"date": "2026-05-27", "score": 32.2, "grade": "MODERATE", "w1": 35.0, "w2": 47.0, "w3": 0.0, "w4": 50.0, "signal": "HOLD"}
 {"date": "2026-05-28", "score": 32.1, "grade": "MODERATE", "w1": 35.0, "w2": 32.0, "w3": 0.0, "w4": 68.0, "signal": "HOLD"}
 {"date": "2026-05-28", "score": 42.1, "grade": "ELEVATED", "w1": 35.0, "w2": 22.0, "w3": 50.0, "w4": 68.0, "signal": "NEUTRAL_CAUTION"}
+{"date": "2026-05-29", "score": 32.1, "grade": "MODERATE", "w1": 35.0, "w2": 32.0, "w3": 0.0, "w4": 68.0, "signal": "HOLD"}
