@@ -12,6 +12,37 @@ function toggleFlip(prefix) {
 }
 
 // ──────────────────────────────────────────────
+// 4개 카드 높이 완전 통일
+// 렌더 완료 후 앞면(.card-front)의 실제 높이를 측정해
+// 가장 큰 값으로 모든 card-flip-inner를 맞춤
+// ──────────────────────────────────────────────
+function equalizeCardHeights() {
+  const prefixes = ["w1", "w2", "w3", "w4"];
+
+  // 1차: 모든 inner 높이 초기화 → 자연 높이 측정 가능하게
+  prefixes.forEach(p => {
+    const inner = document.getElementById(`inner-${p}`);
+    if (inner) inner.style.height = "auto";
+  });
+
+  // 2차: 브라우저가 레이아웃을 확정한 뒤 높이 측정
+  requestAnimationFrame(() => {
+    let maxH = 0;
+    prefixes.forEach(p => {
+      const front = document.getElementById(`card-${p}`);
+      if (front) maxH = Math.max(maxH, front.offsetHeight);
+    });
+
+    if (maxH > 0) {
+      prefixes.forEach(p => {
+        const inner = document.getElementById(`inner-${p}`);
+        if (inner) inner.style.height = `${maxH}px`;
+      });
+    }
+  });
+}
+
+// ──────────────────────────────────────────────
 // 뒷면 — 일반인 언어 자동 생성
 // ──────────────────────────────────────────────
 function buildBackContent(prefix, warn) {
@@ -29,12 +60,13 @@ function buildBackContent(prefix, warn) {
 
   let summary = "", situation = "", numbers = "", advice = "";
 
+  // ── W1: 주도주 압축 ──
   if (prefix === "w1") {
-    const spy  = raw.spy_ytd  ?? 0;
-    const rsp  = raw.rsp_ytd  ?? 0;
-    const qqq  = raw.qqq_ytd  ?? 0;
-    const diff = raw.current_spread ?? 0;
-    const pct  = raw.spread_percentile ?? 0;
+    const spy    = raw.spy_ytd  ?? 0;
+    const rsp    = raw.rsp_ytd  ?? 0;
+    const qqq    = raw.qqq_ytd  ?? 0;
+    const diff   = raw.current_spread ?? 0;
+    const pct    = raw.spread_percentile ?? 0;
     const rspNeg = raw.rsp_is_negative_while_spy_positive;
 
     summary = score >= 70
@@ -45,7 +77,8 @@ function buildBackContent(prefix, warn) {
       ? "대형주 쏠림이 조금씩 나타나고 있지만 아직 큰 이상은 없습니다."
       : "시장 전반이 고르게 움직이고 있습니다. 건강한 상태입니다.";
 
-    situation = `지금 주식시장은 마치 반 전체가 공부를 하는데 한두 명만 100점을 받는 상황과 비슷합니다. ` +
+    situation =
+      `지금 주식시장은 마치 반 전체가 공부를 하는데 한두 명만 100점을 받는 상황과 비슷합니다. ` +
       `S&P 500 지수(대형주 위주)는 올해 ${spy > 0 ? "+" : ""}${spy.toFixed(1)}% 올랐지만, ` +
       `같은 종목을 똑같은 비중으로 담은 RSP(균등 지수)는 ${rsp > 0 ? "+" : ""}${rsp.toFixed(1)}%에 그쳤습니다. ` +
       (rspNeg
@@ -53,11 +86,12 @@ function buildBackContent(prefix, warn) {
         : `나스닥(QQQ)은 ${qqq > 0 ? "+" : ""}${qqq.toFixed(1)}%로 가장 높은 상승을 보이며 기술주로의 쏠림이 뚜렷합니다.`);
 
     numbers = `대형주와 균등지수 간 괴리: ${diff.toFixed(1)}pt | 역대 상위 ${(100 - pct).toFixed(0)}% 수준의 쏠림`;
-
-    advice = score >= 50
+    advice  = score >= 50
       ? "📌 지금 잘 오르는 대형주만 보지 말고, 나머지 종목들이 어떤지 함께 살펴보세요. 나머지가 빠지기 시작하면 그게 진짜 위험 신호입니다."
       : "📌 현재 특별한 경보는 없지만, 대형주 쏠림이 심화되는지 주간 단위로 확인해 두세요.";
   }
+
+  // ── W2: 채권 자경단 ──
   else if (prefix === "w2") {
     const t10y      = raw.t10y_current      ?? 0;
     const fed       = raw.fed_funds_current ?? 0;
@@ -75,7 +109,8 @@ function buildBackContent(prefix, warn) {
       ? "금리가 조금씩 오르고 있지만 아직 위험 수준은 아닙니다."
       : "금리와 물가가 안정적입니다.";
 
-    situation = `미국 10년 국채 금리는 현재 ${t10y.toFixed(2)}%입니다. ` +
+    situation =
+      `미국 10년 국채 금리는 현재 ${t10y.toFixed(2)}%입니다. ` +
       `쉽게 말하면, 미국 정부에 10년간 돈을 빌려줄 때 받는 이자가 ${t10y.toFixed(2)}%라는 뜻입니다. ` +
       `이 금리가 높을수록 주식의 상대적 매력이 떨어집니다. ` +
       `현재 물가 상승률(CPI)은 ${cpi.toFixed(1)}%이고, ` +
@@ -85,11 +120,12 @@ function buildBackContent(prefix, warn) {
         : `채권 자경단 발동 체크리스트 ${checklist}개 항목이 충족된 상태입니다.`);
 
     numbers = `10년 금리: ${t10y.toFixed(2)}% | 기준금리: ${fed.toFixed(2)}% | 실질금리: ${real10y.toFixed(2)}% | 물가: ${cpi.toFixed(1)}%`;
-
-    advice = score >= 50
+    advice  = score >= 50
       ? "📌 금리가 오를수록 특히 많이 오른 성장주(AI, 기술주)의 조정 폭이 커질 수 있습니다. 부채 비율이 높은 종목은 더 주의하세요."
       : "📌 현재 금리 환경은 안정적입니다. 급격한 금리 변화 뉴스가 나오면 다시 확인해 보세요.";
   }
+
+  // ── W3: 사모 크레딧 ──
   else if (prefix === "w3") {
     const hy       = raw.hy_spread_current  ?? 0;
     const ig       = raw.ig_spread_current  ?? 0;
@@ -105,7 +141,8 @@ function buildBackContent(prefix, warn) {
       ? "아직 큰 문제는 없지만 스프레드가 조금씩 넓어지고 있습니다."
       : "기업 신용 시장이 안정적입니다.";
 
-    situation = `HY 스프레드 ${hy.toFixed(0)}bps는 쉽게 말해 '위험한 기업에 돈 빌려줄 때 얼마나 더 많은 이자를 요구하는가'를 나타냅니다. ` +
+    situation =
+      `HY 스프레드 ${hy.toFixed(0)}bps는 쉽게 말해 '위험한 기업에 돈 빌려줄 때 얼마나 더 많은 이자를 요구하는가'를 나타냅니다. ` +
       `이 숫자가 클수록 투자자들이 기업 부도를 더 걱정한다는 뜻입니다. ` +
       `지난 한 달 동안 이 수치는 ${hyChg > 0 ? "+" : ""}${hyChg.toFixed(0)}bps 변했습니다. ` +
       (rollover
@@ -113,11 +150,12 @@ function buildBackContent(prefix, warn) {
         : `HYG ETF 거래량은 평소 대비 ${volSpike.toFixed(1)}배 수준으로, ${volSpike > 1.5 ? "평소보다 많은 매도세가 감지됩니다." : "비교적 정상 범위입니다."}`);
 
     numbers = `HY 스프레드: ${hy.toFixed(0)}bps | IG 스프레드: ${ig.toFixed(0)}bps | 한달 변화: ${hyChg > 0 ? "+" : ""}${hyChg.toFixed(0)}bps`;
-
-    advice = score >= 50
+    advice  = score >= 50
       ? "📌 뉴스에서 '○○ 사모펀드 환매 중단' 기사가 나오기 시작하면 매우 위험한 신호입니다. 하나가 나오면 연쇄적으로 이어질 수 있습니다."
       : "📌 현재 사모 크레딧 시장은 안정적입니다. 특별한 조치는 필요하지 않습니다.";
   }
+
+  // ── W4: 대어급 IPO ──
   else if (prefix === "w4") {
     const total    = raw.total_pipeline_bn    ?? 0;
     const weighted = raw.weighted_pipeline_bn ?? 0;
@@ -135,7 +173,9 @@ function buildBackContent(prefix, warn) {
       ? "IPO 준비 중인 기업들이 있지만 당장 큰 충격은 제한적입니다."
       : "IPO 시장은 현재 조용합니다.";
 
-    situation = `스페이스X, 오픈AI 등 상장을 준비 중인 기업들의 추정 가치 합계가 무려 $${total.toFixed(0)}Bn(약 ${gdpRatio.toFixed(1)}배의 한국 GDP)에 달합니다. ` +
+    situation =
+      `스페이스X, 오픈AI 등 상장을 준비 중인 기업들의 추정 가치 합계가 무려 $${total.toFixed(0)}Bn` +
+      `(약 ${gdpRatio.toFixed(1)}배의 한국 GDP)에 달합니다. ` +
       `상태별 가중치를 적용한 실질 영향 규모는 $${weighted.toFixed(0)}Bn입니다. ` +
       `이 기업들이 상장하면 기관투자자들이 기존에 보유한 주식을 팔아서 청약 자금을 마련하기 때문에 시장 전체의 돈이 IPO 쪽으로 빨려들어 갑니다. ` +
       (active >= 1
@@ -146,8 +186,7 @@ function buildBackContent(prefix, warn) {
         : `공포 지수 VIX는 ${vix.toFixed(1)}입니다.`);
 
     numbers = `총 파이프라인: $${total.toFixed(0)}Bn | 가중 파이프라인: $${weighted.toFixed(0)}Bn | VIX: ${vix.toFixed(1)} | IPO ETF 90일: ${ipoRet > 0 ? "+" : ""}${ipoRet.toFixed(1)}%`;
-
-    advice = score >= 50
+    advice  = score >= 50
       ? "📌 대형 IPO 청약 열기가 최고조에 달할 때가 오히려 시장의 꼭대기일 수 있습니다. '이번 IPO는 무조건 사야 해'라는 분위기가 강해질 때 경계하세요."
       : "📌 아직 IPO로 인한 직접적인 유동성 충격은 크지 않습니다.";
   }
@@ -187,7 +226,7 @@ function buildBackContent(prefix, warn) {
 }
 
 // ──────────────────────────────────────────────
-// 해설 패널 텍스트
+// 해설 패널 텍스트 상수
 // ──────────────────────────────────────────────
 const WARNING_EXPLANATIONS = {
   w1: {
@@ -220,7 +259,11 @@ function scoreBarColor(score) {
 }
 
 function gradeClass(grade) {
-  return { HIGH: "grade-HIGH", CRITICAL: "grade-CRITICAL", PERFECT_STORM: "grade-CRITICAL" }[grade] || "";
+  return {
+    HIGH:          "grade-HIGH",
+    CRITICAL:      "grade-CRITICAL",
+    PERFECT_STORM: "grade-CRITICAL",
+  }[grade] || "";
 }
 
 // ──────────────────────────────────────────────
@@ -231,8 +274,8 @@ function renderDashboard(data) {
   const warns  = data.warnings;
   const signal = data.algo_signal;
 
+  // 종합 스코어 링
   drawScoreRing(comp.final_score);
-
   document.getElementById("composite-card").className = `composite-card ${gradeClass(comp.overall_grade)}`;
 
   const labelEl = document.getElementById("overall-label");
@@ -240,12 +283,14 @@ function renderDashboard(data) {
   labelEl.style.color = comp.overall_color;
 
   document.getElementById("action-rec").textContent  = `📌 ${comp.action_recommended}`;
+
   const badge = document.getElementById("signal-badge");
   badge.textContent      = signal.signal;
   badge.style.background = signal.signal_color;
   document.getElementById("signal-desc").textContent = signal.signal_desc;
   document.getElementById("hedge-rec").textContent   = signal.hedge_rec;
 
+  // 데이터 기준 시각
   const generatedAt = data.meta?.generated_at;
   if (generatedAt) {
     const dt = new Date(generatedAt);
@@ -253,9 +298,11 @@ function renderDashboard(data) {
       `데이터 기준: ${dt.toLocaleString("ko-KR")}`;
   }
 
+  // 퍼펙트 스톰 배너
   document.getElementById("storm-section").style.display =
     comp.overall_grade === "PERFECT_STORM" ? "block" : "none";
 
+  // 종합 경고 바
   const warningList = [
     { id: "w1_liquidity", label: "W1 주도주 압축" },
     { id: "w2_rates",     label: "W2 채권 자경단" },
@@ -289,13 +336,18 @@ function renderDashboard(data) {
   renderWarningExplanation("w4", warns.w4_ipo);
 
   // 뒷면
-  const backMap = { w1: warns.w1_liquidity, w2: warns.w2_rates, w3: warns.w3_credit, w4: warns.w4_ipo };
+  const backMap = {
+    w1: warns.w1_liquidity,
+    w2: warns.w2_rates,
+    w3: warns.w3_credit,
+    w4: warns.w4_ipo,
+  };
   for (const [prefix, warn] of Object.entries(backMap)) {
     const el = document.getElementById(`back-${prefix}`);
     if (el) el.innerHTML = buildBackContent(prefix, warn);
   }
 
-  // 차트
+  // 개별 차트
   const liqRaw = warns.w1_liquidity.raw_data;
   if (liqRaw?.history_90d) drawLiquidityChart("chart-w1", liqRaw.history_90d);
 
@@ -306,10 +358,19 @@ function renderDashboard(data) {
   if (creditRaw?.history) drawCreditChart("chart-w3", creditRaw.history);
 
   renderIPOTable(warns.w4_ipo.raw_data);
+
+  // ── 4개 카드 높이 통일 ──
+  // 차트 렌더까지 완전히 끝난 뒤 실행해야 정확한 높이 측정 가능
+  // setTimeout 0ms → 현재 call stack 비운 뒤 실행
+  setTimeout(equalizeCardHeights, 0);
+
+  // 윈도우 리사이즈 시에도 재계산
+  window.removeEventListener("resize", equalizeCardHeights);
+  window.addEventListener("resize", equalizeCardHeights);
 }
 
 // ──────────────────────────────────────────────
-// 경고등 앞면 렌더
+// 경고등 앞면 카드 렌더
 // ──────────────────────────────────────────────
 function renderWarningCard(prefix, warn) {
   const card = document.getElementById(`card-${prefix}`);
@@ -406,8 +467,7 @@ function renderIPOTable(rawData) {
   const el = document.getElementById("ipo-table");
   if (!el || !rawData?.mega_ipo_pipeline) return;
 
-  // CSS 클래스명에 한글이 직접 들어가면 브라우저 호환 문제가 생길 수 있으므로
-  // 상태값 → 영문 CSS 키 변환 맵을 사용합니다
+  // 한글 상태값 → 영문 CSS 클래스 키 변환
   const statusClassMap = {
     "신청완료":   "Filed",
     "검토중":     "Considering",
@@ -430,12 +490,12 @@ function renderIPOTable(rawData) {
         ${rawData.mega_ipo_pipeline.map(p => {
           const cssKey = statusClassMap[p.status] || p.status;
           return `
-          <tr>
-            <td><strong>${p.company}</strong></td>
-            <td>${p.sector}</td>
-            <td>$${p.est_valuation_bn}B</td>
-            <td><span class="status-badge status-${cssKey}">${p.status}</span></td>
-          </tr>`;
+            <tr>
+              <td><strong>${p.company}</strong></td>
+              <td>${p.sector}</td>
+              <td>$${p.est_valuation_bn}B</td>
+              <td><span class="status-badge status-${cssKey}">${p.status}</span></td>
+            </tr>`;
         }).join("")}
         <tr style="background:rgba(239,68,68,0.08)">
           <td colspan="2"><strong>총 파이프라인</strong></td>
@@ -447,7 +507,7 @@ function renderIPOTable(rawData) {
 }
 
 // ──────────────────────────────────────────────
-// 히스토리 — 날짜별 1포인트, 겹침 없음
+// 히스토리 — 날짜별 1포인트
 // ──────────────────────────────────────────────
 async function loadHistory() {
   try {
@@ -459,7 +519,7 @@ async function loadHistory() {
       .map(l => { try { return JSON.parse(l); } catch { return null; } })
       .filter(Boolean);
 
-    // 날짜별 중복 제거 (하루 1포인트)
+    // 날짜별 중복 제거 — 하루 1포인트만 유지
     const byDate = new Map();
     for (const entry of raw) {
       if (entry.date) byDate.set(entry.date, entry);
