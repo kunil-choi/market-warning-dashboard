@@ -27,12 +27,8 @@ function buildBackContent(prefix, warn) {
     UNKNOWN:  "⚪ 확인 중",
   }[grade] || "⚪ 확인 중";
 
-  let summary = "";
-  let situation = "";
-  let numbers = "";
-  let advice = "";
+  let summary = "", situation = "", numbers = "", advice = "";
 
-  // ── W1: 주도주 압축 ──
   if (prefix === "w1") {
     const spy  = raw.spy_ytd  ?? 0;
     const rsp  = raw.rsp_ytd  ?? 0;
@@ -62,8 +58,6 @@ function buildBackContent(prefix, warn) {
       ? "📌 지금 잘 오르는 대형주만 보지 말고, 나머지 종목들이 어떤지 함께 살펴보세요. 나머지가 빠지기 시작하면 그게 진짜 위험 신호입니다."
       : "📌 현재 특별한 경보는 없지만, 대형주 쏠림이 심화되는지 주간 단위로 확인해 두세요.";
   }
-
-  // ── W2: 채권 자경단 ──
   else if (prefix === "w2") {
     const t10y      = raw.t10y_current      ?? 0;
     const fed       = raw.fed_funds_current ?? 0;
@@ -96,12 +90,10 @@ function buildBackContent(prefix, warn) {
       ? "📌 금리가 오를수록 특히 많이 오른 성장주(AI, 기술주)의 조정 폭이 커질 수 있습니다. 부채 비율이 높은 종목은 더 주의하세요."
       : "📌 현재 금리 환경은 안정적입니다. 급격한 금리 변화 뉴스가 나오면 다시 확인해 보세요.";
   }
-
-  // ── W3: 사모 크레딧 ──
   else if (prefix === "w3") {
-    const hy      = raw.hy_spread_current  ?? 0;
-    const ig      = raw.ig_spread_current  ?? 0;
-    const hyChg   = raw.hy_change_1m       ?? 0;
+    const hy       = raw.hy_spread_current  ?? 0;
+    const ig       = raw.ig_spread_current  ?? 0;
+    const hyChg    = raw.hy_change_1m       ?? 0;
     const volSpike = raw.volume_spike_ratio ?? 1;
     const rollover = raw.rollover_risk_elevated;
 
@@ -126,8 +118,6 @@ function buildBackContent(prefix, warn) {
       ? "📌 뉴스에서 '○○ 사모펀드 환매 중단' 기사가 나오기 시작하면 매우 위험한 신호입니다. 하나가 나오면 연쇄적으로 이어질 수 있습니다."
       : "📌 현재 사모 크레딧 시장은 안정적입니다. 특별한 조치는 필요하지 않습니다.";
   }
-
-  // ── W4: 대어급 IPO ──
   else if (prefix === "w4") {
     const total    = raw.total_pipeline_bn    ?? 0;
     const weighted = raw.weighted_pipeline_bn ?? 0;
@@ -167,42 +157,37 @@ function buildBackContent(prefix, warn) {
       <span class="back-title">💬 쉬운 설명</span>
       <span class="back-grade-badge back-grade-${grade}">${gradeLabel}</span>
     </div>
-
     <div class="back-summary">${summary}</div>
-
     <div class="back-section">
       <span class="back-section-label">📰 지금 무슨 상황인가요?</span>
       <span class="back-section-text">${situation}</span>
     </div>
-
     <div class="back-section">
       <span class="back-section-label">📊 주요 수치</span>
-      <span class="back-section-text" style="font-family:monospace; font-size:0.78rem;">${numbers}</span>
+      <span class="back-section-text" style="font-family:monospace;font-size:0.78rem;">${numbers}</span>
     </div>
-
     <div class="back-risk-meter">
       <span class="back-risk-label">위험도</span>
       <div class="back-risk-bar-track">
         <div class="back-risk-bar-fill"
-             style="width:${score}%; background:${score>=70?"#ef4444":score>=50?"#f97316":score>=30?"#eab308":"#10b981"}">
+             style="width:${score}%;background:${score>=70?"#ef4444":score>=50?"#f97316":score>=30?"#eab308":"#10b981"}">
         </div>
       </div>
-      <span class="back-risk-value" style="color:${score>=70?"#ef4444":score>=50?"#f97316":score>=30?"#eab308":"#10b981"}">
+      <span class="back-risk-value"
+            style="color:${score>=70?"#ef4444":score>=50?"#f97316":score>=30?"#eab308":"#10b981"}">
         ${score.toFixed(0)}/100
       </span>
     </div>
-
     <div class="back-section">
       <span class="back-section-label">🎯 투자자로서 뭘 해야 하나요?</span>
       <span class="back-section-text">${advice}</span>
     </div>
-
     <div class="flip-hint-back">🔄 탭하면 원래 화면으로</div>
   `;
 }
 
 // ──────────────────────────────────────────────
-// 경고등 해설 패널 (앞면 하단)
+// 해설 패널 텍스트
 // ──────────────────────────────────────────────
 const WARNING_EXPLANATIONS = {
   w1: {
@@ -235,12 +220,7 @@ function scoreBarColor(score) {
 }
 
 function gradeClass(grade) {
-  const map = {
-    HIGH:         "grade-HIGH",
-    CRITICAL:     "grade-CRITICAL",
-    PERFECT_STORM:"grade-CRITICAL",
-  };
-  return map[grade] || "";
+  return { HIGH: "grade-HIGH", CRITICAL: "grade-CRITICAL", PERFECT_STORM: "grade-CRITICAL" }[grade] || "";
 }
 
 // ──────────────────────────────────────────────
@@ -253,15 +233,13 @@ function renderDashboard(data) {
 
   drawScoreRing(comp.final_score);
 
-  const compCard = document.getElementById("composite-card");
-  compCard.className = `composite-card ${gradeClass(comp.overall_grade)}`;
+  document.getElementById("composite-card").className = `composite-card ${gradeClass(comp.overall_grade)}`;
 
   const labelEl = document.getElementById("overall-label");
   labelEl.textContent = comp.overall_label;
   labelEl.style.color = comp.overall_color;
 
-  document.getElementById("action-rec").textContent = `📌 ${comp.action_recommended}`;
-
+  document.getElementById("action-rec").textContent  = `📌 ${comp.action_recommended}`;
   const badge = document.getElementById("signal-badge");
   badge.textContent      = signal.signal;
   badge.style.background = signal.signal_color;
@@ -310,16 +288,11 @@ function renderDashboard(data) {
   renderWarningExplanation("w3", warns.w3_credit);
   renderWarningExplanation("w4", warns.w4_ipo);
 
-  // 뒷면 렌더 (raw_data 포함 전달)
-  const backMap = {
-    w1: warns.w1_liquidity,
-    w2: warns.w2_rates,
-    w3: warns.w3_credit,
-    w4: warns.w4_ipo,
-  };
+  // 뒷면
+  const backMap = { w1: warns.w1_liquidity, w2: warns.w2_rates, w3: warns.w3_credit, w4: warns.w4_ipo };
   for (const [prefix, warn] of Object.entries(backMap)) {
-    const backEl = document.getElementById(`back-${prefix}`);
-    if (backEl) backEl.innerHTML = buildBackContent(prefix, warn);
+    const el = document.getElementById(`back-${prefix}`);
+    if (el) el.innerHTML = buildBackContent(prefix, warn);
   }
 
   // 차트
@@ -336,13 +309,13 @@ function renderDashboard(data) {
 }
 
 // ──────────────────────────────────────────────
-// 경고등 앞면 카드 렌더
+// 경고등 앞면 렌더
 // ──────────────────────────────────────────────
 function renderWarningCard(prefix, warn) {
   const card = document.getElementById(`card-${prefix}`);
   if (!card) return;
 
-  card.className = `card-front warning-card ${gradeClass(warn.grade)}`;
+  card.className = `card-front ${gradeClass(warn.grade)}`;
 
   const scoreBadge = document.getElementById(`score-${prefix}`);
   if (scoreBadge) {
@@ -385,8 +358,7 @@ function renderWarningExplanation(prefix, warn) {
   const score = warn.score || 0;
   const grade = warn.grade || "LOW";
 
-  let statusText  = "";
-  let statusClass = "";
+  let statusText = "", statusClass = "";
   if (grade === "CRITICAL") {
     statusText  = "🔴 현재 상황: 위험 수위 초과 — 즉각적인 포트폴리오 점검이 필요합니다.";
     statusClass = "explain-status-red";
@@ -428,25 +400,43 @@ function renderWarningExplanation(prefix, warn) {
 }
 
 // ──────────────────────────────────────────────
-// IPO 테이블
+// IPO 테이블 — 한글 상태값 badge
 // ──────────────────────────────────────────────
 function renderIPOTable(rawData) {
   const el = document.getElementById("ipo-table");
   if (!el || !rawData?.mega_ipo_pipeline) return;
 
+  // CSS 클래스명에 한글이 직접 들어가면 브라우저 호환 문제가 생길 수 있으므로
+  // 상태값 → 영문 CSS 키 변환 맵을 사용합니다
+  const statusClassMap = {
+    "신청완료":   "Filed",
+    "검토중":     "Considering",
+    "공모가확정": "Priced",
+    "거래중":     "Trading",
+    "루머":       "Rumor",
+  };
+
   el.innerHTML = `
     <table class="ipo-table">
       <thead>
-        <tr><th>기업</th><th>섹터</th><th>추정 기업가치</th><th>상태</th></tr>
+        <tr>
+          <th>기업</th>
+          <th>섹터</th>
+          <th>추정 기업가치</th>
+          <th>상태</th>
+        </tr>
       </thead>
       <tbody>
-        ${rawData.mega_ipo_pipeline.map(p => `
+        ${rawData.mega_ipo_pipeline.map(p => {
+          const cssKey = statusClassMap[p.status] || p.status;
+          return `
           <tr>
             <td><strong>${p.company}</strong></td>
             <td>${p.sector}</td>
             <td>$${p.est_valuation_bn}B</td>
-            <td><span class="status-badge status-${p.status}">${p.status}</span></td>
-          </tr>`).join("")}
+            <td><span class="status-badge status-${cssKey}">${p.status}</span></td>
+          </tr>`;
+        }).join("")}
         <tr style="background:rgba(239,68,68,0.08)">
           <td colspan="2"><strong>총 파이프라인</strong></td>
           <td><strong style="color:#ef4444">$${rawData.total_pipeline_bn}B</strong></td>
@@ -457,7 +447,7 @@ function renderIPOTable(rawData) {
 }
 
 // ──────────────────────────────────────────────
-// 히스토리 — 날짜별 1포인트
+// 히스토리 — 날짜별 1포인트, 겹침 없음
 // ──────────────────────────────────────────────
 async function loadHistory() {
   try {
@@ -469,6 +459,7 @@ async function loadHistory() {
       .map(l => { try { return JSON.parse(l); } catch { return null; } })
       .filter(Boolean);
 
+    // 날짜별 중복 제거 (하루 1포인트)
     const byDate = new Map();
     for (const entry of raw) {
       if (entry.date) byDate.set(entry.date, entry);
