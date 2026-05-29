@@ -49,14 +49,17 @@
       </div>
     </section>
 
-    <!-- 4개 경고등 (플립 카드) -->
-    <!-- warnings-grid 에 align-items:stretch 가 적용되어
-         모든 카드가 가장 긴 카드 높이에 맞춰 자동으로 늘어납니다 -->
-    <section class="warnings-grid">
+    <!-- ═══════════════════════════════════════════
+         4개 경고등 카드
+         div.warnings-grid 로 감싸서 section의
+         block formatting context와 완전히 분리
+         ═══════════════════════════════════════════ -->
+    <div class="warnings-grid" id="warnings-grid">
 
       <!-- 경고등 1 — 주도주 압축 -->
       <div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
-        <div class="card-flip-inner">
+        <div class="card-flip-inner" id="inner-w1">
+          <!-- 앞면: 일반 flow → 이 높이가 wrapper 높이 결정 -->
           <div class="card-front" id="card-w1">
             <div class="card-header">
               <span class="card-icon">🔽</span>
@@ -74,13 +77,14 @@
             </div>
             <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
           </div>
+          <!-- 뒷면: absolute, 앞면 크기에 맞춰 덮음 -->
           <div class="card-back" id="back-w1"></div>
         </div>
       </div>
 
       <!-- 경고등 2 — 채권 자경단 & 금리 -->
       <div class="card-flip-wrapper" id="flip-w2" onclick="toggleFlip('w2')">
-        <div class="card-flip-inner">
+        <div class="card-flip-inner" id="inner-w2">
           <div class="card-front" id="card-w2">
             <div class="card-header">
               <span class="card-icon">📈</span>
@@ -104,7 +108,7 @@
 
       <!-- 경고등 3 — 사모 크레딧 환매 -->
       <div class="card-flip-wrapper" id="flip-w3" onclick="toggleFlip('w3')">
-        <div class="card-flip-inner">
+        <div class="card-flip-inner" id="inner-w3">
           <div class="card-front" id="card-w3">
             <div class="card-header">
               <span class="card-icon">🔒</span>
@@ -128,7 +132,7 @@
 
       <!-- 경고등 4 — 대어급 IPO 유동성 -->
       <div class="card-flip-wrapper" id="flip-w4" onclick="toggleFlip('w4')">
-        <div class="card-flip-inner">
+        <div class="card-flip-inner" id="inner-w4">
           <div class="card-front" id="card-w4">
             <div class="card-header">
               <span class="card-icon">🐳</span>
@@ -148,7 +152,7 @@
         </div>
       </div>
 
-    </section>
+    </div><!-- /.warnings-grid -->
 
     <!-- 퍼펙트 스톰 배너 -->
     <section class="storm-section" id="storm-section" style="display:none">
@@ -165,7 +169,11 @@
       </div>
     </section>
 
-    <!-- 위험 스코어 히스토리 — 카드 섹션 완전히 끝난 뒤 배치 -->
+    <!-- ═══════════════════════════════════════════
+         위험 스코어 히스토리
+         warnings-grid div가 끝난 뒤 완전히 독립적인
+         section 블록으로 배치 — 겹침 불가
+         ═══════════════════════════════════════════ -->
     <section class="history-section">
       <h2 class="section-title">📅 위험 스코어 히스토리</h2>
       <div class="history-chart-wrapper">
