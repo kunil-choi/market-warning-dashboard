@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-05-29T10:40:13.636514",
+    "generated_at": "2026-05-29T23:18:14.438065",
     "version": "2.0",
     "source": "김효진 박사 강연 기반 매크로 대시보드"
   },
@@ -35,7 +35,7 @@
         "RSP YTD": "11.46%"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:40:06.654795",
+        "timestamp": "2026-05-29T23:18:09.434328",
         "spy_ytd": 14.34,
         "rsp_ytd": 11.46,
         "qqq_ytd": 23.19,
@@ -619,7 +619,7 @@
         },
         {
           "level": "ORANGE",
-          "msg": "실질 금리 상승 압력 (2.09%)"
+          "msg": "실질 금리 상승 압력 (2.06%)"
         },
         {
           "level": "ORANGE",
@@ -627,19 +627,19 @@
         }
       ],
       "key_metrics": {
-        "10년 국채금리": "4.48%",
-        "자경단 스프레드": "0.84%p",
-        "실질 10년 금리": "2.09%",
+        "10년 국채금리": "4.45%",
+        "자경단 스프레드": "0.81%p",
+        "실질 10년 금리": "2.06%",
         "부채/GDP": "122.6%"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:40:08.262440",
-        "t10y_current": 4.48,
-        "t2y_current": 4.0,
+        "timestamp": "2026-05-29T23:18:10.596843",
+        "t10y_current": 4.45,
+        "t2y_current": 3.99,
         "fed_funds_current": 3.64,
-        "real10y_current": 2.09,
-        "yield_curve_10y2y": 0.48,
-        "vigilante_spread": 0.84,
+        "real10y_current": 2.06,
+        "yield_curve_10y2y": 0.46,
+        "vigilante_spread": 0.81,
         "vigilante_triggered": false,
         "fed_is_cutting": true,
         "t10y_is_rising": true,
@@ -655,7 +655,6 @@
         "history": {
           "t10y": {
             "dates": [
-              "2025-09-08",
               "2025-09-09",
               "2025-09-10",
               "2025-09-11",
@@ -834,10 +833,10 @@
               "2026-05-21",
               "2026-05-22",
               "2026-05-26",
-              "2026-05-27"
+              "2026-05-27",
+              "2026-05-28"
             ],
             "values": [
-              4.05,
               4.08,
               4.04,
               4.01,
@@ -1016,12 +1015,12 @@
               4.57,
               4.56,
               4.5,
-              4.48
+              4.48,
+              4.45
             ]
           },
           "t2y": {
             "dates": [
-              "2025-09-08",
               "2025-09-09",
               "2025-09-10",
               "2025-09-11",
@@ -1200,10 +1199,10 @@
               "2026-05-21",
               "2026-05-22",
               "2026-05-26",
-              "2026-05-27"
+              "2026-05-27",
+              "2026-05-28"
             ],
             "values": [
-              3.49,
               3.54,
               3.54,
               3.52,
@@ -1382,7 +1381,8 @@
               4.08,
               4.13,
               4.01,
-              4.0
+              4.0,
+              3.99
             ]
           },
           "fed_funds": {
@@ -1465,7 +1465,6 @@
           },
           "real10y": {
             "dates": [
-              "2025-09-08",
               "2025-09-09",
               "2025-09-10",
               "2025-09-11",
@@ -1644,10 +1643,10 @@
               "2026-05-21",
               "2026-05-22",
               "2026-05-26",
-              "2026-05-27"
+              "2026-05-27",
+              "2026-05-28"
             ],
             "values": [
-              1.7,
               1.72,
               1.69,
               1.67,
@@ -1826,7 +1825,8 @@
               2.18,
               2.16,
               2.1,
-              2.09
+              2.09,
+              2.06
             ]
           }
         },
@@ -1841,23 +1841,23 @@
       "grade_color": "#00CC44",
       "signals": [],
       "key_metrics": {
-        "HY 스프레드": "271bps",
-        "IG 스프레드": "74bps",
-        "HY 1개월 변화": "-14bps",
+        "HY 스프레드": "272bps",
+        "IG 스프레드": "73bps",
+        "HY 1개월 변화": "-10bps",
         "HYG 거래량 배율": "0.6배"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:40:09.502252",
-        "hy_spread_current": 271.0,
-        "ig_spread_current": 74.0,
-        "hy_change_1m": -14.0,
-        "ig_change_1m": -7.0,
+        "timestamp": "2026-05-29T23:18:11.219529",
+        "hy_spread_current": 272.0,
+        "ig_spread_current": 73.0,
+        "hy_change_1m": -10.0,
+        "ig_change_1m": -8.0,
         "hy_1y_min": 264.0,
         "hy_1y_max": 346.0,
-        "hy_percentile": 11.2,
+        "hy_percentile": 12.5,
         "ig_1y_min": 73.0,
         "ig_1y_max": 94.0,
-        "ig_percentile": 2.1,
+        "ig_percentile": 0.6,
         "hyg_30d_return": 0.37,
         "lqd_30d_return": 0.24,
         "hyg_lqd_relative": 0.14,
@@ -1866,7 +1866,6 @@
         "history": {
           "hy_spread": {
             "dates": [
-              "2025-09-19",
               "2025-09-22",
               "2025-09-23",
               "2025-09-24",
@@ -2045,10 +2044,10 @@
               "2026-05-22",
               "2026-05-25",
               "2026-05-26",
-              "2026-05-27"
+              "2026-05-27",
+              "2026-05-28"
             ],
             "values": [
-              272.0,
               269.0,
               271.0,
               270.0,
@@ -2227,12 +2226,12 @@
               274.0,
               274.0,
               272.0,
-              271.0
+              271.0,
+              272.0
             ]
           },
           "ig_spread": {
             "dates": [
-              "2025-09-19",
               "2025-09-22",
               "2025-09-23",
               "2025-09-24",
@@ -2411,10 +2410,10 @@
               "2026-05-22",
               "2026-05-25",
               "2026-05-26",
-              "2026-05-27"
+              "2026-05-27",
+              "2026-05-28"
             ],
             "values": [
-              74.0,
               74.0,
               75.0,
               75.0,
@@ -2593,7 +2592,8 @@
               74.0,
               74.0,
               74.0,
-              74.0
+              74.0,
+              73.0
             ]
           }
         },
@@ -2609,7 +2609,7 @@
       "signals": [
         {
           "level": "RED",
-          "msg": "⚠️ 가중 IPO 파이프라인 $3946Bn — 역사적 유동성 블랙홀"
+          "msg": "⚠️ 가중 IPO 파이프라인 $4199Bn — 역사적 유동성 블랙홀"
         },
         {
           "level": "ORANGE",
@@ -2621,19 +2621,19 @@
         },
         {
           "level": "YELLOW",
-          "msg": "IPO 관련 뉴스 자동 감지 30건"
+          "msg": "IPO 관련 뉴스 자동 감지 14건"
         }
       ],
       "key_metrics": {
-        "총 IPO 파이프라인": "$4754Bn",
-        "가중 파이프라인": "$3946Bn",
-        "한국 GDP 대비": "2.8배",
-        "VIX": "15.8",
+        "총 IPO 파이프라인": "$5596Bn",
+        "가중 파이프라인": "$4199Bn",
+        "한국 GDP 대비": "3.3배",
+        "VIX": "15.3",
         "IPO ETF 90일": "+28.2%",
         "S-1 제출 건수": "1건"
       },
       "raw_data": {
-        "timestamp": "2026-05-29T10:40:13.636383",
+        "timestamp": "2026-05-29T23:18:14.437935",
         "mega_ipo_pipeline": [
           {
             "company": "SpaceX",
@@ -2643,7 +2643,7 @@
           },
           {
             "company": "OpenAI",
-            "est_valuation_bn": 10.0,
+            "est_valuation_bn": 852,
             "status": "Considering",
             "sector": "AI"
           },
@@ -2666,10 +2666,10 @@
             "sector": "AI/Data"
           }
         ],
-        "total_pipeline_bn": 4754.0,
-        "weighted_pipeline_bn": 3946.0,
-        "estimated_market_impact_bn": 789.0,
-        "pipeline_vs_korea_gdp_ratio": 2.8,
+        "total_pipeline_bn": 5596.0,
+        "weighted_pipeline_bn": 4199.0,
+        "estimated_market_impact_bn": 840.0,
+        "pipeline_vs_korea_gdp_ratio": 3.29,
         "ipo_etf_90d_returns": {
           "IPO": 28.19,
           "IPOS": 12.96
@@ -2677,32 +2677,32 @@
         "recent_ipo_performance": {
           "ARM": {
             "name": "ARM Holdings",
-            "current_price": 335.27,
-            "6m_return": 148.33
+            "current_price": 353.29,
+            "6m_return": 161.68
           },
           "RDDT": {
             "name": "Reddit",
-            "current_price": 167.69,
-            "6m_return": -24.94
+            "current_price": 176.0,
+            "6m_return": -21.22
           },
           "ALAB": {
             "name": "Astera Labs",
-            "current_price": 349.17,
-            "6m_return": 111.37
+            "current_price": 342.85,
+            "6m_return": 107.55
           },
           "KLAR": {
             "name": "Klarna",
-            "current_price": 17.44,
-            "6m_return": -41.94
+            "current_price": 18.29,
+            "6m_return": -39.11
           }
         },
-        "vix_current": 15.85,
+        "vix_current": 15.32,
         "vix_avg_3m": 20.96,
         "vix_is_extreme_low": false,
         "ipo_heat_index": 70,
         "active_ipo_count": 1,
         "considering_ipo_count": 4,
-        "auto_detected_count": 30,
+        "auto_detected_count": 14,
         "status": "ok"
       }
     }
@@ -2717,6 +2717,6 @@
       "bond_vigilante_trigger": false,
       "credit_rollover_trigger": false
     },
-    "generated_at": "2026-05-29T10:40:13.636512"
+    "generated_at": "2026-05-29T23:18:14.438062"
   }
 }
