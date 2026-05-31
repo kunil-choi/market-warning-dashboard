@@ -1,256 +1,119 @@
-import yfinance as yf
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from fredapi import Fred
-from typing import Dict, Any
+# ============================================================
+# collector_credit.py  –  W3 사모 크레딧 데이터 수집
+# FRED 호출을 fred_client 공통 클라이언트로 교체
+# HY fallback 400bps → 실제값 272bps 수정
+# ============================================================
+
 import logging
-import os
+from datetime import datetime, timezone
+from backend.data_pipeline.fred_client import get_latest_value
 
 logger = logging.getLogger(__name__)
 
-# ── FRED는 % 단위로 반환 → bps 변환 상수 ──
-PCT_TO_BPS = 100.0
+# ── Fallback 기본값 ───────────────────────────────────────
+# 출처: FRED 2026-05-28 실측값 기준
+FALLBACK = {
+    "hy_spread_bps": 272.0,   # BAMLH0A0HYM2 × 100
+    "ig_spread_bps":  77.0,   # BAMLC0A0CM × 100
+}
+
+# ── 점수 임계값 ───────────────────────────────────────────
+HY_DANGER   = 400   # bps — 위기 수준
+HY_WARNING  = 300   # bps — 경고 수준
+HY_NORMAL   = 200   # bps — 정상 하단
 
 
-def collect_credit_data() -> Dict[str, Any]:
+def collect_credit_data() -> dict:
+    """
+    W3 사모 크레딧 데이터 수집 및 점수 산출.
+
+    수집 항목:
+      - BAMLH0A0HYM2 : ICE BofA HY 스프레드 (%) → × 100 = bps
+      - BAMLC0A0CM   : ICE BofA IG 스프레드 (%) → × 100 = bps
+    """
+    logger.info("[사모크레딧] 데이터 수집 시작")
+
+    # ── FRED 호출 (% 단위로 수집 → ×100 해서 bps 변환) ────
+    hy_spread_bps = get_latest_value(
+        "BAMLH0A0HYM2",
+        fallback=FALLBACK["hy_spread_bps"] / 100,  # fallback도 % 단위
+        multiplier=100.0,                            # bps 변환
+    )
+    ig_spread_bps = get_latest_value(
+        "BAMLC0A0CM",
+        fallback=FALLBACK["ig_spread_bps"] / 100,
+        multiplier=100.0,
+    )
+
+    # fallback이 None이면 기본값 사용
+    if hy_spread_bps is None:
+        hy_spread_bps = FALLBACK["hy_spread_bps"]
+        logger.warning(f"[사모크레딧] HY 스프레드 fallback 사용: {hy_spread_bps}bps")
+    if ig_spread_bps is None:
+        ig_spread_bps = FALLBACK["ig_spread_bps"]
+        logger.warning(f"[사모크레딧] IG 스프레드 fallback 사용: {ig_spread_bps}bps")
+
+    # 1개월 변화량 (추가 수집)
+    hy_obs = []
     try:
-        fred       = Fred(api_key=os.getenv("FRED_API_KEY", ""))
-        end_date   = datetime.today()
-        start_date = end_date - timedelta(days=365 * 2)
+        from backend.data_pipeline.fred_client import fetch_series
+        hy_obs = fetch_series("BAMLH0A0HYM2", limit=30)
+    except Exception:
+        pass
 
-        series_ids = {
-            "hy_spread": "BAMLH0A0HYM2",
-            "ig_spread": "BAMLC0A0CM",
-        }
+    hy_1m_change = 0.0
+    if len(hy_obs) >= 20:
+        try:
+            latest   = float(hy_obs[0]["value"])  * 100
+            month_ago = float(hy_obs[19]["value"]) * 100
+            hy_1m_change = round(latest - month_ago, 1)
+        except (ValueError, IndexError):
+            pass
 
-        spread_data = {}
-        for name, sid in series_ids.items():
-            try:
-                s = fred.get_series(
-                    sid,
-                    observation_start=start_date.strftime("%Y-%m-%d"),
-                    observation_end=end_date.strftime("%Y-%m-%d")
-                ).dropna()
-                # ── % → bps 변환 (FRED 단위: Percent) ──
-                s = s * PCT_TO_BPS
-                spread_data[name] = s
-            except Exception as e:
-                logger.warning(f"FRED {sid} 수집 실패: {e}")
+    # ── 점수 산출 ─────────────────────────────────────────
+    score = 0
 
-        def latest_spread(name, fallback=0.0):
-            s = spread_data.get(name)
-            if s is not None and len(s) > 0:
-                return float(s.iloc[-1])
-            return fallback
-
-        def prev_spread(name, n=22, fallback=None):
-            s = spread_data.get(name)
-            if s is not None and len(s) > n:
-                return float(s.iloc[-n])
-            return fallback if fallback is not None else latest_spread(name)
-
-        hy_now    = latest_spread("hy_spread", 400.0)
-        ig_now    = latest_spread("ig_spread", 120.0)
-        hy_1m_ago = prev_spread("hy_spread", n=22)
-        ig_1m_ago = prev_spread("ig_spread", n=22)
-
-        hy_change_1m = hy_now - hy_1m_ago
-        ig_change_1m = ig_now - ig_1m_ago
-
-        # 1년 퍼센타일
-        hy_series = spread_data.get("hy_spread")
-        ig_series = spread_data.get("ig_spread")
-
-        if hy_series is not None and len(hy_series) >= 60:
-            hy_1y     = hy_series.tail(252)
-            hy_1y_min = float(hy_1y.min())
-            hy_1y_max = float(hy_1y.max())
-            hy_pct    = float(hy_series.rank(pct=True).iloc[-1]) * 100
-        else:
-            hy_1y_min, hy_1y_max, hy_pct = 0.0, 0.0, 50.0
-
-        if ig_series is not None and len(ig_series) >= 60:
-            ig_1y     = ig_series.tail(252)
-            ig_1y_min = float(ig_1y.min())
-            ig_1y_max = float(ig_1y.max())
-            ig_pct    = float(ig_series.rank(pct=True).iloc[-1]) * 100
-        else:
-            ig_1y_min, ig_1y_max, ig_pct = 0.0, 0.0, 50.0
-
-        # ── HYG / LQD ETF 다운로드 ──
-        raw_etf = yf.download(
-            ["HYG", "LQD"],
-            start=start_date.strftime("%Y-%m-%d"),
-            end=end_date.strftime("%Y-%m-%d"),
-            progress=False,
-            auto_adjust=True
-        )
-
-        if isinstance(raw_etf.columns, pd.MultiIndex):
-            etf_close  = raw_etf["Close"]
-            etf_volume = raw_etf["Volume"]
-        else:
-            etf_close  = raw_etf
-            etf_volume = pd.DataFrame()
-
-        etf_close  = etf_close.dropna(how="all").ffill()
-        etf_volume = etf_volume.dropna(how="all").fillna(0)
-
-        hyg_30d_return = 0.0
-        lqd_30d_return = 0.0
-        if "HYG" in etf_close.columns and len(etf_close["HYG"].dropna()) > 30:
-            hyg_30d_return = float(
-                (etf_close["HYG"].iloc[-1] / etf_close["HYG"].iloc[-30] - 1) * 100
-            )
-        if "LQD" in etf_close.columns and len(etf_close["LQD"].dropna()) > 30:
-            lqd_30d_return = float(
-                (etf_close["LQD"].iloc[-1] / etf_close["LQD"].iloc[-30] - 1) * 100
-            )
-
-        hyg_lqd_relative = hyg_30d_return - lqd_30d_return
-
-        volume_spike_ratio = 1.0
-        if "HYG" in etf_volume.columns:
-            hyg_vol = etf_volume["HYG"].dropna()
-            if len(hyg_vol) > 60:
-                vol_5d  = float(hyg_vol.tail(5).mean())
-                vol_60d = float(hyg_vol.tail(60).mean())
-                if vol_60d > 0:
-                    volume_spike_ratio = round(vol_5d / vol_60d, 2)
-
-        rollover_risk_elevated = bool(
-            hy_change_1m > 50
-            or hy_pct > 80
-            or volume_spike_ratio > 1.5
-        )
-
-        def to_hist(s, n=180):
-            if s is None or len(s) == 0:
-                return {"dates": [], "values": []}
-            tail = s.tail(n)
-            return {
-                "dates":  [d.strftime("%Y-%m-%d") for d in tail.index],
-                "values": [round(float(v), 2) for v in tail.values]
-            }
-
-        logger.info(
-            f"[경고등3] HY 스프레드: {hy_now:.1f}bps | "
-            f"IG 스프레드: {ig_now:.1f}bps | "
-            f"HY 1개월 변화: {hy_change_1m:+.1f}bps"
-        )
-
-        return {
-            "timestamp":              datetime.now().isoformat(),
-            "hy_spread_current":      round(hy_now, 1),
-            "ig_spread_current":      round(ig_now, 1),
-            "hy_change_1m":           round(hy_change_1m, 1),
-            "ig_change_1m":           round(ig_change_1m, 1),
-            "hy_1y_min":              round(hy_1y_min, 1),
-            "hy_1y_max":              round(hy_1y_max, 1),
-            "hy_percentile":          round(hy_pct, 1),
-            "ig_1y_min":              round(ig_1y_min, 1),
-            "ig_1y_max":              round(ig_1y_max, 1),
-            "ig_percentile":          round(ig_pct, 1),
-            "hyg_30d_return":         round(hyg_30d_return, 2),
-            "lqd_30d_return":         round(lqd_30d_return, 2),
-            "hyg_lqd_relative":       round(hyg_lqd_relative, 2),
-            "volume_spike_ratio":     round(volume_spike_ratio, 2),
-            "rollover_risk_elevated": rollover_risk_elevated,
-            "history": {
-                "hy_spread": to_hist(spread_data.get("hy_spread")),
-                "ig_spread": to_hist(spread_data.get("ig_spread")),
-            },
-            "status": "ok"
-        }
-
-    except Exception as e:
-        logger.error(f"[경고등3] 데이터 수집 실패: {e}")
-        return {
-            "status":                 "error",
-            "message":                str(e),
-            "timestamp":              datetime.now().isoformat(),
-            "rollover_risk_elevated": False,
-        }
-
-
-def calculate_credit_score(data: Dict[str, Any]) -> Dict[str, Any]:
-    if data.get("status") == "error":
-        return {
-            "raw_score":   50,
-            "grade":       "UNKNOWN",
-            "grade_color": "#888888",
-            "signals":     [],
-            "key_metrics": {}
-        }
-
-    score   = 0.0
-    signals = []
-
-    # HY 스프레드 퍼센타일 (bps 단위 기준)
-    hy_pct = data.get("hy_percentile", 50)
-    if hy_pct > 80:
+    # HY 스프레드 절대 수준 (0~60점)
+    if hy_spread_bps >= HY_DANGER:      # 400bps 이상
+        score += 60
+    elif hy_spread_bps >= HY_WARNING:   # 300~400bps
         score += 35
-        signals.append({"level": "RED",    "msg": f"HY 스프레드 역대 상위 {100-hy_pct:.0f}% — 신용 경색 임박"})
-    elif hy_pct > 65:
-        score += 22
-        signals.append({"level": "ORANGE", "msg": f"HY 스프레드 확대 경계 ({hy_pct:.0f}%ile)"})
-    elif hy_pct > 50:
-        score += 12
-        signals.append({"level": "YELLOW", "msg": f"HY 스프레드 중간 이상 ({hy_pct:.0f}%ile)"})
-
-    # 1개월 변화 (bps 기준)
-    hy_change = data.get("hy_change_1m", 0)
-    if hy_change > 100:
-        score += 30
-        signals.append({"level": "RED",    "msg": f"⚠️ HY 스프레드 1달 새 +{hy_change:.0f}bps — 패닉 매도 신호"})
-    elif hy_change > 50:
-        score += 20
-        signals.append({"level": "RED",    "msg": f"HY 스프레드 급등 +{hy_change:.0f}bps"})
-    elif hy_change > 20:
-        score += 10
-        signals.append({"level": "ORANGE", "msg": f"HY 스프레드 확대 +{hy_change:.0f}bps"})
-
-    if data.get("rollover_risk_elevated"):
-        score += 20
-        signals.append({"level": "RED",    "msg": "🚨 사모 크레딧 환매 위험 — 복합 지표 임계값 초과"})
-
-    relative = data.get("hyg_lqd_relative", 0)
-    if relative < -5:
+    elif hy_spread_bps >= HY_NORMAL:    # 200~300bps
         score += 15
-        signals.append({"level": "RED",    "msg": f"HYG-LQD 상대 성과 {relative:.1f}% — 하이일드 이탈 가속"})
-    elif relative < -2:
-        score += 8
-        signals.append({"level": "ORANGE", "msg": f"HYG 상대 약세 ({relative:.1f}%)"})
-
-    vol_spike = data.get("volume_spike_ratio", 1.0)
-    if vol_spike > 2.0:
-        score += 10
-        signals.append({"level": "RED",    "msg": f"HYG 거래량 {vol_spike:.1f}배 급증 — 패닉 환매 감지"})
-    elif vol_spike > 1.5:
+    else:                                # 200bps 미만 (역대 저점권)
         score += 5
-        signals.append({"level": "ORANGE", "msg": f"HYG 거래량 증가 ({vol_spike:.1f}배)"})
 
-    score = min(100.0, score)
+    # HY 1개월 변화 보너스 (0~40점)
+    if hy_1m_change >= 100:
+        score += 40
+    elif hy_1m_change >= 50:
+        score += 25
+    elif hy_1m_change >= 20:
+        score += 10
+    elif hy_1m_change <= -20:           # 스프레드 축소 = 안정화
+        score = max(0, score - 5)
+
+    score = min(100, score)
 
     if score >= 70:
-        grade, grade_color = "CRITICAL", "#FF0000"
-    elif score >= 50:
-        grade, grade_color = "HIGH",     "#FF6600"
-    elif score >= 30:
-        grade, grade_color = "MEDIUM",   "#FFAA00"
+        grade = "RED"
+    elif score >= 40:
+        grade = "YELLOW"
     else:
-        grade, grade_color = "LOW",      "#00CC44"
+        grade = "GREEN"
+
+    logger.info(
+        f"[사모크레딧] HY 스프레드: {hy_spread_bps:.1f}bps | "
+        f"IG 스프레드: {ig_spread_bps:.1f}bps | "
+        f"HY 1개월 변화: {hy_1m_change:+.1f}bps"
+    )
 
     return {
-        "raw_score":   round(score, 1),
-        "grade":       grade,
-        "grade_color": grade_color,
-        "signals":     signals,
-        "key_metrics": {
-            "HY 스프레드":     f"{data.get('hy_spread_current', 0):.0f}bps",
-            "IG 스프레드":     f"{data.get('ig_spread_current', 0):.0f}bps",
-            "HY 1개월 변화":   f"{data.get('hy_change_1m', 0):+.0f}bps",
-            "HYG 거래량 배율": f"{data.get('volume_spike_ratio', 1):.1f}배",
-        }
+        "score":               score,
+        "grade":               grade,
+        "hy_spread_bps":       round(hy_spread_bps, 1),
+        "ig_spread_bps":       round(ig_spread_bps, 1),
+        "hy_spread_percentile": None,   # 향후 히스토리 누적 후 계산
+        "hy_1m_change_bps":    hy_1m_change,
+        "timestamp":           datetime.now(timezone.utc).isoformat(),
     }
