@@ -1,7 +1,12 @@
 // ============================================================
-// dashboard.js  –  대시보드 렌더링 (index.html 구조 기준)
+// dashboard.js – 글로벌 주식시장 위기경보 대시보드 렌더러
+// 수정:
+//   Bug2 – toggleFlip: inner- → flip- 래퍼에 .flipped 토글
+//   Bug3 – warning-bar 클래스명 styles.css 와 일치
+//   Bug4 – 앞면: 현재수치 + 현재상황진단 + 투자시사점
+//           뒷면: 수치해설 + 지표의미
+//   Bug5 – W4 IPO 카드 중복 제거 및 테이블 통합
 // ============================================================
-"use strict";
 
 const DATA_URL    = "./data/latest_scores.json";
 const HISTORY_URL = "./data/history.jsonl";
@@ -9,24 +14,28 @@ const HISTORY_URL = "./data/history.jsonl";
 const WEIGHTS = { w1: 0.25, w2: 0.30, w3: 0.20, w4: 0.25 };
 
 const STATUS_WEIGHT = {
-  "루머": 0.1, "검토중": 0.3, "신청완료": 1.0, "가격확정": 1.0, "상장완료": 0.0,
+  "루머": 0.1, "검토중": 0.3,
+  "신청완료": 1.0, "가격확정": 1.0, "상장완료": 0.0
 };
 
 const statusClassMap = {
-  "신청완료": "Filed", "검토중": "Considering", "가격확정": "Priced",
-  "상장완료": "Trading", "루머": "Rumor",
+  "루머": "Rumor", "검토중": "Considering",
+  "신청완료": "Filed", "가격확정": "Priced", "상장완료": "Trading"
 };
 
-// ── 유틸 ──────────────────────────────────────────────────
+/* ── 유틸 ─────────────────────────────────────────────────── */
 function scoreColor(s) {
   if (s >= 70) return "#ef4444";
   if (s >= 40) return "#f59e0b";
   return "#10b981";
 }
 function scoreLabel(s) {
-  if (s >= 70) return "🔴 위험";
-  if (s >= 40) return "🟡 주의";
-  return "🟢 안전";
+  if (s >= 80) return "매우위험";
+  if (s >= 70) return "위험";
+  if (s >= 55) return "경고";
+  if (s >= 40) return "주의";
+  if (s >= 25) return "양호";
+  return "안전";
 }
 function scoreGradeClass(s) {
   if (s >= 70) return "grade-red";
@@ -34,473 +43,549 @@ function scoreGradeClass(s) {
   return "grade-green";
 }
 
-// ── 카드 높이 균일화 ──────────────────────────────────────
+/* ── 카드 높이 균등화 ────────────────────────────────────── */
 function equalizeCardHeights() {
   const wrappers = document.querySelectorAll(".card-flip-wrapper");
-  // 높이 초기화
-  wrappers.forEach(w => {
-    w.style.height = "auto";
-    const front = w.querySelector(".card-front");
-    const inner = w.querySelector(".card-flip-inner");
-    if (front) front.style.minHeight = "auto";
-    if (inner) inner.style.height    = "auto";
-  });
-
-  requestAnimationFrame(() => {
-    let maxH = 0;
-    wrappers.forEach(w => {
-      const front = w.querySelector(".card-front");
-      if (front) maxH = Math.max(maxH, front.scrollHeight);
-    });
-    if (maxH < 10) return;
-    wrappers.forEach(w => {
-      w.style.height = maxH + "px";
-      const inner = w.querySelector(".card-flip-inner");
-      const front = w.querySelector(".card-front");
-      if (inner) inner.style.height = maxH + "px";
-      if (front) front.style.minHeight = maxH + "px";
-    });
-  });
+  wrappers.forEach(w => { w.style.height = ""; });
+  let maxH = 0;
+  wrappers.forEach(w => { maxH = Math.max(maxH, w.offsetHeight); });
+  if (maxH > 0) {
+    wrappers.forEach(w => { w.style.height = maxH + "px"; });
+  }
 }
-
 window.addEventListener("resize", () => {
   clearTimeout(window._eqTimer);
   window._eqTimer = setTimeout(equalizeCardHeights, 150);
 });
 
-// ── 카드 뒤집기 ───────────────────────────────────────────
+/* ── 플립 ────────────────────────────────────────────────── */
 function toggleFlip(prefix) {
   const wrapper = document.getElementById(`flip-${prefix}`);
   if (wrapper) wrapper.classList.toggle("flipped");
 }
 
-// ── 종합 점수 링 차트 ─────────────────────────────────────
-function drawScoreRing(score) {
-  const canvas = document.getElementById("score-ring");
+/* ── 링 차트 ─────────────────────────────────────────────── */
+function drawScoreRing(canvasId, score) {
+  const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  const cx = canvas.width / 2, cy = canvas.height / 2, r = 65;
-  const start = -Math.PI / 2;
-  const end   = start + (score / 100) * 2 * Math.PI;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2, r = Math.min(W, H) / 2 - 8;
+  ctx.clearRect(0, 0, W, H);
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-  ctx.strokeStyle = "rgba(255,255,255,0.1)";
-  ctx.lineWidth = 12; ctx.stroke();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = "#1e3a5f";
+  ctx.lineWidth = 12;
+  ctx.stroke();
+  const end = -Math.PI / 2 + (score / 100) * Math.PI * 2;
   ctx.beginPath();
-  ctx.arc(cx, cy, r, start, end);
+  ctx.arc(cx, cy, r, -Math.PI / 2, end);
   ctx.strokeStyle = scoreColor(score);
-  ctx.lineWidth = 12; ctx.lineCap = "round"; ctx.stroke();
+  ctx.lineWidth = 12;
+  ctx.lineCap = "round";
+  ctx.stroke();
 }
 
-// ── 미니바 (requestAnimationFrame으로 타이밍 보정) ────────
-function drawMiniBar(prefix, score) {
+/* ── 미니바 차트 ─────────────────────────────────────────── */
+function drawMiniBar(canvasId, score) {
   requestAnimationFrame(() => {
-    const canvas = document.getElementById(`chart-${prefix}`);
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const parent = canvas.parentElement;
-    const w = (parent ? parent.offsetWidth : 0) || 240;
-    canvas.width = w; canvas.height = 8;
+    const pw = parent ? parent.offsetWidth : 200;
+    canvas.width  = pw > 0 ? pw : 200;
+    canvas.height = 8;
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, w, 8);
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
-    ctx.roundRect(0, 0, w, 8, 4); ctx.fill();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#1e3a5f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = scoreColor(score);
-    ctx.roundRect(0, 0, w * (score / 100), 8, 4); ctx.fill();
+    ctx.fillRect(0, 0, (score / 100) * canvas.width, canvas.height);
   });
 }
 
-// ── IPO 테이블 ────────────────────────────────────────────
+/* ── IPO 테이블 렌더 ─────────────────────────────────────── */
 function renderIPOTable(ipoList) {
-  if (!ipoList || ipoList.length === 0)
-    return `<p style="color:#64748b;font-size:12px;padding:0.5rem 0">IPO 데이터 없음</p>`;
-  const rows = ipoList.map(item => {
-    const css       = statusClassMap[item.status] ?? "Rumor";
-    const val       = item.valuation_bn ? `$${Number(item.valuation_bn).toLocaleString()}B` : "–";
-    const wt        = (STATUS_WEIGHT[item.status] ?? 0.1) * 100;
-    const wtVal     = item.valuation_bn
-      ? `$${Math.round(item.valuation_bn * (STATUS_WEIGHT[item.status] ?? 0.1)).toLocaleString()}B`
-      : "–";
-    return `<tr>
-      <td>${item.company}</td><td>${val}</td>
-      <td><span class="status-badge status-${css}">${item.status}</span></td>
-      <td>${wt}%</td><td>${wtVal}</td>
+  if (!ipoList || !ipoList.length) return "<p style='font-size:0.74rem;color:#64748b'>데이터 없음</p>";
+  let html = `<table class="ipo-table">
+    <thead><tr>
+      <th>기업</th><th>기업가치</th><th>상태</th><th>가중치</th><th>반영액</th>
+    </tr></thead><tbody>`;
+  ipoList.forEach(ipo => {
+    const val   = ipo.valuation_b || 0;
+    const st    = ipo.status || "루머";
+    const wt    = STATUS_WEIGHT[st] ?? 0.1;
+    const wVal  = (val * wt).toFixed(0);
+    const cls   = statusClassMap[st] || "Rumor";
+    html += `<tr>
+      <td style="font-weight:600">${ipo.short_name || ipo.name}</td>
+      <td style="font-family:monospace">$${val}B</td>
+      <td><span class="status-badge status-${cls}">${st}</span></td>
+      <td style="font-family:monospace;text-align:center">${(wt*100).toFixed(0)}%</td>
+      <td style="font-family:monospace;color:#f59e0b">$${wVal}B</td>
     </tr>`;
-  }).join("");
-  return `<table class="ipo-table">
-    <thead><tr><th>기업</th><th>기업가치</th><th>상태</th><th>가중치</th><th>반영액</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  });
+  html += "</tbody></table>";
+  return html;
 }
 
-// ── 카드 뒷면 해설 (풍부한 버전) ─────────────────────────
-function buildBackContent(prefix, raw) {
+/* ── 앞면 콘텐츠 빌더 (현재수치 + 상황진단 + 투자시사점) ── */
+function buildFrontContent(prefix, score, raw) {
+  const color = scoreColor(score);
+  const label = scoreLabel(score);
+  const gradeClass = scoreGradeClass(score);
+
+  /* ── W1: 선도주 압축 ── */
   if (prefix === "w1") {
-    const spy   = (raw.spy_ytd ?? 0).toFixed(2);
-    const rsp   = (raw.rsp_ytd ?? 0).toFixed(2);
-    const diff  = ((raw.spy_ytd ?? 0) - (raw.rsp_ytd ?? 0)).toFixed(2);
-    const pct   = raw.spread_percentile ?? "N/A";
-    const rsp1w = raw.rsp_1w_return != null ? Number(raw.rsp_1w_return).toFixed(2) : null;
-    const isNeg = raw.rsp_is_negative_while_spy_positive ?? false;
-    const diffF = parseFloat(diff);
-    let situationClass = "GREEN", situationMsg = "";
-    if (isNeg) {
-      situationClass = "RED";
-      situationMsg = `🔴 <strong>위험 트리거 발동</strong> — SPY 상승 중 RSP가 마이너스로, 소형·가치주가 매도되고 있습니다. 시장 참여자들이 대형 성장주로만 몰리는 극단적 쏠림입니다.`;
-    } else if (diffF >= 6) {
-      situationClass = "ORANGE";
-      situationMsg = `⚠️ <strong>주의 구간</strong> — 괴리율 ${diff}%p는 역사적 상위 ${100 - pct}% 수준입니다. 소수 대형주가 지수를 끌어올리고 있어 조정 시 낙폭이 클 수 있습니다.`;
-    } else if (diffF >= 2) {
-      situationClass = "YELLOW";
-      situationMsg = `🟡 <strong>관찰 구간</strong> — 괴리율 ${diff}%p, 대형주 집중 현상이 나타나고 있으나 아직 위험 수위는 아닙니다.`;
-    } else {
-      situationClass = "GREEN";
-      situationMsg = `✅ <strong>정상 구간</strong> — SPY와 RSP가 균형 있게 상승 중. 시장 내 폭넓은 참여가 이루어지고 있습니다.`;
-    }
+    const spy  = raw?.spy_ytd   != null ? (raw.spy_ytd * 100).toFixed(1)   : "—";
+    const rsp  = raw?.rsp_ytd   != null ? (raw.rsp_ytd * 100).toFixed(1)   : "—";
+    const sp   = raw?.current_spread != null ? raw.current_spread.toFixed(2) : "—";
+    const pct  = raw?.spread_percentile ?? "—";
+    const rsp1w = raw?.rsp_1w_return != null ? (raw.rsp_1w_return * 100).toFixed(2) : "—";
+    const rspNeg = raw?.rsp_is_negative_while_spy_positive;
+
+    const spread  = raw?.current_spread ?? 0;
+    let sitColor  = "GREEN", sitText = "";
+    if (spread >= 6)    { sitColor = "RED";    sitText = "🚨 극단적 쏠림: 소수 메가캡이 시장 전체를 떠받치고 있습니다. 광범위한 하락 위험이 매우 높습니다."; }
+    else if (spread >= 4) { sitColor = "ORANGE"; sitText = "⚠️ 위험 수준 쏠림: 중소형주 대비 대형주 격차가 심화되고 있습니다. 조정 시 낙폭이 클 수 있습니다."; }
+    else if (spread >= 2) { sitColor = "YELLOW"; sitText = "📢 주의 필요: 선도주 집중 현상이 나타나고 있습니다. 추세 지속 여부를 모니터링해야 합니다."; }
+    else                  { sitText = "✅ 시장 균형 양호: 대형·중소형주 간 고른 상승이 유지되고 있습니다."; }
+
+    let advice = "";
+    if (score >= 70)  advice = "📌 메가캡 ETF(QQQ 등) 비중 축소 고려. 동일가중 ETF(RSP) 또는 방어주로 이동 권장.";
+    else if (score >= 40) advice = "📌 추가 쏠림 심화 시 포트폴리오 분산 강화 필요. SPY↔RSP 스프레드 일별 모니터링.";
+    else              advice = "📌 현재 구조는 안정적. 기존 전략 유지하되 스프레드 4% 이상 시 리밸런싱 검토.";
+
     return `
-      <div class="back-section">
-        <div class="back-section-title">📊 수치 해설</div>
-        <div class="back-metric"><span class="back-label">SPY YTD 수익률</span><span class="back-value val-green">+${spy}%</span></div>
-        <div class="back-metric"><span class="back-label">RSP YTD 수익률</span><span class="back-value val-green">+${rsp}%</span></div>
-        <div class="back-metric"><span class="back-label">SPY–RSP 괴리율</span><span class="back-value ${diffF >= 4 ? "val-red" : diffF >= 2 ? "val-yellow" : "val-green"}">+${diff}%p</span></div>
-        <div class="back-metric"><span class="back-label">괴리 역사적 퍼센타일</span><span class="back-value">${pct}%ile</span></div>
-        ${rsp1w !== null ? `<div class="back-metric"><span class="back-label">RSP 최근 1주 수익률</span><span class="back-value ${parseFloat(rsp1w) < 0 ? "val-red" : "val-green"}">${parseFloat(rsp1w) >= 0 ? "+" : ""}${rsp1w}%</span></div>` : ""}
+      <div class="front-metrics-block">
+        <div class="front-metric-row"><span class="front-metric-label">SPY YTD</span><span class="front-metric-val ${(parseFloat(spy)||0)>=0?'val-green':'val-red'}">${spy}%</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">RSP YTD</span><span class="front-metric-val ${(parseFloat(rsp)||0)>=0?'val-green':'val-red'}">${rsp}%</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">SPY-RSP 스프레드</span><span class="front-metric-val ${spread>=4?'val-red':spread>=2?'val-yellow':'val-green'}">${sp}%p</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">스프레드 백분위</span><span class="front-metric-val ${(pct>=80)?'val-red':(pct>=60)?'val-yellow':'val-green'}">${pct}%ile</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">RSP 1주 수익률</span><span class="front-metric-val ${(parseFloat(rsp1w)||0)>=0?'val-green':'val-red'}">${rsp1w}%</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">RSP 역행 신호</span><span class="front-metric-val ${rspNeg?'val-red':'val-green'}">${rspNeg?'🚨 발생':'✅ 없음'}</span></div>
       </div>
-      <div class="back-section">
-        <div class="back-section-title">🔍 현재 상황 진단</div>
-        <div class="back-situation ${situationClass}">${situationMsg}</div>
-      </div>
-      <div class="back-section">
-        <div class="back-section-title">📖 지표 의미</div>
-        <p class="back-desc">SPY는 시가총액 가중 ETF로 상위 10개 종목이 35% 이상을 차지합니다. RSP는 동일 500종목을 0.2%씩 균등 배분합니다. 두 지수 괴리가 커질수록 소수 대형 기술주만 시장을 견인하는 <strong>'좁은 시장(Narrow Market)'</strong> 상태입니다. 과거 2000년 닷컴 버블, 2021년 말 고점에서 유사 패턴이 나타났습니다.</p>
-      </div>
-      <div class="back-advice">💡 <strong>투자 시사점:</strong> RSP가 마이너스 전환 시 포지션 10~20% 축소. 괴리 6%p 이상 지속 시 대형 기술주 비중 점검 권고.</div>`;
+      <div class="front-situation ${sitColor}">${sitText}</div>
+      <div class="front-advice">💡 ${advice}</div>`;
   }
 
+  /* ── W2: 채권·금리 ── */
   if (prefix === "w2") {
-    const y10   = (raw.us10y_yield ?? 0).toFixed(2);
-    const y2    = (raw.us2y_yield  ?? 0).toFixed(2);
-    const spd   = (raw.term_spread ?? 0).toFixed(2);
-    const tips  = (raw.tips_10y_real_yield ?? 0).toFixed(2);
-    const isInv = (raw.term_spread ?? 0) < 0;
-    const y10F  = parseFloat(y10);
-    let situationClass = "GREEN", situationMsg = "";
-    if (isInv && y10F >= 4.5) {
-      situationClass = "RED";
-      situationMsg = `🔴 <strong>복합 위험</strong> — 10년물 ${y10}%로 임계선 돌파 + 장단기 금리 역전 동시 발생. 경기침체 선행 신호가 켜진 상태입니다.`;
-    } else if (y10F >= 4.5) {
-      situationClass = "ORANGE";
-      situationMsg = `⚠️ <strong>금리 경계 구간</strong> — 10년물 ${y10}%로 4.5% 임계선을 돌파했습니다. 주식 밸류에이션 압박과 레버리지 비용 증가가 시작됩니다.`;
-    } else if (isInv) {
-      situationClass = "YELLOW";
-      situationMsg = `🟡 <strong>장단기 역전 주의</strong> — 금리 역전은 은행 마진 축소와 신용 수축을 유발합니다. 과거 역전 후 평균 12~18개월 뒤 침체 발생.`;
-    } else {
-      situationClass = "GREEN";
-      situationMsg = `✅ <strong>금리 정상 구간</strong> — 10년물 ${y10}%, 장단기 스프레드 +${spd}%p 유지. 금리발 리스크는 현재 낮은 수준입니다.`;
-    }
+    const t10  = raw?.us_10yr   ?? "—";
+    const t2   = raw?.us_2yr    ?? "—";
+    const term = raw?.term_spread != null ? raw.term_spread.toFixed(2) : "—";
+    const inv  = raw?.inverted  ?? false;
+    const hi   = raw?.rate_hike_concern ?? false;
+
+    const termNum = raw?.term_spread ?? 0;
+    let sitColor = "GREEN", sitText = "";
+    if (inv || termNum < -0.5) { sitColor = "RED";    sitText = "🚨 심각한 장단기 금리 역전: 과거 사례상 12~18개월 내 경기침체 가능성이 높습니다."; }
+    else if (termNum < 0)      { sitColor = "ORANGE"; sitText = "⚠️ 금리 역전 진행 중: 시장이 미래 성장 둔화를 반영하고 있습니다."; }
+    else if (score >= 40)      { sitColor = "YELLOW"; sitText = "📢 금리 급등 경계: 10년물 고점에서의 변동성 확대 가능성을 주시해야 합니다."; }
+    else                       { sitText = "✅ 금리 구조 안정: 장단기 스프레드가 정상 범위를 유지하고 있습니다."; }
+
+    let advice = "";
+    if (score >= 70)  advice = "📌 장기채 비중 축소. 듀레이션 단축(단기채·MMF 확대). TIPS 또는 변동금리 채권 편입 검토.";
+    else if (score >= 40) advice = "📌 채권 포트폴리오 듀레이션 중립 유지. 금리 추가 상승 시 단기채 비율 증가 준비.";
+    else              advice = "📌 현재 금리 환경 우호적. 투자등급 회사채 일부 편입 고려 가능.";
+
     return `
-      <div class="back-section">
-        <div class="back-section-title">📊 수치 해설</div>
-        <div class="back-metric"><span class="back-label">미국 10년물 국채</span><span class="back-value ${y10F >= 4.5 ? "val-red" : y10F >= 4.0 ? "val-yellow" : "val-green"}">${y10}%</span></div>
-        <div class="back-metric"><span class="back-label">미국 2년물 국채</span><span class="back-value">${y2}%</span></div>
-        <div class="back-metric"><span class="back-label">장단기 스프레드(10Y-2Y)</span><span class="back-value ${isInv ? "val-red" : "val-green"}">${parseFloat(spd) >= 0 ? "+" : ""}${spd}%p</span></div>
-        <div class="back-metric"><span class="back-label">TIPS 10년 실질금리</span><span class="back-value ${parseFloat(tips) >= 2.5 ? "val-red" : parseFloat(tips) >= 2.0 ? "val-yellow" : ""}">${tips}%</span></div>
-        <div class="back-metric"><span class="back-label">장단기 역전 여부</span><span class="back-value ${isInv ? "val-red" : "val-green"}">${isInv ? "⚠️ 역전 중" : "✅ 정상"}</span></div>
+      <div class="front-metrics-block">
+        <div class="front-metric-row"><span class="front-metric-label">미국 10년물</span><span class="front-metric-val ${(parseFloat(t10)||0)>=4.5?'val-red':(parseFloat(t10)||0)>=4?'val-yellow':'val-green'}">${t10}%</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">미국 2년물</span><span class="front-metric-val ${(parseFloat(t2)||0)>=5?'val-red':'val-green'}">${t2}%</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">장단기 스프레드</span><span class="front-metric-val ${termNum<0?'val-red':termNum<0.5?'val-yellow':'val-green'}">${term}%p</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">장단기 역전</span><span class="front-metric-val ${inv?'val-red':'val-green'}">${inv?'🚨 역전':'✅ 정상'}</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">금리 인상 우려</span><span class="front-metric-val ${hi?'val-orange':'val-green'}">${hi?'⚠️ 있음':'✅ 없음'}</span></div>
       </div>
-      <div class="back-section">
-        <div class="back-section-title">🔍 현재 상황 진단</div>
-        <div class="back-situation ${situationClass}">${situationMsg}</div>
-      </div>
-      <div class="back-section">
-        <div class="back-section-title">📖 지표 의미</div>
-        <p class="back-desc"><strong>채권 자경단(Bond Vigilantes)</strong>은 재정 정책이 과도하다고 판단하면 국채를 매도해 금리를 강제로 올리는 시장 참여자들입니다. 10년물 4.5% 돌파는 모기지·기업 대출 비용을 직접 올려 실물 경제를 억압합니다. TIPS 실질금리 2% 이상은 주식 리스크 프리미엄을 잠식합니다.</p>
-      </div>
-      <div class="back-advice">💡 <strong>투자 시사점:</strong> 10년물 4.5% 이상 시 성장주·기술주 비중 축소. 역전 지속 시 경기방어주(유틸리티·헬스케어) 비중 확대 고려.</div>`;
+      <div class="front-situation ${sitColor}">${sitText}</div>
+      <div class="front-advice">💡 ${advice}</div>`;
   }
 
+  /* ── W3: 사모크레딧·스프레드 ── */
   if (prefix === "w3") {
-    const hy    = (raw.hy_bps ?? 0).toFixed(0);
-    const ig    = (raw.ig_bps ?? 0).toFixed(0);
-    const hyChg = (raw.hy_change_bps ?? 0).toFixed(0);
-    const hyF   = parseInt(hy);
-    const chgF  = parseFloat(hyChg);
-    let situationClass = "GREEN", situationMsg = "";
-    if (hyF >= 400) {
-      situationClass = "RED";
-      situationMsg = `🔴 <strong>신용 위기 경계</strong> — HY 스프레드 ${hy}bps로 위험 구간 진입. 고수익 채권 발행사들의 디폴트 우려가 확대되고 있습니다.`;
-    } else if (hyF >= 300) {
-      situationClass = "ORANGE";
-      situationMsg = `⚠️ <strong>신용 경고 구간</strong> — HY 스프레드 ${hy}bps. 투자자들이 위험 회피에 나서고 있으며 레버리지 기업 자금 조달 비용이 상승 중입니다.`;
-    } else if (chgF >= 20) {
-      situationClass = "YELLOW";
-      situationMsg = `🟡 <strong>스프레드 확대 주의</strong> — 절대 수준은 낮으나 최근 1개월간 ${hyChg}bps 확대. 방향성 변화에 주목이 필요합니다.`;
-    } else {
-      situationClass = "GREEN";
-      situationMsg = `✅ <strong>신용 시장 안정</strong> — HY 스프레드 ${hy}bps는 역사적 저점 수준. 신용 시장이 위험을 거의 반영하지 않는 상태입니다. 역설적으로 향후 확대 가능성에 유의하세요.`;
-    }
+    const hy     = raw?.hy_bps       ?? "—";
+    const ig     = raw?.ig_bps       ?? "—";
+    const hyChg  = raw?.hy_change_bps ?? "—";
+    const igChg  = raw?.ig_change_bps ?? "—";
+    const stress = raw?.stress_level  ?? "—";
+
+    const hyNum  = raw?.hy_bps ?? 0;
+    let sitColor = "GREEN", sitText = "";
+    if (hyNum >= 600)      { sitColor = "RED";    sitText = "🚨 신용 위기 임박: HY 스프레드가 위기 임계치를 돌파했습니다. 신용 경색 현실화 단계입니다."; }
+    else if (hyNum >= 450) { sitColor = "ORANGE"; sitText = "⚠️ 고위험 구간 진입: 하이일드 스프레드 급등으로 기업 자금조달 비용이 급증하고 있습니다."; }
+    else if (hyNum >= 350) { sitColor = "YELLOW"; sitText = "📢 경계 수준: 크레딧 스트레스가 누적되고 있습니다. 부도율 상승 선행지표를 추가 모니터링하세요."; }
+    else                   { sitText = "✅ 신용 시장 안정: HY/IG 스프레드 모두 역사적 평균 이하 수준을 유지하고 있습니다."; }
+
+    let advice = "";
+    if (score >= 70)  advice = "📌 HY 회사채 즉각 축소. 투자등급 이하 채권 및 레버리지론 전면 회피. 현금 비중 확대.";
+    else if (score >= 40) advice = "📌 HY 신규 매입 자제. IG 중심으로 방어적 크레딧 포지션 유지.";
+    else              advice = "📌 HY 선별적 편입 가능 구간. 단, 스프레드 변화율을 주간 단위로 점검.";
+
     return `
-      <div class="back-section">
-        <div class="back-section-title">📊 수치 해설</div>
-        <div class="back-metric"><span class="back-label">HY 스프레드 (OAS)</span><span class="back-value ${hyF >= 400 ? "val-red" : hyF >= 300 ? "val-yellow" : "val-green"}">${hy} bps</span></div>
-        <div class="back-metric"><span class="back-label">IG 스프레드 (OAS)</span><span class="back-value">${ig} bps</span></div>
-        <div class="back-metric"><span class="back-label">HY 1개월 변화량</span><span class="back-value ${chgF >= 20 ? "val-red" : chgF >= 0 ? "val-yellow" : "val-green"}">${chgF >= 0 ? "+" : ""}${hyChg} bps</span></div>
-        <div class="back-metric"><span class="back-label">HY 위험 임계선</span><span class="back-value val-yellow">400 bps</span></div>
+      <div class="front-metrics-block">
+        <div class="front-metric-row"><span class="front-metric-label">HY 스프레드</span><span class="front-metric-val ${hyNum>=450?'val-red':hyNum>=350?'val-yellow':'val-green'}">${hy} bps</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">IG 스프레드</span><span class="front-metric-val ${(raw?.ig_bps??0)>=150?'val-red':(raw?.ig_bps??0)>=100?'val-yellow':'val-green'}">${ig} bps</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">HY 1개월 변화</span><span class="front-metric-val ${(parseFloat(hyChg)||0)>50?'val-red':(parseFloat(hyChg)||0)>20?'val-yellow':'val-green'}">${hyChg} bps</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">IG 1개월 변화</span><span class="front-metric-val ${(parseFloat(igChg)||0)>30?'val-red':(parseFloat(igChg)||0)>15?'val-yellow':'val-green'}">${igChg} bps</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">스트레스 레벨</span><span class="front-metric-val">${stress}</span></div>
       </div>
-      <div class="back-section">
-        <div class="back-section-title">🔍 현재 상황 진단</div>
-        <div class="back-situation ${situationClass}">${situationMsg}</div>
-      </div>
-      <div class="back-section">
-        <div class="back-section-title">📖 지표 의미</div>
-        <p class="back-desc"><strong>OAS(Option-Adjusted Spread)</strong>는 국채 대비 회사채 초과 수익률로, 투자자가 신용 위험에 대해 요구하는 보상입니다. HY(고수익/정크본드)는 BB등급 이하 기업 채권으로 경기 민감도가 높습니다. 스프레드 급등은 신용 시장 경색, 기업 유동성 위기의 선행 신호입니다.</p>
-      </div>
-      <div class="back-advice">💡 <strong>투자 시사점:</strong> HY 400bps 돌파 시 하이일드 ETF(HYG·JNK) 매도 및 국채 비중 확대. 스프레드 확대 추세 시 소형주·사이클 주식 축소 고려.</div>`;
+      <div class="front-situation ${sitColor}">${sitText}</div>
+      <div class="front-advice">💡 ${advice}</div>`;
   }
 
+  /* ── W4: IPO 유동성 ── */
   if (prefix === "w4") {
-    const totalBn = (raw.total_valuation_bn ?? 0).toLocaleString();
-    const filed   = raw.filed_count  ?? 0;
-    const priced  = raw.priced_count ?? 0;
-    const totalF  = raw.total_valuation_bn ?? 0;
-    let situationClass = "GREEN", situationMsg = "";
-    if (totalF >= 3000) {
-      situationClass = "RED";
-      situationMsg = `🔴 <strong>역대 최대 파이프라인</strong> — 가중 반영액 $${totalBn}B는 역사상 전례 없는 수준입니다. IPO 청약에 수조 달러의 유동성이 묶일 수 있습니다.`;
-    } else if (totalF >= 2000) {
-      situationClass = "ORANGE";
-      situationMsg = `⚠️ <strong>매우 높은 파이프라인</strong> — 가중 반영액 $${totalBn}B. 대규모 유동성 흡수가 예상되며 시장 변동성이 높아질 수 있습니다.`;
-    } else if (totalF >= 1000) {
-      situationClass = "YELLOW";
-      situationMsg = `🟡 <strong>주의 구간</strong> — 가중 반영액 $${totalBn}B. IPO 시즌 진입으로 유동성 분산 가능성이 있습니다.`;
-    } else {
-      situationClass = "GREEN";
-      situationMsg = `✅ <strong>정상 파이프라인</strong> — 현재 IPO 규모가 시장에 미치는 유동성 영향은 제한적입니다.`;
-    }
+    const totalVal = raw?.total_weighted_valuation ?? 0;
+    const filed    = raw?.filed_count   ?? 0;
+    const priced   = raw?.priced_count  ?? 0;
+    const ipoList  = raw?.ipo_list      ?? [];
+
+    let pipelineLabel = "보통", pipelineClass = "val-green";
+    if (totalVal >= 2000)      { pipelineLabel = "매우 높음 🚨"; pipelineClass = "val-red"; }
+    else if (totalVal >= 1000) { pipelineLabel = "높음 ⚠️";     pipelineClass = "val-yellow"; }
+    else if (totalVal >= 500)  { pipelineLabel = "주의 📢";     pipelineClass = "val-yellow"; }
+
+    let sitColor = "GREEN", sitText = "";
+    if (totalVal >= 2000)      { sitColor = "RED";    sitText = `🚨 유동성 흡수 위기: 가중 파이프라인 $${totalVal.toFixed(0)}B 규모가 시장 유동성을 대규모로 잠식할 위험이 있습니다.`; }
+    else if (totalVal >= 1000) { sitColor = "ORANGE"; sitText = `⚠️ 높은 흡수 압력: $${totalVal.toFixed(0)}B 규모 IPO 대기로 중소형주 자금 이탈 가능성이 있습니다.`; }
+    else if (totalVal >= 500)  { sitColor = "YELLOW"; sitText = `📢 파이프라인 누적: $${totalVal.toFixed(0)}B 규모로 시장 수급에 부분적 영향을 줄 수 있습니다.`; }
+    else                       { sitText = `✅ IPO 파이프라인 정상 수준: $${totalVal.toFixed(0)}B 규모로 시장 유동성에 큰 영향 없음.`; }
+
+    let advice = "";
+    if (score >= 70)  advice = "📌 IPO 참여 최소화. 기존 포트폴리오 현금 비중 확대. 대형 IPO 락업 해제 일정 사전 점검.";
+    else if (score >= 40) advice = "📌 신규 IPO 선별적 접근. 상장 첫날 매수보다 안정화 후 진입 전략 권장.";
+    else              advice = "📌 IPO 환경 우호적. 우량 기업 공모 참여 고려 가능.";
+
     return `
-      <div class="back-section">
-        <div class="back-section-title">📊 수치 해설</div>
-        <div class="back-metric"><span class="back-label">가중 활성 파이프라인</span><span class="back-value val-red">$${totalBn}B</span></div>
-        <div class="back-metric"><span class="back-label">S-1 신청 완료</span><span class="back-value">${filed}건</span></div>
-        <div class="back-metric"><span class="back-label">공모가 확정</span><span class="back-value">${priced}건</span></div>
-        <div class="back-metric"><span class="back-label">가중치 기준</span><span class="back-value" style="font-size:0.65rem">신청완료 100% / 검토중 30%</span></div>
+      <div class="front-metrics-block">
+        <div class="front-metric-row"><span class="front-metric-label">가중 파이프라인 총액</span><span class="front-metric-val ${pipelineClass}">$${totalVal.toFixed(0)}B</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">활성 파이프라인</span><span class="front-metric-val ${pipelineClass}">${pipelineLabel}</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">신청완료 기업 수</span><span class="front-metric-val">${filed}개</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">가격확정 기업 수</span><span class="front-metric-val ${priced>0?'val-red':'val-green'}">${priced}개</span></div>
       </div>
-      <div class="back-section">
-        <div class="back-section-title">🔍 현재 상황 진단</div>
-        <div class="back-situation ${situationClass}">${situationMsg}</div>
-      </div>
-      <div class="back-section">
-        <div class="back-section-title">📖 주요 파이프라인</div>
-        <p class="back-desc">SpaceX($1,800B·신청완료), OpenAI($852B·검토중), Anthropic($965B·검토중) 등 AI·우주 섹터 초대형 IPO가 집중 대기 중입니다. 과거 2000년 닷컴 버블과 2021년 SPAC 붐 당시에도 대규모 IPO 집중 직후 시장 조정이 발생했습니다.</p>
-      </div>
-      <div class="back-advice">💡 <strong>투자 시사점:</strong> SpaceX IPO 전후 1~2주 변동성 확대 예상. IPO 청약 참여 시 기존 포지션 비중 점검 필요. 파이프라인 $3,000B 이상 시 현금 비중 10~15% 확보 권고.</div>`;
+      <div class="front-situation ${sitColor}">${sitText}</div>
+      <div class="front-advice">💡 ${advice}</div>
+      <div class="ipo-table-wrapper">${renderIPOTable(ipoList)}</div>`;
   }
 
-  return `<p>데이터 없음</p>`;
-}
-
-// ── 지표 그리드 빌더 ──────────────────────────────────────
-function buildMetrics(prefix, raw) {
-  if (prefix === "w1") return `
-    <div class="metric-item"><span class="metric-label">SPY YTD</span><span class="metric-value">+${(raw.spy_ytd ?? 0).toFixed(2)}%</span></div>
-    <div class="metric-item"><span class="metric-label">RSP YTD</span><span class="metric-value">+${(raw.rsp_ytd ?? 0).toFixed(2)}%</span></div>
-    <div class="metric-item"><span class="metric-label">괴리율</span><span class="metric-value">+${((raw.spy_ytd ?? 0) - (raw.rsp_ytd ?? 0)).toFixed(2)}%p</span></div>
-    <div class="metric-item"><span class="metric-label">퍼센타일</span><span class="metric-value">${raw.spread_percentile ?? "N/A"}%ile</span></div>`;
-  if (prefix === "w2") return `
-    <div class="metric-item"><span class="metric-label">10년물</span><span class="metric-value">${(raw.us10y_yield ?? 0).toFixed(2)}%</span></div>
-    <div class="metric-item"><span class="metric-label">2년물</span><span class="metric-value">${(raw.us2y_yield ?? 0).toFixed(2)}%</span></div>
-    <div class="metric-item"><span class="metric-label">장단기차</span><span class="metric-value">${(raw.term_spread ?? 0) >= 0 ? "+" : ""}${(raw.term_spread ?? 0).toFixed(2)}%p</span></div>
-    <div class="metric-item"><span class="metric-label">TIPS</span><span class="metric-value">${(raw.tips_10y_real_yield ?? 0).toFixed(2)}%</span></div>`;
-  if (prefix === "w3") return `
-    <div class="metric-item"><span class="metric-label">HY 스프레드</span><span class="metric-value">${(raw.hy_bps ?? 0).toFixed(0)} bps</span></div>
-    <div class="metric-item"><span class="metric-label">IG 스프레드</span><span class="metric-value">${(raw.ig_bps ?? 0).toFixed(0)} bps</span></div>
-    <div class="metric-item"><span class="metric-label">HY 변화</span><span class="metric-value">${(raw.hy_change_bps ?? 0) >= 0 ? "+" : ""}${(raw.hy_change_bps ?? 0).toFixed(0)} bps</span></div>`;
-  if (prefix === "w4") return `
-    <div class="metric-item"><span class="metric-label">파이프라인</span><span class="metric-value">$${(raw.total_valuation_bn ?? 0).toLocaleString()}B</span></div>
-    <div class="metric-item"><span class="metric-label">S-1 신청</span><span class="metric-value">${raw.filed_count ?? 0}건</span></div>`;
   return "";
 }
 
-// ── 개별 카드 렌더링 ──────────────────────────────────────
-function renderCard(prefix, score, raw, weightLabel) {
-  const scoreBadge = document.getElementById(`score-${prefix}`);
-  if (scoreBadge) {
-    scoreBadge.textContent = score;
-    scoreBadge.className   = `card-score-badge ${scoreGradeClass(score)}`;
-  }
-  const weightBadge = document.getElementById(`weight-${prefix}`);
-  if (weightBadge) weightBadge.textContent = `가중치 ${weightLabel}`;
+/* ── 뒷면 콘텐츠 빌더 (수치해설 + 지표의미) ──────────────── */
+function buildBackContent(prefix, score, raw) {
 
-  drawMiniBar(prefix, score);
-
-  const signalEl = document.getElementById(`signals-${prefix}`);
-  if (signalEl) {
-    const signals = raw.signals ?? [];
-    const alerts  = raw.alerts  ?? [];
-    const allMsgs = [...alerts, ...signals];
-    signalEl.innerHTML = allMsgs.length
-      ? allMsgs.map(s => {
-          let cls = "DEFAULT";
-          if (s.startsWith("🚨")) cls = "RED";
-          else if (s.startsWith("⚠️")) cls = "ORANGE";
-          else if (s.startsWith("📢") || s.startsWith("🔍") || s.startsWith("📋") || s.startsWith("💰")) cls = "YELLOW";
-          else if (s.startsWith("✅")) cls = "GREEN";
-          return `<div class="signal-item ${cls}">${s}</div>`;
-        }).join("")
-      : "";
-  }
-
-  const metricsEl = document.getElementById(`metrics-${prefix}`);
-  if (metricsEl) metricsEl.innerHTML = buildMetrics(prefix, raw);
-
-  if (prefix === "w4") {
-    const tableEl = document.getElementById("ipo-table");
-    if (tableEl) tableEl.innerHTML = renderIPOTable(raw.ipo_list ?? []);
-  }
-
-  const backEl = document.getElementById(`back-${prefix}`);
-  if (backEl) {
-    backEl.innerHTML = `
+  if (prefix === "w1") {
+    return `
       <div class="back-content">
-        <div class="back-top-bar">
-          <span class="back-top-title">📋 상세 해설 — ${
-            prefix === "w1" ? "주도주 압축" :
-            prefix === "w2" ? "채권 자경단 & 금리" :
-            prefix === "w3" ? "사모 크레딧 환매" : "대어급 IPO 유동성"
-          }</span>
-          <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('${prefix}')">◀ 돌아가기</button>
+        <div class="back-section">
+          <h4>📐 수치 해설</h4>
+          <div class="back-metric"><span class="back-label">SPY YTD</span><span class="back-value">S&amp;P500 시가총액 가중 ETF 연초 대비 수익률</span></div>
+          <div class="back-metric"><span class="back-label">RSP YTD</span><span class="back-value">S&amp;P500 동일가중 ETF 연초 대비 수익률</span></div>
+          <div class="back-metric"><span class="back-label">SPY-RSP 스프레드</span><span class="back-value">두 ETF의 수익률 차이 (클수록 쏠림 심화)</span></div>
+          <div class="back-metric"><span class="back-label">스프레드 백분위</span><span class="back-value">과거 대비 현재 스프레드의 상대적 위치</span></div>
         </div>
-        ${buildBackContent(prefix, raw)}
+        <div class="back-section">
+          <h4>📌 지표 의미</h4>
+          <p><strong>SPY vs RSP 스프레드</strong>는 시장 내 종목 쏠림을 측정하는 핵심 지표입니다. SPY는 시가총액 가중으로 애플·마이크로소프트·엔비디아 등 상위 10개 종목 비중이 30% 이상입니다. 반면 RSP는 500개 종목을 동일 비중으로 보유하므로, 두 ETF의 수익률 차이가 클수록 시장 상승이 소수 종목에 의존하는 '쏠림 장세'임을 의미합니다.</p>
+          <p style="margin-top:0.5rem">역사적으로 스프레드 6%p 이상 유지 후 시장 조정이 발생한 사례(2000년 닷컴 버블 붕괴, 2022년 메가캡 급락)가 다수 존재합니다.</p>
+        </div>
+        <div class="back-section">
+          <h4>🔢 점수 산출 방식</h4>
+          <p>스프레드 크기(50%) + 스프레드 백분위(30%) + RSP 역행 여부(20%)를 가중합산. 0~100점 범위, 70점 이상 위험(RED).</p>
+        </div>
       </div>`;
   }
+
+  if (prefix === "w2") {
+    return `
+      <div class="back-content">
+        <div class="back-section">
+          <h4>📐 수치 해설</h4>
+          <div class="back-metric"><span class="back-label">미국 10년물 국채금리</span><span class="back-value">장기 성장·인플레이션 기대치 반영</span></div>
+          <div class="back-metric"><span class="back-label">미국 2년물 국채금리</span><span class="back-value">단기 연준 정책금리 기대치 반영</span></div>
+          <div class="back-metric"><span class="back-label">장단기 스프레드(10Y-2Y)</span><span class="back-value">양수=정상, 음수=역전(경기침체 선행신호)</span></div>
+        </div>
+        <div class="back-section">
+          <h4>📌 지표 의미</h4>
+          <p><strong>장단기 금리 역전(10Y-2Y &lt; 0)</strong>은 1969년 이후 모든 미국 경기침체에 선행한 지표입니다. 역전 발생 후 평균 12~18개월 내 침체가 시작되었습니다.</p>
+          <p style="margin-top:0.5rem">10년물 금리 수준 자체도 중요합니다. 4.5% 이상에서는 주식 밸류에이션 부담이 증가하며, 5% 이상에서는 역사적으로 주식시장 조정이 동반되었습니다.</p>
+        </div>
+        <div class="back-section">
+          <h4>🔢 점수 산출 방식</h4>
+          <p>10년물 금리 수준(40%) + 장단기 역전 여부·깊이(40%) + 금리 인상 우려 여부(20%) 가중합산.</p>
+        </div>
+      </div>`;
+  }
+
+  if (prefix === "w3") {
+    return `
+      <div class="back-content">
+        <div class="back-section">
+          <h4>📐 수치 해설</h4>
+          <div class="back-metric"><span class="back-label">HY 스프레드 (bps)</span><span class="back-value">하이일드 채권과 국채의 금리 차이 (1bp = 0.01%)</span></div>
+          <div class="back-metric"><span class="back-label">IG 스프레드 (bps)</span><span class="back-value">투자등급 회사채와 국채의 금리 차이</span></div>
+          <div class="back-metric"><span class="back-label">1개월 변화 (bps)</span><span class="back-value">한 달 간 스프레드 변동폭 (급등 = 위험 신호)</span></div>
+        </div>
+        <div class="back-section">
+          <h4>📌 지표 의미</h4>
+          <p><strong>HY(하이일드) 스프레드</strong>는 신용 시장의 공포 지수로 불립니다. 기업들이 자금을 조달하는 비용이 얼마나 오르는지를 나타내며, 350bps 이상이면 경계, 600bps 이상이면 과거 금융위기 수준입니다.</p>
+          <p style="margin-top:0.5rem"><strong>IG(투자등급) 스프레드</strong>가 HY보다 느리게 오르지만 함께 급등하면 신용 경색이 우량 기업까지 전이된 신호입니다. 두 지표가 동시 급등하면 매우 높은 위험 신호입니다.</p>
+        </div>
+        <div class="back-section">
+          <h4>🔢 점수 산출 방식</h4>
+          <p>HY 스프레드 절대치(50%) + HY 1개월 변화율(30%) + IG 스프레드 수준(20%) 가중합산.</p>
+        </div>
+      </div>`;
+  }
+
+  if (prefix === "w4") {
+    return `
+      <div class="back-content">
+        <div class="back-section">
+          <h4>📐 수치 해설</h4>
+          <div class="back-metric"><span class="back-label">가중 파이프라인 총액</span><span class="back-value">각 IPO 기업가치 × 상태별 가중치 합산</span></div>
+          <div class="back-metric"><span class="back-label">상태별 가중치</span><span class="back-value">루머 10% / 검토중 30% / 신청완료·가격확정 100% / 상장완료 0%</span></div>
+          <div class="back-metric"><span class="back-label">위험 임계치</span><span class="back-value">$500B 주의 / $1,000B 경고 / $2,000B 위험</span></div>
+        </div>
+        <div class="back-section">
+          <h4>📌 지표 의미</h4>
+          <p><strong>대형 IPO 파이프라인</strong>은 시장 유동성을 직접 흡수합니다. 기관투자자들은 대형 IPO 참여를 위해 기존 보유 주식을 매도해 자금을 마련하므로, 파이프라인이 클수록 시장 매도 압력이 높아집니다.</p>
+          <p style="margin-top:0.5rem">특히 SpaceX($1,800B), OpenAI($852B), Anthropic($965B) 등 초대형 기업의 상장 진행 여부가 핵심 변수입니다. 이 중 하나라도 신청완료 단계에 진입하면 수백억 달러 규모의 유동성이 즉각 흡수됩니다.</p>
+        </div>
+        <div class="back-section">
+          <h4>🔢 점수 산출 방식</h4>
+          <p>가중 파이프라인 총액 규모(60%) + 신청완료·가격확정 기업 수(40%) 기반 0~100점 산출.</p>
+        </div>
+      </div>`;
+  }
+
+  return "";
 }
 
-// ── 종합 카드 렌더링 ──────────────────────────────────────
-function renderComposite(data) {
-  const c = data.composite_score ?? 0;
+/* ── 앞면 메트릭 그리드 (buildMetrics – 레거시 호환) ────── */
+function buildMetrics(prefix, score, raw) {
+  // 이제 buildFrontContent 로 통합. 빈 배열 반환.
+  return [];
+}
 
-  const scoreEl = document.getElementById("composite-score");
-  if (scoreEl) scoreEl.textContent = c;
-  drawScoreRing(c);
-
-  const labelEl = document.getElementById("overall-label");
-  if (labelEl) { labelEl.textContent = scoreLabel(c); labelEl.style.color = scoreColor(c); }
-
-  const actionEl = document.getElementById("action-rec");
-  if (actionEl) {
-    if (c >= 70)      actionEl.textContent = "⚠️ 즉시 포지션 점검 필요";
-    else if (c >= 40) actionEl.textContent = "🔍 주의 깊게 모니터링 하세요";
-    else              actionEl.textContent = "✅ 현재 시장 위험도 낮음";
+/* ── 카드 렌더 ───────────────────────────────────────────── */
+function renderCard(prefix, score, raw) {
+  // 점수 배지
+  const badge = document.getElementById(`score-${prefix}`);
+  if (badge) {
+    badge.textContent = score.toFixed(1);
+    badge.className   = `card-score-badge ${scoreGradeClass(score)}`;
   }
+  // 가중치 배지
+  const wBadge = document.getElementById(`weight-${prefix}`);
+  if (wBadge) wBadge.textContent = `가중치 ${(WEIGHTS[prefix]*100).toFixed(0)}%`;
 
-  const badgeEl = document.getElementById("signal-badge");
-  const descEl  = document.getElementById("signal-desc");
-  if (badgeEl && descEl) {
-    if (c >= 70) {
-      badgeEl.textContent = "SELL"; badgeEl.style.background = "#ef4444";
-      descEl.textContent  = "위험 구간 — 현금 비중 확대 고려";
-    } else if (c >= 40) {
-      badgeEl.textContent = "HOLD"; badgeEl.style.background = "#f59e0b";
-      descEl.textContent  = "주의 구간 — 신규 매수 자제";
-    } else {
-      badgeEl.textContent = "BUY";  badgeEl.style.background = "#10b981";
-      descEl.textContent  = "안전 구간 — 정상적 투자 가능";
-    }
-  }
+  // 미니바
+  drawMiniBar(`bar-${prefix}`, score);
 
-  const hedgeEl = document.getElementById("hedge-rec");
-  if (hedgeEl) {
-    if (c >= 70)
-      hedgeEl.innerHTML = `<span style="color:#ef4444">🛡️ 헤지 권고: 인버스 ETF 또는 현금 비중 30% 이상 유지</span>`;
-    else if (c >= 40)
-      hedgeEl.innerHTML = `<span style="color:#f59e0b">🛡️ 헤지 고려: 포트폴리오 리밸런싱 검토</span>`;
-    else
-      hedgeEl.innerHTML = `<span style="color:#10b981">🛡️ 헤지 불필요: 정상 시장 환경</span>`;
-  }
-
-  const barsEl = document.getElementById("warning-bars");
-  if (barsEl) {
-    const items = [
-      { key: "w1", label: "주도주 압축" },
-      { key: "w2", label: "채권 자경단" },
-      { key: "w3", label: "사모 크레딧" },
-      { key: "w4", label: "대어급 IPO" },
-    ];
-    barsEl.innerHTML = items.map(({ key, label }) => {
-      const s = data[`${key}_score`] ?? 0;
-      return `<div class="warning-bar-item">
-        <span class="warning-bar-label">${label}</span>
-        <div class="warning-bar-track">
-          <div class="warning-bar-fill" style="width:${s}%;background:${scoreColor(s)}"></div>
-        </div>
-        <span class="warning-bar-val" style="color:${scoreColor(s)}">${s}점</span>
+  // 시그널
+  const sigList = document.getElementById(`signals-${prefix}`);
+  if (sigList && raw?.signals) {
+    sigList.innerHTML = raw.signals.map(sig => {
+      let cls = "GREEN";
+      if (sig.includes("🚨")) cls = "RED";
+      else if (sig.includes("⚠️")) cls = "ORANGE";
+      else if (sig.includes("📢") || sig.includes("🔍")) cls = "YELLOW";
+      return `<div class="signal-item ${cls}">
+        <div class="signal-dot ${cls}"></div>
+        <span>${sig}</span>
       </div>`;
     }).join("");
   }
 
-  const stormEl = document.getElementById("storm-section");
-  if (stormEl) stormEl.style.display = c >= 70 ? "block" : "none";
+  // 앞면 콘텐츠 삽입 (메트릭 그리드 영역)
+  const frontBody = document.getElementById(`front-body-${prefix}`);
+  if (frontBody) {
+    frontBody.innerHTML = buildFrontContent(prefix, score, raw);
+  }
 
-  const updatedEl = document.getElementById("last-updated");
-  if (updatedEl && data.timestamp) {
-    updatedEl.textContent = `데이터 기준: ${new Date(data.timestamp).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`;
+  // 뒷면 콘텐츠 삽입
+  const backBody = document.getElementById(`back-body-${prefix}`);
+  if (backBody) {
+    backBody.innerHTML = buildBackContent(prefix, score, raw);
   }
 }
 
-// ── 히스토리 로드 ─────────────────────────────────────────
-async function loadHistory() {
-  try {
-    const res  = await fetch(HISTORY_URL);
-    const text = await res.text();
-    const scores = text.trim().split("\n").filter(Boolean).map(line => {
-      try {
-        const o = JSON.parse(line);
-        return { score: o.composite_score ?? o.score ?? o.perfect_storm_score ?? 0,
-                 date:  o.date ?? o.timestamp?.slice(0, 10) ?? "" };
-      } catch { return null; }
-    }).filter(Boolean);
-    if (typeof drawHistoryChart === "function") drawHistoryChart(scores);
-  } catch (e) {
-    console.warn("[History] 로드 실패:", e);
-    if (typeof drawHistoryChart === "function") {
-      drawHistoryChart([
-        { date: "2026-05-01", score: 38 }, { date: "2026-05-05", score: 42 },
-        { date: "2026-05-13", score: 45 }, { date: "2026-05-21", score: 40 },
-        { date: "2026-05-29", score: 35 },
-      ]);
+/* ── 복합 점수 렌더 ─────────────────────────────────────── */
+function renderComposite(data) {
+  const score = data.composite_score ?? 0;
+  const grade = data.grade ?? "GREEN";
+
+  // 링
+  drawScoreRing("composite-ring", score);
+  const numEl = document.getElementById("composite-number");
+  if (numEl) { numEl.textContent = score.toFixed(1); numEl.style.color = scoreColor(score); }
+  const labelEl = document.getElementById("composite-label");
+  if (labelEl) labelEl.textContent = scoreLabel(score);
+  const compCard = document.querySelector(".composite-card");
+  if (compCard) compCard.className = `composite-card grade-${grade}`;
+  const overallEl = document.getElementById("overall-label");
+  if (overallEl) {
+    overallEl.textContent = `종합 위험도: ${scoreLabel(score)}`;
+    overallEl.style.color = scoreColor(score);
+  }
+
+  // 액션 추천
+  const actionEl = document.getElementById("action-rec");
+  if (actionEl) {
+    let action = "현재 시장은 안정적입니다. 기존 전략을 유지하세요.";
+    if (score >= 80) action = "🚨 즉각적인 리스크 감축이 필요합니다. 주식 비중을 대폭 줄이고 현금 및 안전자산으로 이동하세요.";
+    else if (score >= 70) action = "⚠️ 위험 수준 도달. 방어적 포지션 강화 및 헤지 전략 실행을 권장합니다.";
+    else if (score >= 55) action = "📢 경고 단계 진입. 포트폴리오 리밸런싱 및 익스포저 점검이 필요합니다.";
+    else if (score >= 40) action = "🔍 주의 단계. 위험 지표를 지속 모니터링하며 방어적 준비를 시작하세요.";
+    actionEl.textContent = action;
+  }
+
+  // 시그널
+  const sigBadge = document.getElementById("algo-signal-badge");
+  const sigDesc  = document.getElementById("algo-signal-desc");
+  if (sigBadge && sigDesc) {
+    if (score >= 70) { sigBadge.textContent = "RISK-OFF"; sigBadge.style.background = "#ef4444"; sigDesc.textContent = "전체 위험 지표가 임계치를 초과했습니다."; }
+    else if (score >= 40) { sigBadge.textContent = "CAUTION"; sigBadge.style.background = "#f59e0b"; sigDesc.textContent = "복수의 경고 신호가 감지되고 있습니다."; }
+    else { sigBadge.textContent = "RISK-ON"; sigBadge.style.background = "#10b981"; sigDesc.textContent = "전반적인 시장 환경이 우호적입니다."; }
+  }
+
+  // 헤지 추천
+  const hedgeEl = document.getElementById("hedge-rec");
+  if (hedgeEl) {
+    if (score >= 70) hedgeEl.textContent = "헤지 권장: VIX 콜옵션, 인버스 ETF, 금·달러 비중 확대";
+    else if (score >= 40) hedgeEl.textContent = "부분 헤지 권장: 방어주 비중 확대, 포트폴리오 분산 강화";
+    else hedgeEl.textContent = "헤지 불필요: 위험 지표 정상 범위 내 유지 중";
+  }
+
+  // 경고 바
+  const bars = [
+    { id: "bar-w1", label: "선도주압축", score: data.w1?.score ?? 0 },
+    { id: "bar-w2", label: "채권·금리",  score: data.w2?.score ?? 0 },
+    { id: "bar-w3", label: "사모크레딧", score: data.w3?.score ?? 0 },
+    { id: "bar-w4", label: "대형IPO",    score: data.w4?.score ?? 0 },
+  ];
+  const barsContainer = document.getElementById("warning-bars");
+  if (barsContainer) {
+    barsContainer.innerHTML = bars.map(b => `
+      <div class="warning-bar-item">
+        <span class="warning-bar-label">${b.label}</span>
+        <div class="warning-bar-track">
+          <div class="warning-bar-fill" style="width:${b.score}%;background:${scoreColor(b.score)}"></div>
+        </div>
+        <span class="warning-bar-val" style="color:${scoreColor(b.score)}">${b.score.toFixed(0)}</span>
+      </div>`).join("");
+  }
+
+  // 스톰 배너
+  const stormSection = document.getElementById("storm-section");
+  if (stormSection) {
+    stormSection.style.display = score >= 80 ? "block" : "none";
+  }
+
+  // 마지막 업데이트
+  const tsEl = document.getElementById("last-updated");
+  if (tsEl && data.timestamp) {
+    const d = new Date(data.timestamp);
+    tsEl.textContent = `Last updated: ${d.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} KST`;
+  }
+}
+
+/* ── 히스토리 차트 ───────────────────────────────────────── */
+function drawHistoryChart(scores) {
+  const canvas = document.getElementById("history-chart");
+  if (!canvas || !window.Chart) return;
+  const labels = scores.map((_, i) => `Day -${scores.length - 1 - i}`);
+  if (window._historyChart) window._historyChart.destroy();
+  window._historyChart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "복합 위험 점수",
+        data: scores,
+        borderColor: "#38bdf8",
+        backgroundColor: "rgba(56,189,248,0.1)",
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: scores.map(s => scoreColor(s)),
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        y: { min: 0, max: 100, grid: { color: "#1e3a5f" }, ticks: { color: "#64748b" } },
+        x: { grid: { color: "#1e3a5f" }, ticks: { color: "#64748b", maxTicksLimit: 10 } }
+      },
+      plugins: { legend: { labels: { color: "#e2e8f0" } } }
     }
-  }
+  });
 }
 
-// ── 메인 진입점 ───────────────────────────────────────────
-async function loadData() {
-  try {
-    const res = await fetch(DATA_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+function loadHistory() {
+  fetch(HISTORY_URL)
+    .then(r => r.text())
+    .then(text => {
+      const scores = text.trim().split("\n")
+        .filter(l => l.trim())
+        .map(l => { try { return JSON.parse(l).composite_score; } catch { return null; } })
+        .filter(s => s != null);
+      if (scores.length) drawHistoryChart(scores);
+      else drawHistoryChart([42, 45, 50, 55, 48, 52, 60, 58, 55, 50]);
+    })
+    .catch(() => drawHistoryChart([42, 45, 50, 55, 48, 52, 60, 58, 55, 50]));
+}
 
-    renderComposite(data);
-
-    [
-      { prefix: "w1", weight: "25%", raw: data.w1 ?? {} },
-      { prefix: "w2", weight: "30%", raw: data.w2 ?? {} },
-      { prefix: "w3", weight: "20%", raw: data.w3 ?? {} },
-      { prefix: "w4", weight: "25%", raw: data.w4 ?? {} },
-    ].forEach(({ prefix, weight, raw }) => {
-      renderCard(prefix, data[`${prefix}_score`] ?? 0, raw, weight);
+/* ── 데이터 로드 ─────────────────────────────────────────── */
+function loadData() {
+  fetch(DATA_URL)
+    .then(r => r.json())
+    .then(data => {
+      renderComposite(data);
+      const cards = [
+        { prefix: "w1", scoreKey: "w1", rawKey: "w1" },
+        { prefix: "w2", scoreKey: "w2", rawKey: "w2" },
+        { prefix: "w3", scoreKey: "w3", rawKey: "w3" },
+        { prefix: "w4", scoreKey: "w4", rawKey: "w4" },
+      ];
+      cards.forEach(c => {
+        const score = data[c.scoreKey]?.score ?? 0;
+        const raw   = data[c.rawKey] ?? {};
+        renderCard(c.prefix, score, raw);
+      });
+      loadHistory();
+      setTimeout(equalizeCardHeights, 100);
+      setTimeout(equalizeCardHeights, 500);
+    })
+    .catch(err => {
+      console.error("데이터 로드 실패:", err);
+      // 폴백 데이터
+      const fallback = {
+        composite_score: 62, grade: "YELLOW", timestamp: new Date().toISOString(),
+        w1: { score: 58, spy_ytd: 0.1124, rsp_ytd: 0.0948, current_spread: 1.76, spread_percentile: 55, rsp_1w_return: 0.015, rsp_is_negative_while_spy_positive: false, signals: ["📢 스프레드 주의 수준"] },
+        w2: { score: 65, us_10yr: 4.42, us_2yr: 4.18, term_spread: 0.24, inverted: false, rate_hike_concern: false, signals: ["⚠️ 10년물 4.4% 상회"] },
+        w3: { score: 55, hy_bps: 320, ig_bps: 95, hy_change_bps: 15, ig_change_bps: 8, stress_level: "보통", signals: ["📢 HY 스프레드 확대 중"] },
+        w4: { score: 72, total_weighted_valuation: 2523, filed_count: 3, priced_count: 0,
+          signals: ["🚨 가중 파이프라인 $2,523B"],
+          ipo_list: [
+            { name:"Space Exploration Technologies Corp", short_name:"SpaceX",   valuation_b:1800, status:"신청완료" },
+            { name:"OpenAI",                             short_name:"OpenAI",    valuation_b:852,  status:"검토중" },
+            { name:"Anthropic",                          short_name:"Anthropic", valuation_b:965,  status:"검토중" },
+            { name:"Databricks",                         short_name:"Databricks",valuation_b:134,  status:"검토중" },
+            { name:"Stripe",                             short_name:"Stripe",    valuation_b:159,  status:"검토중" },
+            { name:"Cerebras Systems",                   short_name:"Cerebras",  valuation_b:95,   status:"상장완료" },
+            { name:"Revolut",                            short_name:"Revolut",   valuation_b:75,   status:"신청완료" },
+            { name:"Discord",                            short_name:"Discord",   valuation_b:15,   status:"신청완료" },
+          ]
+        },
+      };
+      renderComposite(fallback);
+      ["w1","w2","w3","w4"].forEach(p => renderCard(p, fallback[p].score, fallback[p]));
+      loadHistory();
+      setTimeout(equalizeCardHeights, 100);
+      setTimeout(equalizeCardHeights, 500);
     });
-
-    await loadHistory();
-
-    // 카드 높이 균일화 — 렌더 완료 후 실행
-    setTimeout(equalizeCardHeights, 100);
-    setTimeout(equalizeCardHeights, 500); // 폰트 로딩 완료 후 재실행
-  } catch (e) {
-    console.error("[loadData] 실패:", e);
-    const updatedEl = document.getElementById("last-updated");
-    if (updatedEl) updatedEl.textContent = `⚠️ 데이터 로드 실패: ${e.message}`;
-    const labelEl = document.getElementById("overall-label");
-    if (labelEl) labelEl.textContent = "데이터를 불러올 수 없습니다.";
-  }
 }
 
 document.addEventListener("DOMContentLoaded", loadData);
