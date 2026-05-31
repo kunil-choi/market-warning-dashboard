@@ -1,35 +1,16 @@
 // ============================================================
-// dashboard.js  –  대시보드 렌더링 및 인터랙션
-// 수정사항:
-//   Bug Fix 1 – STATUS_WEIGHT 상수 추가 (ReferenceError 해결)
-//   Bug Fix 2 – Anthropic 기업가치 $900B → $965B 텍스트 수정
-//   Bug Fix 3 – loadHistory() 완료 후 equalizeCardHeights() 재호출
+// dashboard.js  –  대시보드 렌더링 (index.html 구조 기준)
 // ============================================================
 
 "use strict";
 
-// ── 데이터 URL ────────────────────────────────────────────
 const DATA_URL    = "./data/latest_scores.json";
 const HISTORY_URL = "./data/history.jsonl";
 
-// ── 가중치 설정 ───────────────────────────────────────────
-const WEIGHTS = {
-  w1: 0.25,
-  w2: 0.30,
-  w3: 0.20,
-  w4: 0.25,
-};
+// ── 가중치 ────────────────────────────────────────────────
+const WEIGHTS = { w1: 0.25, w2: 0.30, w3: 0.20, w4: 0.25 };
 
-const WEIGHT_LABELS = {
-  w1: "25%",
-  w2: "30%",
-  w3: "20%",
-  w4: "25%",
-};
-
-// ── IPO 상태별 가중치 ─────────────────────────────────────
-// ✅ Bug Fix 1: STATUS_WEIGHT 미정의 ReferenceError 해결
-// 백엔드 collector_ipo.py 의 STATUS_WEIGHT 와 동기화
+// ── IPO 상태별 가중치 (백엔드 동기화) ─────────────────────
 const STATUS_WEIGHT = {
   "루머":     0.1,
   "검토중":   0.3,
@@ -38,220 +19,191 @@ const STATUS_WEIGHT = {
   "상장완료": 0.0,
 };
 
-// ── IPO 상태 → CSS 클래스 매핑 ───────────────────────────
+// ── IPO 상태 → CSS 클래스 ────────────────────────────────
 const statusClassMap = {
-  "신청완료":   "Filed",
-  "검토중":     "Considering",
-  "공모가확정": "Priced",
-  "거래중":     "Trading",
-  "루머":       "Rumor",
-  "상장완료":   "Trading",
+  "신청완료": "Filed",
+  "검토중":   "Considering",
+  "가격확정": "Priced",
+  "상장완료": "Trading",
+  "루머":     "Rumor",
 };
 
-// ── 등급별 색상 ───────────────────────────────────────────
-const GRADE_COLOR = {
-  GREEN:  "#27ae60",
-  YELLOW: "#f39c12",
-  RED:    "#e74c3c",
-};
+// ──────────────────────────────────────────────────────────
+// 유틸
+// ──────────────────────────────────────────────────────────
 
-// ── 점수별 CSS 클래스 ─────────────────────────────────────
-function gradeClass(score) {
-  if (score >= 70) return "grade-red";
-  if (score >= 40) return "grade-yellow";
-  return "grade-green";
-}
-
-function scoreBarColor(score) {
-  if (score >= 70) return "#e74c3c";
-  if (score >= 40) return "#f39c12";
+function scoreColor(s) {
+  if (s >= 70) return "#e74c3c";
+  if (s >= 40) return "#f39c12";
   return "#27ae60";
 }
 
+function scoreLabel(s) {
+  if (s >= 70) return "🔴 위험";
+  if (s >= 40) return "🟡 주의";
+  return "🟢 안전";
+}
 
-// ════════════════════════════════════════════════════════════
+function scoreGradeClass(s) {
+  if (s >= 70) return "grade-red";
+  if (s >= 40) return "grade-yellow";
+  return "grade-green";
+}
+
+// ──────────────────────────────────────────────────────────
 // 카드 뒤집기
-// ════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────
 
 function toggleFlip(prefix) {
   const inner = document.getElementById(`inner-${prefix}`);
-  if (!inner) return;
-  inner.classList.toggle("flipped");
+  if (inner) inner.classList.toggle("flipped");
 }
 
+// ──────────────────────────────────────────────────────────
+// 종합 점수 링 차트 (Canvas)
+// ──────────────────────────────────────────────────────────
 
-// ════════════════════════════════════════════════════════════
-// 카드 높이 균일화
-// ════════════════════════════════════════════════════════════
+function drawScoreRing(score) {
+  const canvas = document.getElementById("score-ring");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r  = 65;
+  const start = -Math.PI / 2;
+  const end   = start + (score / 100) * 2 * Math.PI;
 
-function equalizeCardHeights() {
-  const prefixes = ["w1", "w2", "w3", "w4"];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 1단계: 높이 리셋
-  prefixes.forEach(p => {
-    const inner = document.getElementById(`inner-${p}`);
-    if (inner) inner.style.height = "auto";
-  });
+  // 배경 트랙
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.lineWidth   = 12;
+  ctx.stroke();
 
-  // 2단계: 레이아웃 완료 후 실측
-  requestAnimationFrame(() => {
-    let maxH = 0;
-    prefixes.forEach(p => {
-      const front = document.getElementById(`card-${p}`);
-      if (front) maxH = Math.max(maxH, front.offsetHeight);
-    });
-
-    if (maxH > 0) {
-      prefixes.forEach(p => {
-        const inner = document.getElementById(`inner-${p}`);
-        if (inner) inner.style.height = `${maxH}px`;
-      });
-    }
-  });
+  // 점수 호
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, start, end);
+  ctx.strokeStyle = scoreColor(score);
+  ctx.lineWidth   = 12;
+  ctx.lineCap     = "round";
+  ctx.stroke();
 }
 
-// 리사이즈 이벤트 연결 (중복 방지)
-window.removeEventListener("resize", equalizeCardHeights);
-window.addEventListener("resize", equalizeCardHeights);
+// ──────────────────────────────────────────────────────────
+// 개별 카드 미니 차트 (점수 바)
+// ──────────────────────────────────────────────────────────
 
+function drawMiniBar(prefix, score) {
+  const canvas = document.getElementById(`chart-${prefix}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.parentElement.offsetWidth || 260;
+  canvas.width  = w;
+  canvas.height = 8;
+  ctx.clearRect(0, 0, w, 8);
 
-// ════════════════════════════════════════════════════════════
-// 카드 뒷면 콘텐츠 생성
-// ════════════════════════════════════════════════════════════
+  // 배경
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  ctx.roundRect(0, 0, w, 8, 4);
+  ctx.fill();
+
+  // 점수 바
+  ctx.fillStyle = scoreColor(score);
+  ctx.roundRect(0, 0, w * (score / 100), 8, 4);
+  ctx.fill();
+}
+
+// ──────────────────────────────────────────────────────────
+// IPO 테이블
+// ──────────────────────────────────────────────────────────
+
+function renderIPOTable(ipoList) {
+  if (!ipoList || ipoList.length === 0) {
+    return `<p style="color:#888;font-size:12px;">IPO 데이터 없음</p>`;
+  }
+  const rows = ipoList.map(item => {
+    const css        = statusClassMap[item.status] ?? "Rumor";
+    const valuation  = item.valuation_bn ? `$${item.valuation_bn.toLocaleString()}B` : "–";
+    const weight     = (STATUS_WEIGHT[item.status] ?? 0.1) * 100;
+    const weightedBn = item.valuation_bn
+      ? `$${Math.round(item.valuation_bn * (STATUS_WEIGHT[item.status] ?? 0.1)).toLocaleString()}B`
+      : "–";
+    return `
+      <tr>
+        <td>${item.company}</td>
+        <td>${valuation}</td>
+        <td><span class="status-badge status-${css}">${item.status}</span></td>
+        <td>${weight}%</td>
+        <td>${weightedBn}</td>
+      </tr>`;
+  }).join("");
+
+  return `
+    <table class="ipo-table">
+      <thead>
+        <tr><th>기업</th><th>기업가치</th><th>상태</th><th>가중치</th><th>반영액</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ──────────────────────────────────────────────────────────
+// 카드 뒷면 콘텐츠
+// ──────────────────────────────────────────────────────────
 
 function buildBackContent(prefix, raw) {
-  // ── W1: 주도주 압축 ────────────────────────────────────
   if (prefix === "w1") {
-    const spy   = (raw.spy_ytd  ?? 0).toFixed(2);
-    const rsp   = (raw.rsp_ytd  ?? 0).toFixed(2);
+    const spy   = (raw.spy_ytd ?? 0).toFixed(2);
+    const rsp   = (raw.rsp_ytd ?? 0).toFixed(2);
     const diff  = ((raw.spy_ytd ?? 0) - (raw.rsp_ytd ?? 0)).toFixed(2);
     const pct   = raw.spread_percentile ?? "N/A";
-    const rsp1w = raw.rsp_1w_return != null
-                  ? (raw.rsp_1w_return).toFixed(2)
-                  : null;
+    const rsp1w = raw.rsp_1w_return != null ? Number(raw.rsp_1w_return).toFixed(2) : null;
     const isNeg = raw.rsp_is_negative_while_spy_positive ?? false;
 
-    const rsp1wHtml = rsp1w !== null
-      ? `<div class="back-metric">
-           <span class="back-label">RSP 1주 수익률</span>
-           <span class="back-value ${parseFloat(rsp1w) < 0 ? "val-red" : "val-green"}">
-             ${rsp1w > 0 ? "+" : ""}${rsp1w}%
-           </span>
-         </div>`
-      : "";
-
-    const warningHtml = isNeg
-      ? `<p class="back-warning">🔴 SPY 상승 중 RSP 마이너스 — 진짜 위험 트리거 발동</p>`
-      : `<p class="back-ok">✅ RSP 양수 유지 — 소외주 동반 상승 중</p>`;
-
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
-        <div class="back-metric">
-          <span class="back-label">SPY YTD (시가총액 가중)</span>
-          <span class="back-value">+${spy}%</span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">RSP YTD (동일 가중)</span>
-          <span class="back-value">+${rsp}%</span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">SPY–RSP 괴리율</span>
-          <span class="back-value val-red">+${diff}%p</span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">괴리 퍼센타일</span>
-          <span class="back-value">${pct}%ile</span>
-        </div>
-        ${rsp1wHtml}
+        <div class="back-metric"><span class="back-label">SPY YTD</span><span class="back-value">+${spy}%</span></div>
+        <div class="back-metric"><span class="back-label">RSP YTD</span><span class="back-value">+${rsp}%</span></div>
+        <div class="back-metric"><span class="back-label">SPY–RSP 괴리율</span><span class="back-value val-red">+${diff}%p</span></div>
+        <div class="back-metric"><span class="back-label">괴리 퍼센타일</span><span class="back-value">${pct}%ile</span></div>
+        ${rsp1w !== null ? `<div class="back-metric"><span class="back-label">RSP 1주 수익률</span><span class="back-value ${parseFloat(rsp1w) < 0 ? "val-red" : "val-green"}">${parseFloat(rsp1w) >= 0 ? "+" : ""}${rsp1w}%</span></div>` : ""}
       </div>
-
       <div class="back-section">
         <h4>🔍 지금 어떤 상황인가?</h4>
-        <p>
-          <strong>SPY</strong>는 엔비디아·애플·마이크로소프트 등 대형주에
-          자동으로 비중이 쏠리는 시가총액 가중 ETF입니다.
-          <strong>RSP</strong>는 같은 500개 종목을 동일 비중으로 담은 ETF입니다.
-        </p>
-        <p>
-          현재 두 ETF의 연초 대비 수익률 차이가 <strong>${diff}%p</strong>로,
-          이는 역대 데이터 중 상위 <strong>${pct}%ile</strong> 수준입니다.
-          쉽게 말해, 지금처럼 대형주와 나머지 종목 사이의 격차가 이렇게
-          벌어진 적이 역사적으로 거의 없었다는 의미입니다.
-        </p>
-        ${warningHtml}
-        <p class="back-advice">
-          💡 <strong>투자 시사점:</strong>
-          RSP가 플러스를 유지하는 동안은 시장 전반의 붕괴보다
-          대형주 쏠림 현상에 가깝습니다. RSP가 마이너스로 전환되면
-          포지션 축소를 고려하세요.
-        </p>
-      </div>
-    `;
+        <p>SPY는 대형주 비중이 높은 시총 가중 ETF, RSP는 같은 500종목을 동일 비중으로 담습니다. 괴리가 클수록 대형주 쏠림이 심하다는 의미입니다.</p>
+        ${isNeg
+          ? `<p class="back-warning">🔴 SPY 상승 중 RSP 마이너스 — 위험 트리거 발동</p>`
+          : `<p class="back-ok">✅ RSP 양수 유지 — 소외주 동반 상승 중</p>`}
+        <p class="back-advice">💡 RSP가 마이너스로 전환되면 포지션 축소를 고려하세요.</p>
+      </div>`;
   }
 
-  // ── W2: 채권 자경단 (금리) ─────────────────────────────
   if (prefix === "w2") {
-    const y10     = (raw.us10y_yield         ?? 0).toFixed(2);
-    const y2      = (raw.us2y_yield          ?? 0).toFixed(2);
-    const termSprd = ((raw.us10y_yield ?? 0) - (raw.us2y_yield ?? 0)).toFixed(2);
-    const realYld = (raw.tips_10y_real_yield ?? 0).toFixed(2);
-    const isInv   = parseFloat(termSprd) < 0;
+    const y10    = (raw.us10y_yield ?? 0).toFixed(2);
+    const y2     = (raw.us2y_yield  ?? 0).toFixed(2);
+    const spread = ((raw.us10y_yield ?? 0) - (raw.us2y_yield ?? 0)).toFixed(2);
+    const tips   = (raw.tips_10y_real_yield ?? 0).toFixed(2);
+    const isInv  = parseFloat(spread) < 0;
 
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
-        <div class="back-metric">
-          <span class="back-label">미국 10년물 국채금리</span>
-          <span class="back-value ${parseFloat(y10) >= 4.5 ? "val-red" : ""}">
-            ${y10}%
-          </span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">미국 2년물 국채금리</span>
-          <span class="back-value">${y2}%</span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">장단기 금리차 (10Y–2Y)</span>
-          <span class="back-value ${isInv ? "val-red" : "val-green"}">
-            ${parseFloat(termSprd) >= 0 ? "+" : ""}${termSprd}%p
-          </span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">10년 실질금리 (TIPS)</span>
-          <span class="back-value">${realYld}%</span>
-        </div>
+        <div class="back-metric"><span class="back-label">미국 10년물</span><span class="back-value ${parseFloat(y10) >= 4.5 ? "val-red" : ""}">${y10}%</span></div>
+        <div class="back-metric"><span class="back-label">미국 2년물</span><span class="back-value">${y2}%</span></div>
+        <div class="back-metric"><span class="back-label">장단기 스프레드</span><span class="back-value ${isInv ? "val-red" : "val-green"}">${parseFloat(spread) >= 0 ? "+" : ""}${spread}%p</span></div>
+        <div class="back-metric"><span class="back-label">TIPS 실질금리</span><span class="back-value">${tips}%</span></div>
       </div>
-
       <div class="back-section">
         <h4>🔍 지금 어떤 상황인가?</h4>
-        <p>
-          채권 시장의 큰손(자경단)들이 금리를 높게 유지하면
-          주식 시장에서 돈이 빠져나가는 효과가 생깁니다.
-          <strong>10년물 금리 4.5%</strong>가 핵심 임계선으로,
-          이를 돌파하면 주식 밸류에이션 압박이 본격화됩니다.
-        </p>
-        <p>
-          현재 10년물은 <strong>${y10}%</strong>입니다.
-          ${parseFloat(y10) >= 4.5
-            ? "⚠️ 임계선 4.5%를 <strong>돌파</strong>한 상태입니다. 주식 시장 압박 구간입니다."
-            : `임계선 4.5%까지 <strong>${(4.5 - parseFloat(y10)).toFixed(2)}%p</strong> 여유가 있습니다.`
-          }
-        </p>
-        ${isInv
-          ? `<p class="back-warning">🔴 장단기 금리 역전 — 경기침체 선행 신호</p>`
-          : `<p class="back-ok">✅ 장단기 금리차 정상 (역전 없음)</p>`
-        }
-        <p class="back-advice">
-          💡 <strong>투자 시사점:</strong>
-          10년물 금리가 4.5% 이상에서 유지되거나 상승하면
-          성장주·기술주 비중 축소를 고려하세요.
-        </p>
-      </div>
-    `;
+        <p>10년물 4.5%가 핵심 임계선입니다. 현재 ${y10}%로 ${parseFloat(y10) >= 4.5 ? "⚠️ 임계선을 <strong>돌파</strong>한 상태입니다." : `임계선까지 ${(4.5 - parseFloat(y10)).toFixed(2)}%p 여유가 있습니다.`}</p>
+        ${isInv ? `<p class="back-warning">🔴 장단기 금리 역전 — 경기침체 선행 신호</p>` : `<p class="back-ok">✅ 장단기 금리차 정상</p>`}
+        <p class="back-advice">💡 10년물이 4.5% 이상 유지되면 성장주 비중 축소를 고려하세요.</p>
+      </div>`;
   }
 
-  // ── W3: 사모 크레딧 ────────────────────────────────────
   if (prefix === "w3") {
     const hy    = (raw.hy_spread_bps ?? raw.hy_bps ?? 0).toFixed(0);
     const ig    = (raw.ig_spread_bps ?? raw.ig_bps ?? 0).toFixed(0);
@@ -260,365 +212,259 @@ function buildBackContent(prefix, raw) {
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
-        <div class="back-metric">
-          <span class="back-label">HY 스프레드 (고수익채권)</span>
-          <span class="back-value ${
-            parseInt(hy) >= 400 ? "val-red"
-            : parseInt(hy) >= 300 ? "val-yellow"
-            : "val-green"
-          }">
-            ${hy} bps
-          </span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">IG 스프레드 (투자등급채권)</span>
-          <span class="back-value">${ig} bps</span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">HY 스프레드 퍼센타일</span>
-          <span class="back-value">${hyPct}%ile</span>
-        </div>
+        <div class="back-metric"><span class="back-label">HY 스프레드</span><span class="back-value ${parseInt(hy) >= 400 ? "val-red" : parseInt(hy) >= 300 ? "val-yellow" : "val-green"}">${hy} bps</span></div>
+        <div class="back-metric"><span class="back-label">IG 스프레드</span><span class="back-value">${ig} bps</span></div>
+        <div class="back-metric"><span class="back-label">HY 퍼센타일</span><span class="back-value">${hyPct}%ile</span></div>
       </div>
-
       <div class="back-section">
         <h4>🔍 지금 어떤 상황인가?</h4>
-        <p>
-          스프레드는 국채 대비 회사채의 추가 이자율입니다.
-          기업들이 돈을 빌릴 때 얼마나 더 많은 이자를 내야 하는지를
-          보여주는 지표로, 높을수록 시장의 불안감이 크다는 신호입니다.
-        </p>
-        <p>
-          현재 고수익채권(HY) 스프레드는 <strong>${hy}bps</strong>,
-          투자등급(IG) 스프레드는 <strong>${ig}bps</strong>입니다.
-          HY 300bps 미만은 역사적 저점권으로 시장이 매우 낙관적임을 의미합니다.
-          ${parseInt(hy) < 300
-            ? "지금은 그 낮은 수준입니다 — 역설적으로 향후 스프레드 확대 리스크가 존재합니다."
-            : parseInt(hy) >= 400
-              ? "⚠️ 400bps 돌파 — 신용 위기 경계 구간입니다."
-              : "현재는 정상~주의 구간입니다."
-          }
-        </p>
-        <p class="back-advice">
-          💡 <strong>투자 시사점:</strong>
-          HY 스프레드가 급격히 400bps 이상으로 확대되면
-          신용 경색 초입 신호로 해석하고 위험자산 비중을 줄이세요.
-        </p>
-      </div>
-    `;
+        <p>HY 스프레드 ${hy}bps — ${parseInt(hy) < 300 ? "역사적 저점권. 향후 확대 리스크 존재." : parseInt(hy) >= 400 ? "⚠️ 400bps 돌파 — 신용 위기 경계." : "정상~주의 구간."}</p>
+        <p class="back-advice">💡 HY 스프레드가 400bps 이상으로 급등하면 위험자산 비중을 줄이세요.</p>
+      </div>`;
   }
 
-  // ── W4: 대어급 IPO ─────────────────────────────────────
   if (prefix === "w4") {
     const totalBn = (raw.total_valuation_bn ?? raw.total_weighted_bn ?? 0).toLocaleString();
     const filed   = raw.filed_count  ?? 0;
     const priced  = raw.priced_count ?? 0;
-    const ipoList = raw.ipo_list     ?? [];
 
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
-        <div class="back-metric">
-          <span class="back-label">가중 IPO 파이프라인</span>
-          <span class="back-value ${
-            parseFloat(String(totalBn).replace(/,/g, "")) >= 1500
-              ? "val-red" : "val-yellow"
-          }">
-
-            $${totalBn}B
-          </span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">S-1 신청완료 건수</span>
-          <span class="back-value">${filed}건</span>
-        </div>
-        <div class="back-metric">
-          <span class="back-label">공모가 확정 건수</span>
-          <span class="back-value">${priced}건</span>
-        </div>
+        <div class="back-metric"><span class="back-label">가중 파이프라인</span><span class="back-value val-red">$${totalBn}B</span></div>
+        <div class="back-metric"><span class="back-label">S-1 신청완료</span><span class="back-value">${filed}건</span></div>
+        <div class="back-metric"><span class="back-label">공모가 확정</span><span class="back-value">${priced}건</span></div>
       </div>
-
       <div class="back-section">
         <h4>🔍 지금 어떤 상황인가?</h4>
-        <p>
-          대형 IPO가 줄줄이 예정되면 기관·개인 투자자들의 현금이
-          주식 시장에서 빠져나와 IPO 청약에 쏠립니다.
-          이를 <strong>유동성 흡수</strong> 효과라고 합니다.
-        </p>
-        <p>
-          현재 가중 파이프라인은 <strong>$${totalBn}B</strong>입니다.
-          스페이스X($1,800B)의 역대 최대 IPO를 포함해
-          OpenAI($852B), Anthropic($965B) 등이 줄줄이 대기 중으로,
-          역사상 전례 없는 규모입니다.
-        </p>
-        <p>
-          <strong>가중치 계산 방식:</strong> S-1 신청완료 기업은 100%,
-          검토중은 30%, 루머는 10%의 기업가치만 파이프라인에 반영합니다.
-          $1,500B 초과 시 HIGH 위험 등급입니다.
-        </p>
-        <p class="back-advice">
-          💡 <strong>투자 시사점:</strong>
-          스페이스X IPO(6월 12일 예정) 전후로 시장 유동성이
-          일시적으로 타이트해질 수 있습니다.
-          청약 참여 계획이 없다면 IPO 당일 전후 변동성에 주의하세요.
-        </p>
-      </div>
-    `;
+        <p>대형 IPO가 줄줄이 예정되면 유동성이 IPO 청약에 쏠립니다. 현재 SpaceX($1,800B), OpenAI($852B), Anthropic($965B) 등 역사상 전례 없는 규모의 파이프라인이 대기 중입니다.</p>
+        <p><strong>가중치:</strong> 신청완료 100%, 검토중 30%, 루머 10%, 상장완료 0%</p>
+        <p class="back-advice">💡 SpaceX IPO(6월 12일 예정) 전후 변동성에 주의하세요.</p>
+      </div>`;
   }
 
   return `<p>데이터 없음</p>`;
 }
 
+// ──────────────────────────────────────────────────────────
+// 개별 카드 렌더링 (index.html 기존 DOM 요소 업데이트)
+// ──────────────────────────────────────────────────────────
 
-// ════════════════════════════════════════════════════════════
-// 가중치 적용 종합점수 계산
-// ════════════════════════════════════════════════════════════
-
-function calcWeightedScore(raw) {
-  const s1 = (raw.w1_score ?? 0) * WEIGHTS.w1;
-  const s2 = (raw.w2_score ?? 0) * WEIGHTS.w2;
-  const s3 = (raw.w3_score ?? 0) * WEIGHTS.w3;
-  const s4 = (raw.w4_score ?? 0) * WEIGHTS.w4;
-  return Math.min(100, Math.round((s1 + s2 + s3 + s4) * 10) / 10);
-}
-
-
-// ════════════════════════════════════════════════════════════
-// IPO 테이블 렌더링
-// ════════════════════════════════════════════════════════════
-
-function renderIPOTable(ipoList) {
-  if (!ipoList || ipoList.length === 0) {
-    return `<p class="no-data">IPO 데이터 없음</p>`;
+function renderCard(prefix, score, raw, weightLabel) {
+  // 점수 배지
+  const scoreBadge = document.getElementById(`score-${prefix}`);
+  if (scoreBadge) {
+    scoreBadge.textContent = score;
+    scoreBadge.className   = `card-score-badge ${scoreGradeClass(score)}`;
   }
 
-  const rows = ipoList.map(item => {
-    const cssKey     = statusClassMap[item.status] ?? "Rumor";
-    const valuation  = item.valuation_bn
-      ? `$${item.valuation_bn.toLocaleString()}B`
-      : "–";
-    // ✅ Bug Fix 1: STATUS_WEIGHT 이제 정의됨 → ReferenceError 해결
-    const weight     = (STATUS_WEIGHT[item.status] ?? 0.1) * 100;
-    const weightedBn = item.valuation_bn
-      ? `$${Math.round(item.valuation_bn * (STATUS_WEIGHT[item.status] ?? 0.1)).toLocaleString()}B`
-      : "–";
+  // 가중치 배지
+  const weightBadge = document.getElementById(`weight-${prefix}`);
+  if (weightBadge) weightBadge.textContent = `가중치 ${weightLabel}`;
 
+  // 미니 바 차트
+  drawMiniBar(prefix, score);
+
+  // 시그널 목록
+  const signalEl = document.getElementById(`signals-${prefix}`);
+  if (signalEl) {
+    const signals = raw.signals ?? [];
+    signalEl.innerHTML = signals.length
+      ? signals.map(s => `<div class="signal-item">${s}</div>`).join("")
+      : "";
+  }
+
+  // 지표 그리드 (W1~W3)
+  const metricsEl = document.getElementById(`metrics-${prefix}`);
+  if (metricsEl) {
+    metricsEl.innerHTML = buildMetrics(prefix, raw);
+  }
+
+  // W4 IPO 테이블
+  if (prefix === "w4") {
+    const tableEl = document.getElementById("ipo-table");
+    if (tableEl) tableEl.innerHTML = renderIPOTable(raw.ipo_list ?? []);
+  }
+
+  // 카드 뒷면
+  const backEl = document.getElementById(`back-${prefix}`);
+  if (backEl) {
+    backEl.innerHTML = `
+      <div class="back-content">
+        <div class="card-header">
+          <span class="card-title">상세 해설</span>
+          <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('${prefix}')">◀ 돌아가기</button>
+        </div>
+        ${buildBackContent(prefix, raw)}
+      </div>`;
+  }
+}
+
+// ──────────────────────────────────────────────────────────
+// 지표 그리드 빌더
+// ──────────────────────────────────────────────────────────
+
+function buildMetrics(prefix, raw) {
+  if (prefix === "w1") {
     return `
-      <tr>
-        <td>${item.company}</td>
-        <td>${valuation}</td>
-        <td><span class="status-badge status-${cssKey}">${item.status}</span></td>
-        <td>${weight}%</td>
-        <td>${weightedBn}</td>
-      </tr>
-    `;
-  }).join("");
-
-  return `
-    <table class="ipo-table">
-      <thead>
-        <tr>
-          <th>기업</th>
-          <th>기업가치</th>
-          <th>상태</th>
-          <th>가중치</th>
-          <th>반영액</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+      <div class="metric-item"><span class="metric-label">SPY YTD</span><span class="metric-value">+${(raw.spy_ytd ?? 0).toFixed(2)}%</span></div>
+      <div class="metric-item"><span class="metric-label">RSP YTD</span><span class="metric-value">+${(raw.rsp_ytd ?? 0).toFixed(2)}%</span></div>
+      <div class="metric-item"><span class="metric-label">괴리율</span><span class="metric-value">+${((raw.spy_ytd ?? 0) - (raw.rsp_ytd ?? 0)).toFixed(2)}%p</span></div>
+      <div class="metric-item"><span class="metric-label">퍼센타일</span><span class="metric-value">${raw.spread_percentile ?? "N/A"}%ile</span></div>`;
+  }
+  if (prefix === "w2") {
+    return `
+      <div class="metric-item"><span class="metric-label">10년물</span><span class="metric-value">${(raw.us10y_yield ?? 0).toFixed(2)}%</span></div>
+      <div class="metric-item"><span class="metric-label">2년물</span><span class="metric-value">${(raw.us2y_yield ?? 0).toFixed(2)}%</span></div>
+      <div class="metric-item"><span class="metric-label">장단기차</span><span class="metric-value">${(raw.term_spread ?? 0) >= 0 ? "+" : ""}${(raw.term_spread ?? 0).toFixed(2)}%p</span></div>
+      <div class="metric-item"><span class="metric-label">TIPS</span><span class="metric-value">${(raw.tips_10y_real_yield ?? 0).toFixed(2)}%</span></div>`;
+  }
+  if (prefix === "w3") {
+    return `
+      <div class="metric-item"><span class="metric-label">HY 스프레드</span><span class="metric-value">${(raw.hy_bps ?? 0).toFixed(0)} bps</span></div>
+      <div class="metric-item"><span class="metric-label">IG 스프레드</span><span class="metric-value">${(raw.ig_bps ?? 0).toFixed(0)} bps</span></div>
+      <div class="metric-item"><span class="metric-label">HY 변화</span><span class="metric-value">${(raw.hy_change_bps ?? 0) >= 0 ? "+" : ""}${(raw.hy_change_bps ?? 0).toFixed(0)} bps</span></div>`;
+  }
+  if (prefix === "w4") {
+    return `
+      <div class="metric-item"><span class="metric-label">파이프라인</span><span class="metric-value">$${(raw.total_valuation_bn ?? 0).toLocaleString()}B</span></div>
+      <div class="metric-item"><span class="metric-label">S-1 신청</span><span class="metric-value">${raw.filed_count ?? 0}건</span></div>`;
+  }
+  return "";
 }
 
+// ──────────────────────────────────────────────────────────
+// 종합 카드 렌더링
+// ──────────────────────────────────────────────────────────
 
-// ════════════════════════════════════════════════════════════
-// 경고 카드 렌더링
-// ════════════════════════════════════════════════════════════
+function renderComposite(data) {
+  const composite = data.composite_score ?? 0;
 
-function renderWarningCard(prefix, title, score, raw) {
-  const color    = scoreBarColor(score);
-  const gClass   = gradeClass(score);
-  const weight   = WEIGHT_LABELS[prefix];
-  const backHtml = buildBackContent(prefix, raw);
+  // 점수 숫자
+  const scoreEl = document.getElementById("composite-score");
+  if (scoreEl) scoreEl.textContent = composite;
 
-  // W4는 카드 앞면에 IPO 테이블 추가
-  const extraHtml = prefix === "w4"
-    ? renderIPOTable(raw.ipo_list ?? [])
-    : "";
+  // 링 차트
+  drawScoreRing(composite);
 
-  return `
-    <div class="card-flip-wrapper">
-      <div class="card-flip-inner" id="inner-${prefix}">
-
-        <!-- 앞면 -->
-        <div class="card-front" id="card-${prefix}">
-          <div class="card-header">
-            <span class="card-title">${title}</span>
-            <span class="weight-badge">가중치 ${weight}</span>
-            <button class="flip-btn" onclick="toggleFlip('${prefix}')">
-              상세 보기 ▶
-            </button>
-          </div>
-          <div class="score-bar-wrap">
-            <div class="score-bar"
-                 style="width:${score}%; background:${color};">
-            </div>
-          </div>
-          <div class="card-score ${gClass}">${score}<span class="score-unit">점</span></div>
-          ${extraHtml}
-        </div>
-
-        <!-- 뒷면 -->
-        <div class="card-back" id="back-${prefix}">
-          <div class="card-header">
-            <span class="card-title">${title} — 상세 해설</span>
-            <button class="flip-btn" onclick="toggleFlip('${prefix}')">
-              ◀ 돌아가기
-            </button>
-          </div>
-          <div class="back-content">
-            ${backHtml}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  `;
-}
-
-
-// ════════════════════════════════════════════════════════════
-// 메인 대시보드 렌더링
-// ════════════════════════════════════════════════════════════
-
-function renderDashboard(data) {
-  const composite = calcWeightedScore(data);
-  const compColor = scoreBarColor(composite);
-  const compClass = gradeClass(composite);
-
-  let gradeLabel;
-  if (composite >= 70)      gradeLabel = "🔴 위험";
-  else if (composite >= 40) gradeLabel = "🟡 주의";
-  else                      gradeLabel = "🟢 안전";
-
-  // ── 종합 카드 ────────────────────────────────────────────
-  const compositeEl = document.getElementById("composite-card");
-  if (compositeEl) {
-    compositeEl.innerHTML = `
-      <div class="composite-inner">
-        <div class="composite-score-ring ${compClass}">
-          <span class="ring-score">${composite}</span>
-          <span class="ring-label">퍼펙트스톰</span>
-        </div>
-        <div class="composite-info">
-          <div class="composite-grade">${gradeLabel}</div>
-          <div class="composite-sub">
-            가중 평균 점수 (W1×25% + W2×30% + W3×20% + W4×25%)
-          </div>
-          <div class="composite-bars">
-            ${["w1","w2","w3","w4"].map(p => {
-              const s   = data[`${p}_score`] ?? 0;
-              const lbl = { w1:"주도주", w2:"금리", w3:"크레딧", w4:"IPO" }[p];
-              return `
-                <div class="mini-bar-row">
-                  <span class="mini-bar-label">${lbl}</span>
-                  <div class="mini-bar-bg">
-                    <div class="mini-bar-fill"
-                         style="width:${s}%; background:${scoreBarColor(s)}">
-                    </div>
-                  </div>
-                  <span class="mini-bar-val">${s}점</span>
-                </div>
-              `;
-            }).join("")}
-          </div>
-        </div>
-      </div>
-      <div class="composite-timestamp">
-        데이터 기준: ${data.timestamp
-          ? new Date(data.timestamp).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
-          : "N/A"}
-        <span class="ts-hint">
-          (매일 07:00 KST 자동 갱신 · latest_scores.json 파일 기준)
-        </span>
-      </div>
-    `;
+  // 전체 등급 레이블
+  const labelEl = document.getElementById("overall-label");
+  if (labelEl) {
+    labelEl.textContent  = scoreLabel(composite);
+    labelEl.style.color  = scoreColor(composite);
   }
 
-  // ── 4개 경고 카드 ─────────────────────────────────────────
-  const cards = [
-    { prefix: "w1", title: "⚡ W1 주도주 압축", raw: data.w1 ?? {} },
-    { prefix: "w2", title: "📈 W2 채권 자경단", raw: data.w2 ?? {} },
-    { prefix: "w3", title: "💳 W3 사모 크레딧", raw: data.w3 ?? {} },
-    { prefix: "w4", title: "🚀 W4 대어급 IPO",  raw: data.w4 ?? {} },
-  ];
-
-  const gridEl = document.getElementById("warnings-grid");
-  if (gridEl) {
-    gridEl.innerHTML = cards.map(c =>
-      renderWarningCard(
-        c.prefix,
-        c.title,
-        data[`${c.prefix}_score`] ?? 0,
-        c.raw
-      )
-    ).join("");
+  // 행동 권고
+  const actionEl = document.getElementById("action-rec");
+  if (actionEl) {
+    if (composite >= 70)      actionEl.textContent = "⚠️ 즉시 포지션 점검 필요";
+    else if (composite >= 40) actionEl.textContent = "🔍 주의 깊게 모니터링 하세요";
+    else                      actionEl.textContent = "✅ 현재 시장 위험도 낮음";
   }
 
-  // ── 높이 균일화 ──────────────────────────────────────────
-  setTimeout(equalizeCardHeights, 0);
+  // 신호 배지
+  const badgeEl = document.getElementById("signal-badge");
+  const descEl  = document.getElementById("signal-desc");
+  if (badgeEl && descEl) {
+    if (composite >= 70) {
+      badgeEl.textContent  = "SELL";
+      badgeEl.style.background = "#e74c3c";
+      descEl.textContent   = "위험 구간 — 현금 비중 확대 고려";
+    } else if (composite >= 40) {
+      badgeEl.textContent  = "HOLD";
+      badgeEl.style.background = "#f39c12";
+      descEl.textContent   = "주의 구간 — 신규 매수 자제";
+    } else {
+      badgeEl.textContent  = "BUY";
+      badgeEl.style.background = "#27ae60";
+      descEl.textContent   = "안전 구간 — 정상적 투자 가능";
+    }
+  }
+
+  // 헤지 권고
+  const hedgeEl = document.getElementById("hedge-rec");
+  if (hedgeEl) {
+    if (composite >= 70)
+      hedgeEl.innerHTML = `<span style="color:#e74c3c">🛡️ 헤지 권고: 인버스 ETF 또는 현금 비중 30% 이상 유지</span>`;
+    else if (composite >= 40)
+      hedgeEl.innerHTML = `<span style="color:#f39c12">🛡️ 헤지 고려: 포트폴리오 리밸런싱 검토</span>`;
+    else
+      hedgeEl.innerHTML = `<span style="color:#27ae60">🛡️ 헤지 불필요: 정상 시장 환경</span>`;
+  }
+
+  // W1~W4 미니 바
+  const barsEl = document.getElementById("warning-bars");
+  if (barsEl) {
+    const items = [
+      { key: "w1", label: "주도주 압축" },
+      { key: "w2", label: "채권 자경단" },
+      { key: "w3", label: "사모 크레딧" },
+      { key: "w4", label: "대어급 IPO" },
+    ];
+    barsEl.innerHTML = items.map(({ key, label }) => {
+      const s = data[`${key}_score`] ?? 0;
+      return `
+        <div class="warning-bar-row">
+          <span class="bar-label">${label}</span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${s}%; background:${scoreColor(s)}"></div>
+          </div>
+          <span class="bar-val" style="color:${scoreColor(s)}">${s}점</span>
+        </div>`;
+    }).join("");
+  }
+
+  // 퍼펙트 스톰 배너
+  const stormEl = document.getElementById("storm-section");
+  if (stormEl) {
+    stormEl.style.display = composite >= 70 ? "block" : "none";
+  }
+
+  // 마지막 업데이트
+  const updatedEl = document.getElementById("last-updated");
+  if (updatedEl && data.timestamp) {
+    updatedEl.textContent = `데이터 기준: ${new Date(data.timestamp).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`;
+  }
 }
 
-
-// ════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────
 // 히스토리 로드
-// ════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────
 
 async function loadHistory() {
   try {
     const res   = await fetch(HISTORY_URL);
     const text  = await res.text();
     const lines = text.trim().split("\n").filter(Boolean);
-
     const scores = lines.map(line => {
       try {
         const obj = JSON.parse(line);
         return {
-          // composite 키 이름 양쪽 모두 대응 (키 불일치 방어)
           score: obj.composite_score ?? obj.score ?? obj.perfect_storm_score ?? 0,
           date:  obj.date ?? obj.timestamp?.slice(0, 10) ?? "",
         };
       } catch { return null; }
     }).filter(Boolean);
 
-    if (typeof drawHistoryChart === "function") {
-      drawHistoryChart(scores);
-    }
+    if (typeof drawHistoryChart === "function") drawHistoryChart(scores);
 
   } catch (e) {
     console.warn("[History] 로드 실패:", e);
-    // 샘플 데이터로 폴백
     if (typeof drawHistoryChart === "function") {
       drawHistoryChart([
         { date: "2026-05-01", score: 38 },
         { date: "2026-05-05", score: 42 },
-        { date: "2026-05-09", score: 45 },
-        { date: "2026-05-13", score: 48 },
-        { date: "2026-05-17", score: 51 },
-        { date: "2026-05-21", score: 50 },
-        { date: "2026-05-25", score: 52 },
-        { date: "2026-05-29", score: 51.5 },
+        { date: "2026-05-13", score: 45 },
+        { date: "2026-05-21", score: 40 },
+        { date: "2026-05-29", score: 35 },
       ]);
     }
   }
-
-  // ✅ Bug Fix 3: IPO 테이블 렌더 후 높이 재계산
-  setTimeout(equalizeCardHeights, 150);
 }
 
-
-// ════════════════════════════════════════════════════════════
-// 데이터 로드 및 초기화
-// ════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────
+// 메인 진입점
+// ──────────────────────────────────────────────────────────
 
 async function loadData() {
   try {
@@ -626,18 +472,30 @@ async function loadData() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    renderDashboard(data);
+    // 종합 카드
+    renderComposite(data);
+
+    // 4개 경고 카드
+    const cardDefs = [
+      { prefix: "w1", weight: "25%", raw: data.w1 ?? {} },
+      { prefix: "w2", weight: "30%", raw: data.w2 ?? {} },
+      { prefix: "w3", weight: "20%", raw: data.w3 ?? {} },
+      { prefix: "w4", weight: "25%", raw: data.w4 ?? {} },
+    ];
+    cardDefs.forEach(({ prefix, weight, raw }) => {
+      renderCard(prefix, data[`${prefix}_score`] ?? 0, raw, weight);
+    });
+
+    // 히스토리 차트
     await loadHistory();
 
   } catch (e) {
     console.error("[loadData] 실패:", e);
-    const el = document.getElementById("composite-card");
-    if (el) {
-      el.innerHTML =
-        `<p class="error-msg">⚠️ 데이터 로드 실패: ${e.message}</p>`;
-    }
+    const updatedEl = document.getElementById("last-updated");
+    if (updatedEl) updatedEl.textContent = `⚠️ 데이터 로드 실패: ${e.message}`;
+    const labelEl = document.getElementById("overall-label");
+    if (labelEl) labelEl.textContent = "데이터를 불러올 수 없습니다.";
   }
 }
 
-// ── 초기 실행 ─────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", loadData);
