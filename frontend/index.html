@@ -17,9 +17,7 @@
         <p class="subtitle">4대 매크로 경고등 · 매일 오전 7시 자동 갱신</p>
       </div>
     </div>
-    <div class="header-right">
-      <div id="last-updated" class="last-updated">로딩 중...</div>
-    </div>
+    <div id="last-updated" class="last-updated">로딩 중...</div>
   </header>
 
   <main class="container">
@@ -29,7 +27,7 @@
       <div class="composite-card" id="composite-card">
         <div class="composite-left">
           <div class="score-ring-wrapper">
-            <canvas id="score-ring" width="200" height="200"></canvas>
+            <canvas id="score-ring" width="160" height="160"></canvas>
             <div class="score-center">
               <div id="composite-score" class="score-number">--</div>
               <div class="score-label">/ 100</div>
@@ -49,17 +47,12 @@
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════
-         4개 경고등 카드
-         div.warnings-grid 로 감싸서 section의
-         block formatting context와 완전히 분리
-         ═══════════════════════════════════════════ -->
+    <!-- 4개 경고등 카드 -->
     <div class="warnings-grid" id="warnings-grid">
 
-      <!-- 경고등 1 — 주도주 압축 -->
+      <!-- W1 주도주 압축 -->
       <div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
         <div class="card-flip-inner" id="inner-w1">
-          <!-- 앞면: 일반 flow → 이 높이가 wrapper 높이 결정 -->
           <div class="card-front" id="card-w1">
             <div class="card-header">
               <span class="card-icon">🔽</span>
@@ -67,22 +60,21 @@
                 <div class="card-title">경고등 1</div>
                 <div class="card-subtitle">주도주 압축</div>
               </div>
+              <span class="card-weight-badge" id="weight-w1">가중치 --</span>
               <div class="card-score-badge" id="score-w1">--</div>
             </div>
             <div class="metrics-grid" id="metrics-w1"></div>
             <div class="signals-list" id="signals-w1"></div>
-            <div id="explain-w1" class="explain-container"></div>
             <div class="chart-wrapper">
               <canvas id="chart-w1"></canvas>
             </div>
-            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
+            <div class="flip-hint">🔄 탭하면 수치 해설 보기</div>
           </div>
-          <!-- 뒷면: absolute, 앞면 크기에 맞춰 덮음 -->
           <div class="card-back" id="back-w1"></div>
         </div>
       </div>
 
-      <!-- 경고등 2 — 채권 자경단 & 금리 -->
+      <!-- W2 채권 자경단 -->
       <div class="card-flip-wrapper" id="flip-w2" onclick="toggleFlip('w2')">
         <div class="card-flip-inner" id="inner-w2">
           <div class="card-front" id="card-w2">
@@ -92,21 +84,21 @@
                 <div class="card-title">경고등 2</div>
                 <div class="card-subtitle">채권 자경단 & 금리</div>
               </div>
+              <span class="card-weight-badge" id="weight-w2">가중치 --</span>
               <div class="card-score-badge" id="score-w2">--</div>
             </div>
             <div class="metrics-grid" id="metrics-w2"></div>
             <div class="signals-list" id="signals-w2"></div>
-            <div id="explain-w2" class="explain-container"></div>
             <div class="chart-wrapper">
               <canvas id="chart-w2"></canvas>
             </div>
-            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
+            <div class="flip-hint">🔄 탭하면 수치 해설 보기</div>
           </div>
           <div class="card-back" id="back-w2"></div>
         </div>
       </div>
 
-      <!-- 경고등 3 — 사모 크레딧 환매 -->
+      <!-- W3 사모 크레딧 -->
       <div class="card-flip-wrapper" id="flip-w3" onclick="toggleFlip('w3')">
         <div class="card-flip-inner" id="inner-w3">
           <div class="card-front" id="card-w3">
@@ -116,21 +108,21 @@
                 <div class="card-title">경고등 3</div>
                 <div class="card-subtitle">사모 크레딧 환매</div>
               </div>
+              <span class="card-weight-badge" id="weight-w3">가중치 --</span>
               <div class="card-score-badge" id="score-w3">--</div>
             </div>
             <div class="metrics-grid" id="metrics-w3"></div>
             <div class="signals-list" id="signals-w3"></div>
-            <div id="explain-w3" class="explain-container"></div>
             <div class="chart-wrapper">
               <canvas id="chart-w3"></canvas>
             </div>
-            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
+            <div class="flip-hint">🔄 탭하면 수치 해설 보기</div>
           </div>
           <div class="card-back" id="back-w3"></div>
         </div>
       </div>
 
-      <!-- 경고등 4 — 대어급 IPO 유동성 -->
+      <!-- W4 대어급 IPO -->
       <div class="card-flip-wrapper" id="flip-w4" onclick="toggleFlip('w4')">
         <div class="card-flip-inner" id="inner-w4">
           <div class="card-front" id="card-w4">
@@ -140,21 +132,21 @@
                 <div class="card-title">경고등 4</div>
                 <div class="card-subtitle">대어급 IPO 유동성</div>
               </div>
+              <span class="card-weight-badge" id="weight-w4">가중치 --</span>
               <div class="card-score-badge" id="score-w4">--</div>
             </div>
             <div class="metrics-grid" id="metrics-w4"></div>
             <div class="signals-list" id="signals-w4"></div>
-            <div id="explain-w4" class="explain-container"></div>
             <div class="ipo-table-wrapper" id="ipo-table"></div>
-            <div class="flip-hint">🔄 탭하면 쉬운 설명 보기</div>
+            <div class="flip-hint">🔄 탭하면 수치 해설 보기</div>
           </div>
           <div class="card-back" id="back-w4"></div>
         </div>
       </div>
 
-    </div><!-- /.warnings-grid -->
+    </div>
 
-    <!-- 퍼펙트 스톰 배너 -->
+    <!-- 퍼펙트 스톰 -->
     <section class="storm-section" id="storm-section" style="display:none">
       <div class="storm-banner">
         <div class="storm-icon">⛈️</div>
@@ -169,13 +161,9 @@
       </div>
     </section>
 
-    <!-- ═══════════════════════════════════════════
-         위험 스코어 히스토리
-         warnings-grid div가 끝난 뒤 완전히 독립적인
-         section 블록으로 배치 — 겹침 불가
-         ═══════════════════════════════════════════ -->
+    <!-- 위험 스코어 히스토리 — 종합 점수 단일 라인 -->
     <section class="history-section">
-      <h2 class="section-title">📅 위험 스코어 히스토리</h2>
+      <h2 class="section-title">📅 종합 위험 스코어 히스토리</h2>
       <div class="history-chart-wrapper">
         <canvas id="history-chart"></canvas>
       </div>
