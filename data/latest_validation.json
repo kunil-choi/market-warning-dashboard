@@ -1,0 +1,10 @@
+{
+  "validation_passed": null,
+  "overall_assessment": "검증 스킵: 3회 재시도 모두 실패",
+  "data_checks": [],
+  "score_checks": [],
+  "anomalies": [],
+  "recommendations": [],
+  "validated_at": "2026-05-31T13:57:35.154167+00:00",
+  "model": null
+}
