@@ -109,20 +109,23 @@ function renderIPOTable(ipoList) {
   if (!ipoList || !ipoList.length) return "<p style='font-size:0.74rem;color:#64748b'>데이터 없음</p>";
   let html = `<table class="ipo-table">
     <thead><tr>
-      <th>기업</th><th>기업가치</th><th>상태</th><th>가중치</th><th>반영액</th>
+      <th>기업</th><th>기업가치</th><th>상태</th><th>가중치</th><th>위험환산</th>
     </tr></thead><tbody>`;
   ipoList.forEach(ipo => {
-    const val   = ipo.valuation_b || 0;
+    // 백엔드 필드명 일치: valuation_bn (not valuation_b), company (not short_name)
+    const val   = ipo.valuation_bn ?? ipo.valuation_b ?? 0;
     const st    = ipo.status || "루머";
     const wt    = STATUS_WEIGHT[st] ?? 0.1;
     const wVal  = (val * wt).toFixed(0);
     const cls   = statusClassMap[st] || "Rumor";
-    html += `<tr>
-      <td style="font-weight:600">${ipo.short_name || ipo.name}</td>
+    const name  = ipo.company || ipo.short_name || ipo.name || "—";
+    const isListed = st === "상장완료";
+    html += `<tr style="${isListed ? 'opacity:0.5' : ''}">
+      <td style="font-weight:600">${name}${ipo.ticker ? ` <span style="color:#64748b;font-size:0.7rem">(${ipo.ticker})</span>` : ''}</td>
       <td style="font-family:monospace">$${val}B</td>
       <td><span class="status-badge status-${cls}">${st}</span></td>
-      <td style="font-family:monospace;text-align:center">${(wt*100).toFixed(0)}%</td>
-      <td style="font-family:monospace;color:#f59e0b">$${wVal}B</td>
+      <td style="font-family:monospace;text-align:center">${isListed ? '—' : (wt*100).toFixed(0)+'%'}</td>
+      <td style="font-family:monospace;color:${isListed?'#64748b':'#f59e0b'}">${isListed ? '제외' : '$'+wVal+'B'}</td>
     </tr>`;
   });
   html += "</tbody></table>";
@@ -137,11 +140,12 @@ function buildFrontContent(prefix, score, raw) {
 
   /* ── W1: 선도주 압축 ── */
   if (prefix === "w1") {
-    const spy  = raw?.spy_ytd   != null ? (raw.spy_ytd * 100).toFixed(1)   : "—";
-    const rsp  = raw?.rsp_ytd   != null ? (raw.rsp_ytd * 100).toFixed(1)   : "—";
+    // spy_ytd / rsp_ytd / rsp_1w_return 는 백엔드에서 이미 % 단위로 반환됨 (*100 불필요)
+    const spy  = raw?.spy_ytd   != null ? parseFloat(raw.spy_ytd).toFixed(2)   : "—";
+    const rsp  = raw?.rsp_ytd   != null ? parseFloat(raw.rsp_ytd).toFixed(2)   : "—";
     const sp   = raw?.current_spread != null ? raw.current_spread.toFixed(2) : "—";
     const pct  = raw?.spread_percentile ?? "—";
-    const rsp1w = raw?.rsp_1w_return != null ? (raw.rsp_1w_return * 100).toFixed(2) : "—";
+    const rsp1w = raw?.rsp_1w_return != null ? parseFloat(raw.rsp_1w_return).toFixed(2) : "—";
     const rspNeg = raw?.rsp_is_negative_while_spy_positive;
 
     const spread  = raw?.current_spread ?? 0;
@@ -171,17 +175,21 @@ function buildFrontContent(prefix, score, raw) {
 
   /* ── W2: 채권·금리 ── */
   if (prefix === "w2") {
-    const t10  = raw?.us_10yr   ?? "—";
-    const t2   = raw?.us_2yr    ?? "—";
+    // 백엔드 필드명 일치: us10y_yield, us2y_yield, is_inverted
+    const t10  = raw?.us10y_yield ?? raw?.us_10yr ?? "—";
+    const t2   = raw?.us2y_yield  ?? raw?.us_2yr  ?? "—";
     const term = raw?.term_spread != null ? raw.term_spread.toFixed(2) : "—";
-    const inv  = raw?.inverted  ?? false;
-    const hi   = raw?.rate_hike_concern ?? false;
+    const inv  = raw?.is_inverted ?? raw?.inverted ?? false;
+    // tips_10y_real_yield >= 2.0 이면 금리 인상 우려 신호로 간주
+    const tipsReal = raw?.tips_10y_real_yield ?? 0;
+    const hi   = raw?.rate_hike_concern ?? (tipsReal >= 2.0);
 
     const termNum = raw?.term_spread ?? 0;
+    const t10Num  = parseFloat(t10) || 0;
     let sitColor = "GREEN", sitText = "";
     if (inv || termNum < -0.5) { sitColor = "RED";    sitText = "🚨 심각한 장단기 금리 역전: 과거 사례상 12~18개월 내 경기침체 가능성이 높습니다."; }
     else if (termNum < 0)      { sitColor = "ORANGE"; sitText = "⚠️ 금리 역전 진행 중: 시장이 미래 성장 둔화를 반영하고 있습니다."; }
-    else if (score >= 40)      { sitColor = "YELLOW"; sitText = "📢 금리 급등 경계: 10년물 고점에서의 변동성 확대 가능성을 주시해야 합니다."; }
+    else if (score >= 40 || t10Num >= 4.5) { sitColor = "YELLOW"; sitText = "📢 금리 급등 경계: 10년물 고점에서의 변동성 확대 가능성을 주시해야 합니다."; }
     else                       { sitText = "✅ 금리 구조 안정: 장단기 스프레드가 정상 범위를 유지하고 있습니다."; }
 
     let advice = "";
@@ -191,9 +199,10 @@ function buildFrontContent(prefix, score, raw) {
 
     return `
       <div class="front-metrics-block">
-        <div class="front-metric-row"><span class="front-metric-label">미국 10년물</span><span class="front-metric-val ${(parseFloat(t10)||0)>=4.5?'val-red':(parseFloat(t10)||0)>=4?'val-yellow':'val-green'}">${t10}%</span></div>
-        <div class="front-metric-row"><span class="front-metric-label">미국 2년물</span><span class="front-metric-val ${(parseFloat(t2)||0)>=5?'val-red':'val-green'}">${t2}%</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">미국 10년물</span><span class="front-metric-val ${t10Num>=4.5?'val-red':t10Num>=4?'val-yellow':'val-green'}">${t10}%</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">미국 2년물</span><span class="front-metric-val ${(parseFloat(t2)||0)>=5?'val-red':(parseFloat(t2)||0)>=4.5?'val-yellow':'val-green'}">${t2}%</span></div>
         <div class="front-metric-row"><span class="front-metric-label">장단기 스프레드</span><span class="front-metric-val ${termNum<0?'val-red':termNum<0.5?'val-yellow':'val-green'}">${term}%p</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">10년 실질금리(TIPS)</span><span class="front-metric-val ${tipsReal>=2.5?'val-red':tipsReal>=2.0?'val-yellow':'val-green'}">${tipsReal.toFixed(2)}%</span></div>
         <div class="front-metric-row"><span class="front-metric-label">장단기 역전</span><span class="front-metric-val ${inv?'val-red':'val-green'}">${inv?'🚨 역전':'✅ 정상'}</span></div>
         <div class="front-metric-row"><span class="front-metric-label">금리 인상 우려</span><span class="front-metric-val ${hi?'val-orange':'val-green'}">${hi?'⚠️ 있음':'✅ 없음'}</span></div>
       </div>
@@ -235,10 +244,16 @@ function buildFrontContent(prefix, score, raw) {
 
   /* ── W4: IPO 유동성 ── */
   if (prefix === "w4") {
-    const totalVal = raw?.total_weighted_valuation ?? 0;
+    // 백엔드 필드명 일치: total_valuation_bn (가중 합산값)
+    const totalVal = raw?.total_valuation_bn ?? raw?.total_weighted_valuation ?? 0;
+    // 실제 기업가치 합계 (가중치 미적용, 상장완료 제외)
+    const ipoListRaw = raw?.ipo_list ?? [];
+    const totalRaw = ipoListRaw
+      .filter(ip => ip.status !== "상장완료")
+      .reduce((s, ip) => s + (ip.valuation_bn ?? ip.valuation_b ?? 0), 0);
     const filed    = raw?.filed_count   ?? 0;
     const priced   = raw?.priced_count  ?? 0;
-    const ipoList  = raw?.ipo_list      ?? [];
+    const ipoList  = ipoListRaw;
 
     let pipelineLabel = "보통", pipelineClass = "val-green";
     if (totalVal >= 2000)      { pipelineLabel = "매우 높음 🚨"; pipelineClass = "val-red"; }
@@ -258,9 +273,10 @@ function buildFrontContent(prefix, score, raw) {
 
     return `
       <div class="front-metrics-block">
-        <div class="front-metric-row"><span class="front-metric-label">가중 파이프라인 총액</span><span class="front-metric-val ${pipelineClass}">$${totalVal.toFixed(0)}B</span></div>
-        <div class="front-metric-row"><span class="front-metric-label">활성 파이프라인</span><span class="front-metric-val ${pipelineClass}">${pipelineLabel}</span></div>
-        <div class="front-metric-row"><span class="front-metric-label">신청완료 기업 수</span><span class="front-metric-val">${filed}개</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">실제 파이프라인 총액</span><span class="front-metric-val val-red">$${totalRaw.toFixed(0)}B</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">가중 위험 환산액</span><span class="front-metric-val ${pipelineClass}">$${totalVal.toFixed(0)}B</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">위험 수준</span><span class="front-metric-val ${pipelineClass}">${pipelineLabel}</span></div>
+        <div class="front-metric-row"><span class="front-metric-label">신청완료 기업 수</span><span class="front-metric-val ${filed>0?'val-yellow':'val-green'}">${filed}개</span></div>
         <div class="front-metric-row"><span class="front-metric-label">가격확정 기업 수</span><span class="front-metric-val ${priced>0?'val-red':'val-green'}">${priced}개</span></div>
       </div>
       <div class="front-situation ${sitColor}">${sitText}</div>
@@ -492,49 +508,42 @@ function renderComposite(data) {
 }
 
 /* ── 히스토리 차트 ───────────────────────────────────────── */
-function drawHistoryChart(scores) {
-  const canvas = document.getElementById("history-chart");
-  if (!canvas || !window.Chart) return;
-  const labels = scores.map((_, i) => `Day -${scores.length - 1 - i}`);
-  if (window._historyChart) window._historyChart.destroy();
-  window._historyChart = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "복합 위험 점수",
-        data: scores,
-        borderColor: "#38bdf8",
-        backgroundColor: "rgba(56,189,248,0.1)",
-        tension: 0.4,
-        pointRadius: 3,
-        pointBackgroundColor: scores.map(s => scoreColor(s)),
-        fill: true,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      scales: {
-        y: { min: 0, max: 100, grid: { color: "#1e3a5f" }, ticks: { color: "#64748b" } },
-        x: { grid: { color: "#1e3a5f" }, ticks: { color: "#64748b", maxTicksLimit: 10 } }
-      },
-      plugins: { legend: { labels: { color: "#e2e8f0" } } }
-    }
-  });
-}
+// drawHistoryChart 는 charts.js 에서 정의됨 (먼저 로드)
+// dashboard.js 에서는 loadHistory() 만 정의
 
 function loadHistory() {
   fetch(HISTORY_URL)
     .then(r => r.text())
     .then(text => {
-      const scores = text.trim().split("\n")
+      // charts.js drawHistoryChart 는 [{date, score}] 형식을 기대
+      const entries = text.trim().split("\n")
         .filter(l => l.trim())
-        .map(l => { try { return JSON.parse(l).composite_score; } catch { return null; } })
+        .map(l => {
+          try {
+            const obj = JSON.parse(l);
+            // history.jsonl 은 {date, score} 형식으로 통일됨
+            const score = obj.score ?? obj.composite_score;
+            const date  = obj.date ?? "";
+            if (score != null && date) return { date, score: parseFloat(score) };
+            return null;
+          } catch { return null; }
+        })
         .filter(s => s != null);
-      if (scores.length) drawHistoryChart(scores);
-      else drawHistoryChart([42, 45, 50, 55, 48, 52, 60, 58, 55, 50]);
+      if (entries.length) drawHistoryChart(entries);
+      else {
+        // 폴백: 더미 데이터
+        const fallback = [35,38,32,40,45,42,38,35,30,32,35,38,42,40,38,35,32,35,42,35].map((s, i) => ({
+          date: `Day-${20-i}`, score: s
+        }));
+        drawHistoryChart(fallback);
+      }
     })
-    .catch(() => drawHistoryChart([42, 45, 50, 55, 48, 52, 60, 58, 55, 50]));
+    .catch(() => {
+      const fallback = [35,38,32,40,45,42,38,35,30,32,35,38,42,40,38,35,32,35,42,35].map((s, i) => ({
+        date: `Day-${20-i}`, score: s
+      }));
+      drawHistoryChart(fallback);
+    });
 }
 
 /* ── 데이터 로드 ─────────────────────────────────────────── */
