@@ -1,6 +1,6 @@
 # ============================================================
 # run_pipeline.py  –  파이프라인 메인 진입점
-# 단계: 수집·점수산출 → AI검증 → 저장
+# 수정: Bug7 – history.jsonl 같은 날 중복 기록 방지
 # ============================================================
 
 import json
@@ -15,9 +15,7 @@ from backend.scoring.ai_validator   import validate_with_ai
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ],
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -25,6 +23,33 @@ DATA_DIR        = Path("data")
 LATEST_JSON     = DATA_DIR / "latest_scores.json"
 HISTORY_JSONL   = DATA_DIR / "history.jsonl"
 VALIDATION_JSON = DATA_DIR / "latest_validation.json"
+
+
+def _update_history(entry: dict) -> None:
+    """
+    Bug7 수정: 같은 날짜 항목이 이미 있으면 덮어씀 (중복 방지).
+    """
+    today = entry["date"]
+    lines = []
+
+    if HISTORY_JSONL.exists():
+        with open(HISTORY_JSONL, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    # 오늘 날짜 항목은 제거 (새 항목으로 교체)
+                    if obj.get("date") != today:
+                        lines.append(line)
+                except json.JSONDecodeError:
+                    lines.append(line)  # 파싱 불가 행은 보존
+
+    lines.append(json.dumps(entry, ensure_ascii=False))
+
+    with open(HISTORY_JSONL, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
 
 
 def run_pipeline():
@@ -52,17 +77,14 @@ def run_pipeline():
     try:
         validation = validate_with_ai(scores)
     except Exception as e:
-        logger.error(f"[2/3] AI 검증 중 예외 발생: {e}", exc_info=True)
-        # AI 검증 실패는 파이프라인을 중단하지 않음
+        logger.error(f"[2/3] AI 검증 예외: {e}", exc_info=True)
         validation = {
             "validation_passed":  None,
             "overall_assessment": f"검증 예외: {e}",
-            "data_checks":        [],
-            "score_checks":       [],
-            "anomalies":          [],
-            "recommendations":    [],
-            "validated_at":       datetime.now(timezone.utc).isoformat(),
-            "model":              None,
+            "data_checks": [], "score_checks": [],
+            "anomalies": [], "recommendations": [],
+            "validated_at": datetime.now(timezone.utc).isoformat(),
+            "model": None,
         }
 
     passed = validation.get("validation_passed")
@@ -77,13 +99,11 @@ def run_pipeline():
     else:
         logger.info("[2/3] ℹ️  AI 검증 스킵")
 
-    # 검증 결과를 scores에 포함
     scores["ai_validation"] = validation
 
     # ── 3단계: 결과 저장 ─────────────────────────────────────
     logger.info("[3/3] 결과 저장")
 
-    # latest_scores.json — 검증 결과 포함 전체
     try:
         with open(LATEST_JSON, "w", encoding="utf-8") as f:
             json.dump(scores, f, ensure_ascii=False, indent=2)
@@ -92,15 +112,13 @@ def run_pipeline():
         logger.error(f"latest_scores.json 저장 실패: {e}")
         sys.exit(1)
 
-    # latest_validation.json — 검증 결과 단독
     try:
         with open(VALIDATION_JSON, "w", encoding="utf-8") as f:
             json.dump(validation, f, ensure_ascii=False, indent=2)
         logger.info(f"저장 완료: {VALIDATION_JSON}")
     except Exception as e:
-        logger.warning(f"latest_validation.json 저장 실패 (비치명): {e}")
+        logger.warning(f"latest_validation.json 저장 실패: {e}")
 
-    # history.jsonl — 히스토리 누적
     try:
         history_entry = {
             "date":              datetime.now(timezone.utc).strftime("%Y-%m-%d"),
@@ -112,11 +130,10 @@ def run_pipeline():
             "grade":             scores.get("grade"),
             "validation_passed": passed,
         }
-        with open(HISTORY_JSONL, "a", encoding="utf-8") as f:
-            f.write(json.dumps(history_entry, ensure_ascii=False) + "\n")
-        logger.info(f"히스토리 추가: {HISTORY_JSONL}")
+        _update_history(history_entry)   # Bug7 수정: 중복 방지 함수 사용
+        logger.info(f"히스토리 업데이트: {HISTORY_JSONL}")
     except Exception as e:
-        logger.warning(f"history.jsonl 저장 실패 (비치명): {e}")
+        logger.warning(f"history.jsonl 저장 실패: {e}")
 
     logger.info("=" * 60)
     logger.info(
