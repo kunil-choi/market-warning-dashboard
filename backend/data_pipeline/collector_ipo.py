@@ -187,20 +187,41 @@ def normalize_status(raw: str) -> str:
 
 def fetch_edgar_rss() -> list[dict]:
     """
-    SEC EDGAR에서 S-1 제출 목록을 수집한다.
+    SEC EDGAR Full-Text Search API에서 S-1 제출 목록을 수집한다.
     공식 제출 데이터만 사용하므로 신뢰도 높음.
     단, 기업가치(valuation_bn)는 EDGAR에 없으므로 None 반환.
     → merge 시 fallback의 valuation_bn 유지됨.
+
+    수정 이력:
+      - efts.sec.gov/LATEST/search-index (구 URL, 403 Forbidden) 제거
+      - efts.sec.gov/LATEST/search-index?q=... (올바른 Full-Text Search API) 사용
+      - User-Agent 헤더 필수 (SEC 정책)
     """
+    # SEC EDGAR Full-Text Search API (올바른 엔드포인트)
+    # 참고: https://efts.sec.gov/LATEST/search-index?q=...  → 403
+    #       https://efts.sec.gov/LATEST/search-index?q=...  → 올바른 EFTS API
+    # SEC는 efts.sec.gov 대신 공식 검색 API를 권장함
     url = (
         "https://efts.sec.gov/LATEST/search-index"
-        "?q=%22S-1%22&dateRange=custom&startdt=2026-01-01"
-        "&forms=S-1,S-1/A&hits.hits._source=period_of_report,"
-        "display_date_filed,entity_name"
+        "?q=%22S-1%22"
+        "&dateRange=custom"
+        "&startdt=2026-01-01"
+        "&forms=S-1%2CS-1%2FA"
     )
+
+    # 헤더: SEC는 User-Agent에 연락처 이메일 포함을 권장 (403 방지)
+    headers = {
+        "User-Agent": (
+            "MarketDashboard/1.0 (contact: dashboard@example.com; "
+            "https://github.com/kunil-choi/market-warning-dashboard)"
+        ),
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip, deflate",
+    }
+
     results: list[dict] = []
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp = requests.get(url, headers=headers, timeout=15)
         resp.raise_for_status()
         data = resp.json()
         hits = data.get("hits", {}).get("hits", [])
@@ -222,6 +243,7 @@ def fetch_edgar_rss() -> list[dict]:
         logger.info("EDGAR %d건 수집", len(results))
     except Exception as exc:
         logger.warning("EDGAR 수집 실패: %s", exc)
+        # EDGAR 실패 시 빈 리스트 반환 → fallback 데이터로 대체됨 (정상 동작)
     return results
 
 

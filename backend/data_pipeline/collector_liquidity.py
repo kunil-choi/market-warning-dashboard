@@ -3,10 +3,12 @@
 # 수정:
 #   Bug3 – yfinance 단일 티커 MultiIndex 완전 방어
 #   Bug4 – YTD 기준일(2025-12-31) 비거래일 문제 해결
+#   Bug8 – yfinance RateLimit: 재시도 로직 추가 (최대 3회)
 # ============================================================
 
 import logging
 import socket
+import time
 from datetime import datetime, timezone
 
 import yfinance as yf
@@ -77,15 +79,41 @@ def _extract_close(df: pd.DataFrame) -> pd.Series | None:
         return None
 
 
+def _download_with_retry(ticker: str, max_retries: int = 3, **kwargs) -> pd.DataFrame | None:
+    """
+    yfinance 다운로드 래퍼 — RateLimit 시 최대 max_retries 회 재시도.
+    대기 시간: 1차 5초, 2차 15초, 3차 30초
+    """
+    wait_times = [5, 15, 30]
+    for attempt in range(max_retries):
+        try:
+            df = yf.download(ticker, **kwargs)
+            if df is not None and not df.empty:
+                return df
+            logger.warning(f"[유동성] {ticker} 빈 데이터 (시도 {attempt+1}/{max_retries})")
+        except Exception as e:
+            err_str = str(e)
+            if "RateLimit" in err_str or "Too Many Requests" in err_str or "rate limit" in err_str.lower():
+                wait = wait_times[min(attempt, len(wait_times)-1)]
+                logger.warning(f"[유동성] {ticker} Rate Limit — {wait}초 대기 후 재시도 ({attempt+1}/{max_retries})")
+                time.sleep(wait)
+            else:
+                logger.warning(f"[유동성] {ticker} 다운로드 오류: {e}")
+                return None
+    logger.warning(f"[유동성] {ticker} {max_retries}회 재시도 모두 실패 → fallback 사용")
+    return None
+
+
 def _calc_ytd_return(ticker: str) -> float | None:
     """
     연초 대비 수익률(YTD) 계산.
     Bug4 수정: start를 2025-12-25로 설정해 연말 거래일을 반드시 포함.
+    Bug8 수정: _download_with_retry() 사용으로 RateLimit 자동 재시도.
     """
     try:
         # 2025-12-25 부터 받으면 12/26, 12/29, 12/31 중
         # 실제 거래일 첫 행이 연초 기준가가 됨
-        df = yf.download(
+        df = _download_with_retry(
             ticker,
             start="2025-12-25",
             auto_adjust=True,
@@ -127,9 +155,12 @@ def _calc_ytd_return(ticker: str) -> float | None:
 
 
 def _calc_1w_return(ticker: str) -> float | None:
-    """1주(5거래일) 수익률 계산."""
+    """
+    1주(5거래일) 수익률 계산.
+    Bug8 수정: _download_with_retry() 사용으로 RateLimit 자동 재시도.
+    """
     try:
-        df = yf.download(
+        df = _download_with_retry(
             ticker,
             period="10d",
             auto_adjust=True,
