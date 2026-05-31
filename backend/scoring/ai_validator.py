@@ -1,6 +1,11 @@
 # ============================================================
 # ai_validator.py  –  Claude AI 기반 검증
-# 수정: Bug5 – APIStatusError.message → str(e) 로 교체
+# 수정:
+#   Bug4 – _build_raw_summary W3 키명 수정
+#          hy_spread_bps  → hy_bps
+#          ig_spread_bps  → ig_bps
+#          hy_1m_change_bps → hy_change_bps
+#          (collector_credit.py 실제 반환 키와 일치)
 # ============================================================
 
 import os
@@ -85,13 +90,14 @@ def _build_raw_summary(scores_data: dict) -> str:
             "TIPS실질금리_%":  w2.get("tips_10y_real_yield"),
             "장단기역전여부":  w2.get("is_inverted"),
         },
+        # Bug4 수정: collector_credit.py 실제 반환 키와 일치
         "W3_사모크레딧": {
-            "HY스프레드_bps":  w3.get("hy_spread_bps"),
-            "IG스프레드_bps":  w3.get("ig_spread_bps"),
-            "HY_1개월변화_bps": w3.get("hy_1m_change_bps"),
+            "HY스프레드_bps":    w3.get("hy_bps"),
+            "IG스프레드_bps":    w3.get("ig_bps"),
+            "HY_1개월변화_bps":  w3.get("hy_change_bps"),
         },
         "W4_대어급IPO": {
-            "가중파이프라인_B": w4.get("total_weighted_bn"),
+            "가중파이프라인_B": w4.get("total_valuation_bn"),
             "신청완료건수":     w4.get("filed_count"),
             "공모가확정건수":   w4.get("priced_count"),
             "IPO목록": [
@@ -185,7 +191,6 @@ def validate_with_ai(scores_data: dict) -> dict:
             time.sleep(wait)
 
         except anthropic.APIStatusError as e:
-            # Bug5 수정: e.message → str(e)
             err_msg = str(e)
             logger.error(f"[AI검증] API 상태 오류 {e.status_code} ({attempt}/3): {err_msg}")
             if e.status_code in (500, 529):
