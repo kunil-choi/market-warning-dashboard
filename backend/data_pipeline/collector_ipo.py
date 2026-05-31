@@ -1,6 +1,9 @@
 """
 collector_ipo.py
 IPO 파이프라인 데이터 수집 및 위험 점수 계산 모듈
+
+수정: Google News RSS 비활성화 (데이터 오염 방지)
+     EDGAR + Fallback 조합만 사용
 """
 
 import socket
@@ -9,10 +12,11 @@ import re
 from datetime import datetime, timezone
 from typing import Optional
 
-import feedparser
 import requests
 
-# feedparser 전역 타임아웃 설정 (hang 방지)
+# feedparser는 Google News RSS 비활성화로 현재 미사용
+# (오염된 기업가치/상태 파싱 방지)
+
 socket.setdefaulttimeout(15)
 
 logger = logging.getLogger(__name__)
@@ -26,7 +30,7 @@ STATUS_WEIGHT: dict[str, float] = {
     "검토중":   0.3,
     "신청완료": 1.0,
     "가격확정": 1.0,
-    "상장완료": 0.0,  # 상장 완료 기업은 점수 계산 제외
+    "상장완료": 0.0,
 }
 
 STATUS_PRIORITY: dict[str, int] = {
@@ -37,7 +41,6 @@ STATUS_PRIORITY: dict[str, int] = {
     "상장완료": 5,
 }
 
-# EDGAR 별칭 매핑 (SEC 등록명 → 표준명)
 EDGAR_ALIAS: dict[str, str] = {
     "Space Exploration Technologies Corp": "SpaceX",
     "Space Exploration Technologies":      "SpaceX",
@@ -58,8 +61,11 @@ MEGA_COMPANIES: set[str] = {
     "Revolut", "Discord",
 }
 
-# fallback 데이터 (EDGAR / News 수집 실패 시 사용)
-# 출처: aifundingtracker.com, Reuters, Bloomberg, CNBC (2026-05-28 기준)
+# ──────────────────────────────────────────────
+# Fallback 데이터 (최우선 신뢰 소스)
+# 출처: Reuters, Bloomberg, CNBC, Anthropic 공식 (2026-05-28 기준)
+# Google News RSS는 오염 위험으로 사용하지 않음
+# ──────────────────────────────────────────────
 MEGA_IPO_FALLBACK: list[dict] = [
     {
         "company":      "SpaceX",
@@ -80,7 +86,6 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "ticker":       None,
     },
     {
-        # ✅ 수정: $900B → $965B (Anthropic Series H 완료, Anthropic 공식 / Reuters 2026-05-28)
         "company":      "Anthropic",
         "valuation_bn": 965,
         "status":       "검토중",
@@ -108,7 +113,6 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "ticker":       None,
     },
     {
-        # ✅ 수정: 신청완료 → 상장완료 (Nasdaq CBRS 2026-05-14 상장, 첫날 +68%)
         "company":      "Cerebras",
         "valuation_bn": 95,
         "status":       "상장완료",
@@ -150,10 +154,6 @@ HEADERS: dict[str, str] = {
 # ──────────────────────────────────────────────
 
 def parse_valuation(raw: str) -> Optional[float]:
-    """
-    문자열에서 기업가치(십억 달러 단위)를 추출한다.
-    예) '$1.8T' → 1800.0,  '$965B' → 965.0,  '$134 billion' → 134.0
-    """
     if not raw:
         return None
     raw = raw.replace(",", "").strip()
@@ -163,16 +163,10 @@ def parse_valuation(raw: str) -> Optional[float]:
     m = re.search(r"([\d.]+)\s*[Bb](?:illion)?", raw)
     if m:
         return float(m.group(1))
-    m = re.search(r"([\d.]+)", raw)
-    if m:
-        return float(m.group(1))
     return None
 
 
 def normalize_status(raw: str) -> str:
-    """
-    다양한 영문/국문 상태 표현을 표준 한국어 상태로 변환한다.
-    """
     if not raw:
         return "루머"
     r = raw.lower().strip()
@@ -188,12 +182,15 @@ def normalize_status(raw: str) -> str:
 
 
 # ──────────────────────────────────────────────
-# 데이터 수집 함수
+# EDGAR 수집 (신뢰 소스 — S-1 공식 제출만)
 # ──────────────────────────────────────────────
 
 def fetch_edgar_rss() -> list[dict]:
     """
-    SEC EDGAR에서 최근 S-1 / S-1A 제출 목록을 수집한다.
+    SEC EDGAR에서 S-1 제출 목록을 수집한다.
+    공식 제출 데이터만 사용하므로 신뢰도 높음.
+    단, 기업가치(valuation_bn)는 EDGAR에 없으므로 None 반환.
+    → merge 시 fallback의 valuation_bn 유지됨.
     """
     url = (
         "https://efts.sec.gov/LATEST/search-index"
@@ -215,77 +212,39 @@ def fetch_edgar_rss() -> list[dict]:
                 continue
             results.append({
                 "company":      company,
-                "valuation_bn": None,
+                "valuation_bn": None,       # EDGAR에는 기업가치 없음
                 "status":       "신청완료",
                 "source":       "SEC EDGAR",
                 "filed_date":   src.get("display_date_filed"),
                 "listed_date":  None,
                 "ticker":       None,
             })
+        logger.info("EDGAR %d건 수집", len(results))
     except Exception as exc:
         logger.warning("EDGAR 수집 실패: %s", exc)
     return results
 
 
-def fetch_google_news_rss(company: str) -> list[dict]:
-    """
-    Google News RSS로 특정 기업의 IPO 관련 기사를 수집한다.
-    """
-    query = f"{company} IPO valuation 2026"
-    url = (
-        "https://news.google.com/rss/search"
-        f"?q={requests.utils.quote(query)}&hl=en-US&gl=US&ceid=US:en"
-    )
-    results: list[dict] = []
-    try:
-        feed = feedparser.parse(url)
-        for entry in feed.entries[:5]:
-            title      = entry.get("title", "") + " " + entry.get("summary", "")
-            valuation  = parse_valuation(title)
-            status_raw = ""
-            if any(k in title.lower() for k in ("filed", "s-1", "confidential")):
-                status_raw = "filed"
-            elif any(k in title.lower() for k in ("trading", "listed", "debut")):
-                status_raw = "trading"
-            elif any(k in title.lower() for k in ("pricing", "priced")):
-                status_raw = "priced"
-            elif any(k in title.lower() for k in ("ipo", "listing", "going public")):
-                status_raw = "considering"
-            if not status_raw:
-                continue
-            results.append({
-                "company":      company,
-                "valuation_bn": valuation,
-                "status":       normalize_status(status_raw),
-                "source":       "Google News RSS",
-                "filed_date":   None,
-                "listed_date":  None,
-                "ticker":       None,
-            })
-    except Exception as exc:
-        logger.warning("%s Google News RSS 수집 실패: %s", company, exc)
-    return results
-
-
 # ──────────────────────────────────────────────
 # 데이터 병합
+# EDGAR → Fallback 순서 (Google News RSS 제거)
 # ──────────────────────────────────────────────
 
 def merge_ipo_lists(
     edgar:    list[dict],
-    news:     list[dict],
     fallback: list[dict],
 ) -> list[dict]:
     """
-    EDGAR → News → Fallback 순서로 병합한다.
+    EDGAR → Fallback 순서로 병합한다.
     - 같은 기업은 STATUS_PRIORITY 가 높은 값 채택
     - valuation_bn 은 None 이 아닌 값만 덮어씀
+      (EDGAR는 valuation_bn=None 이므로 fallback 값 유지)
     """
     merged: dict[str, dict] = {}
 
     def _upsert(item: dict) -> None:
         if not isinstance(item, dict):
-            logger.warning("merge_ipo_lists: dict 가 아닌 항목 무시 (%s)", type(item))
+            logger.warning("merge_ipo_lists: dict 아닌 항목 무시 (%s)", type(item))
             return
         company = item.get("company", "")
         if not company:
@@ -299,11 +258,12 @@ def merge_ipo_lists(
         if new_pri >= cur_pri:
             new_val = item.get("valuation_bn")
             merged[company] = dict(item)
-            # ✅ valuation_bn 은 None 이 아닐 때만 업데이트
+            # valuation_bn 은 None 이 아닐 때만 업데이트
             if new_val is None:
                 merged[company]["valuation_bn"] = existing.get("valuation_bn")
 
-    for item in (edgar + news + fallback):
+    # EDGAR 먼저 (상태 업데이트용), Fallback 나중 (기업가치 보정용)
+    for item in (edgar + fallback):
         _upsert(item)
 
     return list(merged.values())
@@ -316,10 +276,7 @@ def merge_ipo_lists(
 def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     """
     IPO 파이프라인 리스트를 받아 위험 점수(0-100)를 계산한다.
-    scoring_engine 이 이 함수를 직접 호출하지 않도록 주의.
-    collect_ipo_data() 를 통해 간접 호출할 것.
     """
-    # ── 타입 방어
     if not isinstance(ipo_list, list):
         logger.error(
             "calculate_ipo_score: list 를 받아야 하지만 %s 수신", type(ipo_list)
@@ -342,7 +299,6 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
         val_bn  = item.get("valuation_bn") or 0.0
         weight  = STATUS_WEIGHT.get(status, 0.0)
 
-        # 상장 완료 기업은 파이프라인 합산 제외
         if status == "상장완료":
             signals.append(f"✅ {company}: 상장 완료 (점수 제외)")
             continue
@@ -361,7 +317,6 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
         else:
             signals.append(f"💬 {company}: 루머 단계 (${val_bn:.0f}B)")
 
-    # ── 기본 점수 (파이프라인 총 기업가치 기준)
     if total_valuation_bn >= 3_000:
         base_score = 80
         alerts.append(f"🚨 활성 파이프라인 ${total_valuation_bn:.0f}B — 역대 최대")
@@ -376,11 +331,9 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     else:
         base_score = 10
 
-    # ── 보너스: S-1 제출 / 가격확정 건수
-    bonus      = min(filed_count * 5 + priced_count * 3, 20)
-    raw_score  = min(base_score + bonus, 100)
+    bonus     = min(filed_count * 5 + priced_count * 3, 20)
+    raw_score = min(base_score + bonus, 100)
 
-    # ── 등급
     if raw_score >= 80:
         grade, color = "위험", "red"
     elif raw_score >= 60:
@@ -405,25 +358,26 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
 
 
 # ──────────────────────────────────────────────
-# 메인 수집 함수 (scoring_engine 에서 호출)
+# 메인 수집 함수
 # ──────────────────────────────────────────────
 
 def collect_ipo_data() -> dict:
     """
-    전체 IPO 데이터를 수집하고 점수를 계산해 반환한다.
-    scoring_engine.py 는 반환값의 'score' 키를 직접 사용하면 된다.
+    IPO 데이터를 수집하고 점수를 계산해 반환한다.
+    신뢰 소스: EDGAR(공식 S-1 제출) + Fallback(검증된 언론 데이터)
+    Google News RSS는 데이터 오염 위험으로 사용하지 않음.
     """
     logger.info("IPO 데이터 수집 시작")
 
-    edgar_data: list[dict] = fetch_edgar_rss()
-    logger.info("EDGAR %d건 수집", len(edgar_data))
+    edgar_data = fetch_edgar_rss()
 
+    # ✅ Google News RSS 완전 비활성화
+    # 이유: 기사 제목에서 잘못된 기업가치($3,000B)와
+    #       잘못된 상태(가격확정, 상장완료)를 파싱하여 데이터 오염 발생
     news_data: list[dict] = []
-    for company in MEGA_COMPANIES:
-        news_data.extend(fetch_google_news_rss(company))
-    logger.info("Google News %d건 수집", len(news_data))
+    logger.info("Google News RSS 비활성화 — fallback 데이터 사용")
 
-    merged = merge_ipo_lists(edgar_data, news_data, MEGA_IPO_FALLBACK)
+    merged = merge_ipo_lists(edgar_data, MEGA_IPO_FALLBACK)
     logger.info("병합 후 총 %d개 기업", len(merged))
 
     result = calculate_ipo_score(merged)
