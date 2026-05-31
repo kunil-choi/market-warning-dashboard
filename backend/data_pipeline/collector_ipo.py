@@ -1,16 +1,20 @@
 # ============================================================
-# collector_ipo.py  –  W4 대어급 IPO 데이터 수집
-# 수정: calculate_ipo_score() 방어 코드 강화
-#       item 타입 검증, ipo_list 반드시 포함
+# collector_ipo.py  –  W4 대어급 IPO
+# 수정:
+#   Bug2 – feedparser 타임아웃 없음 → socket.setdefaulttimeout
+#   Bug8 – merge 시 valuation_bn 우선순위 로직 보완
 # ============================================================
 
+import socket
 import feedparser
-import requests
 import re
 import logging
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+
+# feedparser 전역 타임아웃 설정 (Bug2 수정)
+socket.setdefaulttimeout(15)
 
 # ── 상태별 가중치 ─────────────────────────────────────────
 STATUS_WEIGHT = {
@@ -52,64 +56,23 @@ MEGA_COMPANIES = [
     "Cerebras", "Revolut", "Anduril",
 ]
 
-# ── Fallback 데이터 ───────────────────────────────────────
 MEGA_IPO_FALLBACK = [
-    {
-        "company":      "SpaceX",
-        "valuation_bn": 1800,
-        "status":       "신청완료",
-        "source":       "Bloomberg 2026-05",
-        "filed_date":   "2026-05-20",
-    },
-    {
-        "company":      "OpenAI",
-        "valuation_bn": 852,
-        "status":       "검토중",
-        "source":       "OpenAI 공식 2026-03-31",
-        "filed_date":   None,
-    },
-    {
-        "company":      "Anthropic",
-        "valuation_bn": 900,
-        "status":       "검토중",
-        "source":       "Bloomberg 2026-05-12",
-        "filed_date":   None,
-    },
-    {
-        "company":      "Stripe",
-        "valuation_bn": 159,
-        "status":       "검토중",
-        "source":       "Reuters 2026-02-24",
-        "filed_date":   None,
-    },
-    {
-        "company":      "Databricks",
-        "valuation_bn": 134,
-        "status":       "검토중",
-        "source":       "Databricks 공식 2026-02-09",
-        "filed_date":   None,
-    },
-    {
-        "company":      "Cerebras",
-        "valuation_bn": 49,
-        "status":       "신청완료",
-        "source":       "CNBC 2026-05-11",
-        "filed_date":   "2026-04-17",
-    },
-    {
-        "company":      "Discord",
-        "valuation_bn": 15,
-        "status":       "신청완료",
-        "source":       "업계 보도 2026",
-        "filed_date":   None,
-    },
-    {
-        "company":      "Revolut",
-        "valuation_bn": 75,
-        "status":       "신청완료",
-        "source":       "업계 보도 2026",
-        "filed_date":   None,
-    },
+    {"company": "SpaceX",     "valuation_bn": 1800, "status": "신청완료",
+     "source": "Bloomberg 2026-05-29", "filed_date": "2026-05-20"},
+    {"company": "OpenAI",     "valuation_bn": 852,  "status": "검토중",
+     "source": "OpenAI 공식 2026-03-31", "filed_date": None},
+    {"company": "Anthropic",  "valuation_bn": 900,  "status": "검토중",
+     "source": "Bloomberg 2026-05-12", "filed_date": None},
+    {"company": "Stripe",     "valuation_bn": 159,  "status": "검토중",
+     "source": "Reuters 2026-02-24", "filed_date": None},
+    {"company": "Databricks", "valuation_bn": 134,  "status": "검토중",
+     "source": "Databricks 공식 2026-02-09", "filed_date": None},
+    {"company": "Cerebras",   "valuation_bn": 49,   "status": "신청완료",
+     "source": "CNBC 2026-05-11", "filed_date": "2026-04-17"},
+    {"company": "Discord",    "valuation_bn": 15,   "status": "신청완료",
+     "source": "업계 보도 2026", "filed_date": None},
+    {"company": "Revolut",    "valuation_bn": 75,   "status": "신청완료",
+     "source": "업계 보도 2026", "filed_date": None},
 ]
 
 
@@ -145,14 +108,20 @@ def normalize_status(raw: str) -> str:
 # ════════════════════════════════════════════════════════════
 
 def fetch_sec_edgar_ipo_rss() -> list[dict]:
+    """SEC EDGAR S-1 RSS 수집. 타임아웃은 socket 전역 설정으로 처리."""
     headers = {"User-Agent": "IPO-Monitor/1.0 contact@example.com"}
     results = []
     try:
         feed = feedparser.parse(
             "https://www.sec.gov/cgi-bin/browse-edgar"
-            "?action=getcurrent&type=S-1&dateb=&owner=include&count=40&output=atom",
+            "?action=getcurrent&type=S-1&dateb=&owner=include"
+            "&count=40&output=atom",
             request_headers=headers,
         )
+        if feed.bozo and not feed.entries:
+            logger.warning(f"[EDGAR] 피드 파싱 오류: {feed.bozo_exception}")
+            return []
+
         for entry in feed.entries:
             raw   = entry.get("title", "")
             lower = raw.lower()
@@ -175,12 +144,15 @@ def fetch_sec_edgar_ipo_rss() -> list[dict]:
                 "source":       "SEC EDGAR",
                 "filed_date":   entry.get("updated", "")[:10],
             })
+            logger.info(f"[EDGAR] 매칭: {raw} → {matched}")
+
     except Exception as e:
         logger.warning(f"[EDGAR] RSS 수집 실패: {e}")
     return results
 
 
 def fetch_google_news_ipo_rss() -> list[dict]:
+    """Google News RSS 수집. 타임아웃은 socket 전역 설정으로 처리."""
     queries = [
         "SpaceX+OpenAI+Anthropic+Stripe+IPO+2026",
         "IPO+S-1+SEC+billion+valuation+2026",
@@ -201,6 +173,7 @@ def fetch_google_news_ipo_rss() -> list[dict]:
         try:
             feed = feedparser.parse(url, request_headers=headers)
             if not feed.entries:
+                logger.warning(f"[GoogleNews] 빈 응답: {query}")
                 continue
             for entry in feed.entries:
                 title = entry.get("title", "")
@@ -240,10 +213,15 @@ def fetch_google_news_ipo_rss() -> list[dict]:
 
 
 # ════════════════════════════════════════════════════════════
-# 병합
+# 병합  (Bug8 수정)
 # ════════════════════════════════════════════════════════════
 
 def merge_ipo_lists(*lists) -> list[dict]:
+    """
+    Bug8 수정:
+    - valuation_bn 우선순위: fallback > None (외부 데이터가 None이면 fallback 유지)
+    - 상태 우선순위는 기존대로 (신청완료 > 검토중 > 루머)
+    """
     STATUS_PRIORITY = {
         "신청완료":   4,
         "공모가확정": 3,
@@ -252,6 +230,7 @@ def merge_ipo_lists(*lists) -> list[dict]:
         "거래중":     0,
     }
     merged: dict[str, dict] = {}
+
     for ipo_list in lists:
         if not isinstance(ipo_list, list):
             continue
@@ -261,21 +240,28 @@ def merge_ipo_lists(*lists) -> list[dict]:
             company = item.get("company")
             if not company:
                 continue
+            item = item.copy()
             item["status"] = normalize_status(item.get("status", ""))
+
             if company not in merged:
-                merged[company] = item.copy()
+                merged[company] = item
             else:
                 existing     = merged[company]
                 new_priority = STATUS_PRIORITY.get(item["status"], 0)
                 old_priority = STATUS_PRIORITY.get(existing["status"], 0)
+
                 if new_priority > old_priority:
                     existing["status"]     = item["status"]
                     existing["filed_date"] = (
                         item.get("filed_date") or existing.get("filed_date")
                     )
                     existing["source"] = item["source"]
-                if existing.get("valuation_bn") is None and item.get("valuation_bn"):
+
+                # Bug8 수정: 새 값이 None이 아닐 때만 덮어씀
+                # (fallback의 정확한 valuation_bn을 외부 None이 지우지 않도록)
+                if item.get("valuation_bn") is not None:
                     existing["valuation_bn"] = item["valuation_bn"]
+
     return [v for v in merged.values() if v.get("status") != "거래중"]
 
 
@@ -284,15 +270,9 @@ def merge_ipo_lists(*lists) -> list[dict]:
 # ════════════════════════════════════════════════════════════
 
 def calculate_ipo_score(ipo_list: list) -> dict:
-    """
-    ipo_list 반드시 list[dict] 형태여야 함.
-    잘못된 타입 입력 시 방어 처리.
-    """
-    # ★ 타입 방어
     if not isinstance(ipo_list, list):
         logger.error(
-            f"[IPO] calculate_ipo_score 잘못된 입력 타입: "
-            f"{type(ipo_list).__name__} → 빈 리스트로 대체"
+            f"[IPO] 잘못된 입력 타입: {type(ipo_list).__name__} → 빈 리스트 대체"
         )
         ipo_list = []
 
@@ -302,14 +282,9 @@ def calculate_ipo_score(ipo_list: list) -> dict:
     signals           = []
 
     for item in ipo_list:
-        # ★ 아이템 타입 방어
         if not isinstance(item, dict):
-            logger.warning(
-                f"[IPO] ipo_list 아이템이 dict가 아님: "
-                f"{type(item).__name__}={item!r} → 스킵"
-            )
+            logger.warning(f"[IPO] dict 아닌 아이템 스킵: {type(item).__name__}")
             continue
-
         company      = item.get("company", "Unknown")
         valuation_bn = item.get("valuation_bn") or 0
         status       = item.get("status", "루머")
@@ -318,14 +293,11 @@ def calculate_ipo_score(ipo_list: list) -> dict:
 
         total_weighted_bn += weighted_bn
 
-        if status == "신청완료":
-            filed_count += 1
-        elif status == "공모가확정":
-            priced_count += 1
+        if status == "신청완료":   filed_count  += 1
+        elif status == "공모가확정": priced_count += 1
 
         signals.append(
-            f"{company} {valuation_bn:,.0f}B "
-            f"[{status}] 가중={weighted_bn:,.0f}B"
+            f"{company} {valuation_bn:,.0f}B [{status}] 가중={weighted_bn:,.0f}B"
         )
 
     pipeline_score = min(50, (total_weighted_bn / 1_500) * 50)
@@ -333,23 +305,16 @@ def calculate_ipo_score(ipo_list: list) -> dict:
     priced_score   = min(15, priced_count * 5)
     final_score    = min(100, round(pipeline_score + filed_score + priced_score, 1))
 
-    if final_score >= 70:
-        grade, color = "RED",    "#e74c3c"
-    elif final_score >= 40:
-        grade, color = "YELLOW", "#f39c12"
-    else:
-        grade, color = "GREEN",  "#27ae60"
+    grade = "RED" if final_score >= 70 else "YELLOW" if final_score >= 40 else "GREEN"
+    color = {"RED": "#e74c3c", "YELLOW": "#f39c12", "GREEN": "#27ae60"}[grade]
 
     alert_messages = []
     if total_weighted_bn >= 1_500:
         alert_messages.append(
-            f"🔴 IPO 파이프라인 {total_weighted_bn:,.0f}B — "
-            f"임계값 1,500B 초과"
+            f"🔴 IPO 파이프라인 {total_weighted_bn:,.0f}B — 임계값 1,500B 초과"
         )
-    if filed_count >= 1:
-        alert_messages.append(f"⚠️ S-1 신청완료 {filed_count}건")
-    if priced_count >= 1:
-        alert_messages.append(f"⚠️ 공모가 확정 {priced_count}건")
+    if filed_count  >= 1: alert_messages.append(f"⚠️ S-1 신청완료 {filed_count}건")
+    if priced_count >= 1: alert_messages.append(f"⚠️ 공모가 확정 {priced_count}건")
 
     return {
         "score":             final_score,
@@ -360,7 +325,7 @@ def calculate_ipo_score(ipo_list: list) -> dict:
         "priced_count":      priced_count,
         "signals":           signals,
         "alert_messages":    alert_messages,
-        "ipo_list":          ipo_list,    # ★ 반드시 포함
+        "ipo_list":          ipo_list,
         "timestamp":         datetime.now(timezone.utc).isoformat(),
     }
 
@@ -390,12 +355,10 @@ def collect_ipo_data() -> dict:
 
     logger.info(f"[IPO] 최종 {len(merged)}개 기업 병합 완료")
 
-    # ★ calculate_ipo_score()는 여기서 단 한 번만 호출
     result = calculate_ipo_score(merged)
-
     logger.info(
         f"[IPO] 점수={result['score']} "
         f"등급={result['grade']} "
         f"가중파이프라인={result['total_weighted_bn']}B"
     )
-    return result   # dict 반환 (score, ipo_list 등 포함)
+    return result
