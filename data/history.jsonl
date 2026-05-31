@@ -8,4 +8,4 @@
 {"date": "2026-05-29", "score": 32.1, "grade": "MODERATE", "w1": 35.0, "w2": 32.0, "w3": 0.0, "w4": 68.0, "signal": "HOLD"}
 {"date": "2026-05-29", "score": 32.1, "grade": "MODERATE", "w1": 35.0, "w2": 32.0, "w3": 0.0, "w4": 68.0, "signal": "HOLD"}
 {"date": "2026-05-29", "score": 32.1, "grade": "MODERATE", "w1": 35.0, "w2": 32.0, "w3": 0.0, "w4": 68.0, "signal": "HOLD"}
-{"date": "2026-05-31", "composite_score": 39.0, "w1_score": 12, "w2_score": 30, "w3_score": 15, "w4_score": 96, "grade": "GREEN", "validation_passed": null}
+{"date": "2026-05-31", "composite_score": 35.0, "w1_score": 12, "w2_score": 30, "w3_score": 15, "w4_score": 80, "grade": "GREEN", "validation_passed": null}

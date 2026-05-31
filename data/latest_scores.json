@@ -1,11 +1,11 @@
 {
-  "composite_score": 39.0,
+  "composite_score": 35.0,
   "grade": "GREEN",
-  "timestamp": "2026-05-31T14:03:30.320238+00:00",
+  "timestamp": "2026-05-31T14:09:27.779274+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
-  "w4_score": 96,
+  "w4_score": 80,
   "w1": {
     "score": 12,
     "grade": "GREEN",
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-05-31T14:03:22.920368+00:00"
+    "timestamp": "2026-05-31T14:09:24.305007+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-05-31T14:03:24.337367+00:00"
+    "timestamp": "2026-05-31T14:09:25.685280+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,52 +38,52 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-05-31T14:03:26.163405+00:00"
+    "timestamp": "2026-05-31T14:09:27.495527+00:00"
   },
   "w4": {
-    "score": 96,
+    "score": 80,
     "grade": "위험",
     "color": "red",
-    "total_valuation_bn": 6177.9,
-    "filed_count": 2,
-    "priced_count": 2,
+    "total_valuation_bn": 2523.0,
+    "filed_count": 3,
+    "priced_count": 0,
     "signals": [
-      "📋 Revolut: S-1 제출 완료 ($75B)",
-      "✅ SpaceX: 상장 완료 (점수 제외)",
-      "💰 OpenAI: 가격 확정 ($3000B)",
+      "📋 SpaceX: S-1 제출 완료 ($1800B)",
+      "🔍 OpenAI: IPO 검토 중 ($852B)",
+      "🔍 Anthropic: IPO 검토 중 ($965B)",
       "🔍 Databricks: IPO 검토 중 ($134B)",
-      "💰 Anthropic: 가격 확정 ($3000B)",
       "🔍 Stripe: IPO 검토 중 ($159B)",
       "✅ Cerebras: 상장 완료 (점수 제외)",
+      "📋 Revolut: S-1 제출 완료 ($75B)",
       "📋 Discord: S-1 제출 완료 ($15B)"
     ],
     "alerts": [
-      "🚨 활성 파이프라인 $6178B — 역대 최대"
+      "⚠️ 활성 파이프라인 $2523B — 매우 높음"
     ],
     "ipo_list": [
       {
-        "company": "Revolut",
-        "valuation_bn": 75,
-        "status": "신청완료",
-        "source": "Bloomberg 2026",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
         "company": "SpaceX",
-        "valuation_bn": 1800.0,
-        "status": "상장완료",
-        "source": "Google News RSS",
-        "filed_date": null,
+        "valuation_bn": 1800,
+        "status": "신청완료",
+        "source": "Reuters/Bloomberg 2026-05-15",
+        "filed_date": "2026-04-01",
         "listed_date": null,
         "ticker": null
       },
       {
         "company": "OpenAI",
-        "valuation_bn": 3000.0,
-        "status": "가격확정",
-        "source": "Google News RSS",
+        "valuation_bn": 852,
+        "status": "검토중",
+        "source": "Bloomberg 2026-03-31",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "Anthropic",
+        "valuation_bn": 965,
+        "status": "검토중",
+        "source": "Anthropic 공식 / Reuters 2026-05-28",
         "filed_date": null,
         "listed_date": null,
         "ticker": null
@@ -93,15 +93,6 @@
         "valuation_bn": 134,
         "status": "검토중",
         "source": "CNBC 2026-02-09",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
-        "company": "Anthropic",
-        "valuation_bn": 3000.0,
-        "status": "가격확정",
-        "source": "Google News RSS",
         "filed_date": null,
         "listed_date": null,
         "ticker": null
@@ -125,6 +116,15 @@
         "ticker": "CBRS"
       },
       {
+        "company": "Revolut",
+        "valuation_bn": 75,
+        "status": "신청완료",
+        "source": "Bloomberg 2026",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      },
+      {
         "company": "Discord",
         "valuation_bn": 15,
         "status": "신청완료",
@@ -134,7 +134,7 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-05-31T14:03:30.320177+00:00"
+    "timestamp": "2026-05-31T14:09:27.779203+00:00"
   },
   "ai_validation": {
     "validation_passed": null,
@@ -143,7 +143,7 @@
     "score_checks": [],
     "anomalies": [],
     "recommendations": [],
-    "validated_at": "2026-05-31T14:03:48.463941+00:00",
+    "validated_at": "2026-05-31T14:09:46.014494+00:00",
     "model": null
   }
 }
