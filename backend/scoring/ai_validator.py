@@ -1,7 +1,6 @@
 # ============================================================
 # ai_validator.py  –  Claude AI 기반 검증
-# 수정: 예외 클래스 계층 정확히 처리
-#       anthropic.RateLimitError / APIStatusError / APIConnectionError
+# 수정: Bug5 – APIStatusError.message → str(e) 로 교체
 # ============================================================
 
 import os
@@ -54,21 +53,11 @@ VALIDATION_PROMPT = """
   "validation_passed": true,
   "overall_assessment": "전체 평가 한 문장",
   "data_checks": [
-    {{
-      "field": "필드명",
-      "value": "수치",
-      "status": "OK",
-      "comment": "설명"
-    }}
+    {{"field": "필드명", "value": "수치", "status": "OK", "comment": "설명"}}
   ],
   "score_checks": [
-    {{
-      "indicator": "W1",
-      "reported_score": 40,
-      "expected_range": "30~55",
-      "status": "OK",
-      "comment": "설명"
-    }}
+    {{"indicator": "W1", "reported_score": 40, "expected_range": "30~55",
+      "status": "OK", "comment": "설명"}}
   ],
   "anomalies": [],
   "recommendations": []
@@ -81,38 +70,35 @@ def _build_raw_summary(scores_data: dict) -> str:
     w2 = scores_data.get("w2", {})
     w3 = scores_data.get("w3", {})
     w4 = scores_data.get("w4", {})
-
     summary = {
         "W1_주도주압축": {
-            "SPY_YTD_%":       w1.get("spy_ytd"),
-            "RSP_YTD_%":       w1.get("rsp_ytd"),
-            "괴리율_%p":        w1.get("current_spread"),
-            "괴리_퍼센타일":    w1.get("spread_percentile"),
-            "RSP_1주수익률_%":  w1.get("rsp_1w_return"),
+            "SPY_YTD_%":      w1.get("spy_ytd"),
+            "RSP_YTD_%":      w1.get("rsp_ytd"),
+            "괴리율_%p":       w1.get("current_spread"),
+            "괴리_퍼센타일":   w1.get("spread_percentile"),
+            "RSP_1주수익률_%": w1.get("rsp_1w_return"),
         },
         "W2_채권자경단": {
-            "10년물금리_%":     w2.get("us10y_yield"),
-            "2년물금리_%":      w2.get("us2y_yield"),
-            "장단기금리차_%p":  w2.get("term_spread"),
-            "TIPS실질금리_%":   w2.get("tips_10y_real_yield"),
-            "장단기역전여부":   w2.get("is_inverted"),
+            "10년물금리_%":    w2.get("us10y_yield"),
+            "2년물금리_%":     w2.get("us2y_yield"),
+            "장단기금리차_%p": w2.get("term_spread"),
+            "TIPS실질금리_%":  w2.get("tips_10y_real_yield"),
+            "장단기역전여부":  w2.get("is_inverted"),
         },
         "W3_사모크레딧": {
-            "HY스프레드_bps":   w3.get("hy_spread_bps"),
-            "IG스프레드_bps":   w3.get("ig_spread_bps"),
+            "HY스프레드_bps":  w3.get("hy_spread_bps"),
+            "IG스프레드_bps":  w3.get("ig_spread_bps"),
             "HY_1개월변화_bps": w3.get("hy_1m_change_bps"),
         },
         "W4_대어급IPO": {
-            "가중파이프라인_B":  w4.get("total_weighted_bn"),
-            "신청완료건수":      w4.get("filed_count"),
-            "공모가확정건수":    w4.get("priced_count"),
+            "가중파이프라인_B": w4.get("total_weighted_bn"),
+            "신청완료건수":     w4.get("filed_count"),
+            "공모가확정건수":   w4.get("priced_count"),
             "IPO목록": [
-                {
-                    "기업":       item.get("company"),
-                    "기업가치_B": item.get("valuation_bn"),
-                    "상태":       item.get("status"),
-                }
-                for item in (w4.get("ipo_list") or [])
+                {"기업": i.get("company"),
+                 "기업가치_B": i.get("valuation_bn"),
+                 "상태": i.get("status")}
+                for i in (w4.get("ipo_list") or [])
             ],
         },
     }
@@ -124,14 +110,13 @@ def _build_scores_summary(scores_data: dict) -> str:
     w2 = scores_data.get("w2_score") or 0
     w3 = scores_data.get("w3_score") or 0
     w4 = scores_data.get("w4_score") or 0
-
     summary = {
-        "W1_원점수":  w1,
-        "W2_원점수":  w2,
-        "W3_원점수":  w3,
-        "W4_원점수":  w4,
-        "종합점수":   scores_data.get("composite_score"),
-        "등급":       scores_data.get("grade"),
+        "W1_원점수": w1,
+        "W2_원점수": w2,
+        "W3_원점수": w3,
+        "W4_원점수": w4,
+        "종합점수":  scores_data.get("composite_score"),
+        "등급":      scores_data.get("grade"),
         "가중계산_검증": {
             "W1×0.25": round(w1 * 0.25, 2),
             "W2×0.30": round(w2 * 0.30, 2),
@@ -144,10 +129,6 @@ def _build_scores_summary(scores_data: dict) -> str:
 
 
 def validate_with_ai(scores_data: dict) -> dict:
-    """
-    Claude API 호출하여 데이터·점수 검증.
-    모든 예외를 잡아 파이프라인 중단 방지.
-    """
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key:
         logger.warning("[AI검증] ANTHROPIC_API_KEY 없음 → 스킵")
@@ -171,7 +152,7 @@ def validate_with_ai(scores_data: dict) -> dict:
 
             raw_text = message.content[0].text.strip()
 
-            # 마크다운 코드블록 제거 (Claude가 간혹 붙임)
+            # 마크다운 코드블록 제거
             if "```" in raw_text:
                 parts    = raw_text.split("```")
                 raw_text = parts[1] if len(parts) > 1 else parts[0]
@@ -184,18 +165,13 @@ def validate_with_ai(scores_data: dict) -> dict:
 
             passed = result.get("validation_passed")
             if passed is True:
-                logger.info(
-                    f"[AI검증] ✅ 통과: {result.get('overall_assessment', '')}"
-                )
+                logger.info(f"[AI검증] ✅ 통과: {result.get('overall_assessment','')}")
             else:
-                logger.warning(
-                    f"[AI검증] ⚠️  실패: {result.get('overall_assessment', '')}"
-                )
+                logger.warning(f"[AI검증] ⚠️  실패: {result.get('overall_assessment','')}")
                 for a in result.get("anomalies", []):
                     logger.warning(f"[AI검증]   이상: {a}")
                 for r in result.get("recommendations", []):
                     logger.warning(f"[AI검증]   권고: {r}")
-
             return result
 
         except json.JSONDecodeError as e:
@@ -203,34 +179,25 @@ def validate_with_ai(scores_data: dict) -> dict:
             if attempt == 3:
                 return _skip_result(f"JSON 파싱 오류: {e}")
 
-        # ── Anthropic 예외 계층 정확히 처리 ────────────────
         except anthropic.RateLimitError:
             wait = 2 ** attempt
-            logger.warning(
-                f"[AI검증] Rate Limit → {wait}초 대기 ({attempt}/3)"
-            )
+            logger.warning(f"[AI검증] Rate Limit → {wait}초 대기 ({attempt}/3)")
             time.sleep(wait)
 
         except anthropic.APIStatusError as e:
-            # 500, 529 등 서버 측 오류
-            logger.error(
-                f"[AI검증] API 상태 오류 {e.status_code} ({attempt}/3): "
-                f"{e.message}"
-            )
+            # Bug5 수정: e.message → str(e)
+            err_msg = str(e)
+            logger.error(f"[AI검증] API 상태 오류 {e.status_code} ({attempt}/3): {err_msg}")
             if e.status_code in (500, 529):
                 time.sleep(2 ** attempt)
             else:
-                # 4xx 클라이언트 오류는 재시도 불필요
-                return _skip_result(f"API 오류 {e.status_code}: {e.message}")
+                return _skip_result(f"API 오류 {e.status_code}: {err_msg}")
 
         except anthropic.APIConnectionError as e:
-            logger.warning(
-                f"[AI검증] 연결 오류 ({attempt}/3): {e}"
-            )
+            logger.warning(f"[AI검증] 연결 오류 ({attempt}/3): {e}")
             time.sleep(2 ** attempt)
 
         except anthropic.APIError as e:
-            # 위에서 잡지 못한 기타 Anthropic 오류
             logger.error(f"[AI검증] 기타 API 오류 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"API 오류: {e}")
