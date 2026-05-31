@@ -1,5 +1,8 @@
 // ============================================================
 // dashboard.js  –  대시보드 렌더링 (index.html 구조 기준)
+// 수정:
+//   Bug2 – toggleFlip: inner- → flip- (CSS .card-flip-wrapper.flipped 대응)
+//   Bug3 – warning bars 클래스명 CSS와 일치
 // ============================================================
 
 "use strict";
@@ -52,11 +55,13 @@ function scoreGradeClass(s) {
 
 // ──────────────────────────────────────────────────────────
 // 카드 뒤집기
+// Bug2 수정: inner-${prefix} → flip-${prefix}
+// CSS: .card-flip-wrapper.flipped .card-flip-inner { transform: rotateY(180deg) }
 // ──────────────────────────────────────────────────────────
 
 function toggleFlip(prefix) {
-  const inner = document.getElementById(`inner-${prefix}`);
-  if (inner) inner.classList.toggle("flipped");
+  const wrapper = document.getElementById(`flip-${prefix}`);
+  if (wrapper) wrapper.classList.toggle("flipped");
 }
 
 // ──────────────────────────────────────────────────────────
@@ -205,16 +210,16 @@ function buildBackContent(prefix, raw) {
   }
 
   if (prefix === "w3") {
-    const hy    = (raw.hy_spread_bps ?? raw.hy_bps ?? 0).toFixed(0);
-    const ig    = (raw.ig_spread_bps ?? raw.ig_bps ?? 0).toFixed(0);
-    const hyPct = raw.hy_spread_percentile ?? "N/A";
+    const hy    = (raw.hy_bps ?? 0).toFixed(0);
+    const ig    = (raw.ig_bps ?? 0).toFixed(0);
+    const hyChg = (raw.hy_change_bps ?? 0).toFixed(0);
 
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
         <div class="back-metric"><span class="back-label">HY 스프레드</span><span class="back-value ${parseInt(hy) >= 400 ? "val-red" : parseInt(hy) >= 300 ? "val-yellow" : "val-green"}">${hy} bps</span></div>
         <div class="back-metric"><span class="back-label">IG 스프레드</span><span class="back-value">${ig} bps</span></div>
-        <div class="back-metric"><span class="back-label">HY 퍼센타일</span><span class="back-value">${hyPct}%ile</span></div>
+        <div class="back-metric"><span class="back-label">HY 1개월 변화</span><span class="back-value">${parseInt(hyChg) >= 0 ? "+" : ""}${hyChg} bps</span></div>
       </div>
       <div class="back-section">
         <h4>🔍 지금 어떤 상황인가?</h4>
@@ -224,7 +229,7 @@ function buildBackContent(prefix, raw) {
   }
 
   if (prefix === "w4") {
-    const totalBn = (raw.total_valuation_bn ?? raw.total_weighted_bn ?? 0).toLocaleString();
+    const totalBn = (raw.total_valuation_bn ?? 0).toLocaleString();
     const filed   = raw.filed_count  ?? 0;
     const priced  = raw.priced_count ?? 0;
 
@@ -239,7 +244,7 @@ function buildBackContent(prefix, raw) {
         <h4>🔍 지금 어떤 상황인가?</h4>
         <p>대형 IPO가 줄줄이 예정되면 유동성이 IPO 청약에 쏠립니다. 현재 SpaceX($1,800B), OpenAI($852B), Anthropic($965B) 등 역사상 전례 없는 규모의 파이프라인이 대기 중입니다.</p>
         <p><strong>가중치:</strong> 신청완료 100%, 검토중 30%, 루머 10%, 상장완료 0%</p>
-        <p class="back-advice">💡 SpaceX IPO(6월 12일 예정) 전후 변동성에 주의하세요.</p>
+        <p class="back-advice">💡 SpaceX IPO 전후 변동성에 주의하세요.</p>
       </div>`;
   }
 
@@ -274,7 +279,7 @@ function renderCard(prefix, score, raw, weightLabel) {
       : "";
   }
 
-  // 지표 그리드 (W1~W3)
+  // 지표 그리드 (W1~W4)
   const metricsEl = document.getElementById(`metrics-${prefix}`);
   if (metricsEl) {
     metricsEl.innerHTML = buildMetrics(prefix, raw);
@@ -392,7 +397,12 @@ function renderComposite(data) {
       hedgeEl.innerHTML = `<span style="color:#27ae60">🛡️ 헤지 불필요: 정상 시장 환경</span>`;
   }
 
-  // W1~W4 미니 바
+  // Bug3 수정: CSS 클래스명을 styles.css와 일치시킴
+  // warning-bar-row → warning-bar-item
+  // bar-label       → warning-bar-label
+  // bar-track       → warning-bar-track
+  // bar-fill        → warning-bar-fill
+  // bar-val         → warning-bar-val
   const barsEl = document.getElementById("warning-bars");
   if (barsEl) {
     const items = [
@@ -404,12 +414,12 @@ function renderComposite(data) {
     barsEl.innerHTML = items.map(({ key, label }) => {
       const s = data[`${key}_score`] ?? 0;
       return `
-        <div class="warning-bar-row">
-          <span class="bar-label">${label}</span>
-          <div class="bar-track">
-            <div class="bar-fill" style="width:${s}%; background:${scoreColor(s)}"></div>
+        <div class="warning-bar-item">
+          <span class="warning-bar-label">${label}</span>
+          <div class="warning-bar-track">
+            <div class="warning-bar-fill" style="width:${s}%; background:${scoreColor(s)}"></div>
           </div>
-          <span class="bar-val" style="color:${scoreColor(s)}">${s}점</span>
+          <span class="warning-bar-val" style="color:${scoreColor(s)}">${s}점</span>
         </div>`;
     }).join("");
   }
