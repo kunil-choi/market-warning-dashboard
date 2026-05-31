@@ -151,7 +151,7 @@ def validate_with_ai(scores_data: dict) -> dict:
         try:
             client  = anthropic.Anthropic(api_key=api_key)
             message = client.messages.create(
-                model="claude-sonnet-4-6",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=2048,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -167,7 +167,7 @@ def validate_with_ai(scores_data: dict) -> dict:
 
             result = json.loads(raw_text)
             result["validated_at"] = datetime.now(timezone.utc).isoformat()
-            result["model"]        = "claude-sonnet-4-6"
+            result["model"]        = "claude-3-5-sonnet-20241022"
 
             passed = result.get("validation_passed")
             if passed is True:
@@ -186,33 +186,32 @@ def validate_with_ai(scores_data: dict) -> dict:
                 return _skip_result(f"JSON 파싱 오류: {e}")
 
         except anthropic.RateLimitError:
-            wait = 2 ** attempt
-            logger.warning(f"[AI검증] Rate Limit → {wait}초 대기 ({attempt}/3)")
-            time.sleep(wait)
+            logger.warning(f"[AI검증] Rate Limit → 5초 대기 ({attempt}/3)")
+            time.sleep(5)
 
         except anthropic.APIStatusError as e:
             err_msg = str(e)
             logger.error(f"[AI검증] API 상태 오류 {e.status_code} ({attempt}/3): {err_msg}")
             if e.status_code in (500, 529):
-                time.sleep(2 ** attempt)
+                time.sleep(5)
             else:
                 return _skip_result(f"API 오류 {e.status_code}: {err_msg}")
 
         except anthropic.APIConnectionError as e:
             logger.warning(f"[AI검증] 연결 오류 ({attempt}/3): {e}")
-            time.sleep(2 ** attempt)
+            time.sleep(5)
 
         except anthropic.APIError as e:
             logger.error(f"[AI검증] 기타 API 오류 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"API 오류: {e}")
-            time.sleep(2 ** attempt)
+            time.sleep(5)
 
         except Exception as e:
             logger.error(f"[AI검증] 예상치 못한 오류 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"알 수 없는 오류: {e}")
-            time.sleep(2 ** attempt)
+            time.sleep(5)
 
     return _skip_result("3회 재시도 모두 실패")
 
