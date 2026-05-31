@@ -1,34 +1,268 @@
-<!-- W1 카드 예시 (w2, w3, w4도 동일 패턴 적용, prefix만 변경) -->
-<div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
-  <div class="card-flip-inner">
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>글로벌 주식시장 위기경보 대시보드</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
 
-    <!-- 앞면 -->
-    <div class="card-front" id="front-w1">
-      <div class="card-header">
-        <span class="card-icon">📉</span>
-        <div>
-          <div class="card-title">W1 · 가중치 25%</div>
-          <div class="card-subtitle">선도주 압축 지표</div>
-        </div>
-        <span class="card-weight-badge" id="weight-w1">가중치 25%</span>
-        <span class="card-score-badge grade-green" id="score-w1">—</span>
-      </div>
-      <div class="chart-wrapper"><canvas id="bar-w1"></canvas></div>
-      <div class="signals-list" id="signals-w1"></div>
-      <!-- 앞면 본문: buildFrontContent 가 여기에 삽입 -->
-      <div id="front-body-w1"></div>
-      <div class="flip-hint">🔄 클릭하면 지표 해설 →</div>
+<!-- ══════════════════════════════════════════
+     HEADER
+     ══════════════════════════════════════════ -->
+<header class="site-header">
+  <div class="header-left">
+    <span class="logo">🚨</span>
+    <div>
+      <h1>글로벌 주식시장 위기경보 대시보드</h1>
+      <div class="subtitle">Global Stock Market Crisis Alert Dashboard</div>
     </div>
-
-    <!-- 뒷면 -->
-    <div class="card-back" id="back-w1">
-      <div class="back-header">
-        <span class="back-title">📉 선도주 압축 — 지표 해설</span>
-        <button class="flip-btn" onclick="event.stopPropagation();toggleFlip('w1')">◀ 돌아가기</button>
-      </div>
-      <!-- 뒷면 본문: buildBackContent 가 여기에 삽입 -->
-      <div id="back-body-w1"></div>
-    </div>
-
   </div>
-</div>
+  <div id="last-updated" class="last-updated">데이터 로딩 중...</div>
+</header>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       STORM BANNER (score >= 80 시 표시)
+       ══════════════════════════════════════════ -->
+  <section class="storm-section" id="storm-section" style="display:none">
+    <div class="storm-banner">
+      <div class="storm-icon">⛈️</div>
+      <div>
+        <div class="storm-title">PERFECT STORM 경보</div>
+        <div class="storm-desc">모든 위험 지표가 동시에 임계치를 초과했습니다. 즉각적인 리스크 감축이 필요합니다.</div>
+        <div class="storm-chain">
+          <strong>위기 전파 경로:</strong> 선도주 쏠림 붕괴 → 채권 금리 급등 →
+          신용 스프레드 확대 → 대형 IPO 유동성 흡수 → <strong>전면적 시장 조정</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       COMPOSITE SCORE
+       ══════════════════════════════════════════ -->
+  <section class="composite-section">
+    <div class="composite-card" id="composite-card">
+
+      <!-- 링 차트 -->
+      <div class="score-ring-wrapper">
+        <canvas id="composite-ring" width="160" height="160"></canvas>
+        <div class="score-center">
+          <span class="score-number" id="composite-number">—</span>
+          <span class="score-label">/ 100</span>
+        </div>
+      </div>
+
+      <!-- 우측 정보 -->
+      <div class="composite-right">
+        <div class="overall-label" id="overall-label">종합 위험도 계산 중...</div>
+
+        <div class="action-rec" id="action-rec">데이터를 불러오는 중입니다...</div>
+
+        <div class="algo-signal-box">
+          <span class="signal-badge" id="algo-signal-badge">—</span>
+          <span class="signal-desc" id="algo-signal-desc"></span>
+        </div>
+
+        <div class="hedge-rec" id="hedge-rec"></div>
+
+        <!-- 4개 카드 경고 바 -->
+        <div class="warning-bars" id="warning-bars"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       WARNING CARDS (4개)
+       ══════════════════════════════════════════ -->
+  <section class="warnings-section">
+    <div class="warnings-grid">
+
+      <!-- ─────────────────────────────────────
+           W1 · 선도주 압축 지표
+           ───────────────────────────────────── -->
+      <div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
+        <div class="card-flip-inner">
+
+          <!-- 앞면 -->
+          <div class="card-front" id="front-w1">
+            <div class="card-header">
+              <span class="card-icon">📉</span>
+              <div>
+                <div class="card-title">W1 · 선도주 압축</div>
+                <div class="card-subtitle">Lead-Stock Compression</div>
+              </div>
+              <span class="card-weight-badge" id="weight-w1">가중치 25%</span>
+              <span class="card-score-badge grade-green" id="score-w1">—</span>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="bar-w1"></canvas>
+            </div>
+            <div class="signals-list" id="signals-w1"></div>
+            <div id="front-body-w1"></div>
+            <div class="flip-hint">🔄 클릭하면 지표 해설 보기 →</div>
+          </div>
+
+          <!-- 뒷면 -->
+          <div class="card-back" id="back-w1">
+            <div class="back-header">
+              <span class="back-title">📉 선도주 압축 — 지표 해설</span>
+              <button class="flip-btn"
+                onclick="event.stopPropagation();toggleFlip('w1')">◀ 돌아가기</button>
+            </div>
+            <div id="back-body-w1"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           W2 · 채권 감시 & 금리
+           ───────────────────────────────────── -->
+      <div class="card-flip-wrapper" id="flip-w2" onclick="toggleFlip('w2')">
+        <div class="card-flip-inner">
+
+          <!-- 앞면 -->
+          <div class="card-front" id="front-w2">
+            <div class="card-header">
+              <span class="card-icon">📊</span>
+              <div>
+                <div class="card-title">W2 · 채권 감시 &amp; 금리</div>
+                <div class="card-subtitle">Bond Watchdog &amp; Rates</div>
+              </div>
+              <span class="card-weight-badge" id="weight-w2">가중치 30%</span>
+              <span class="card-score-badge grade-green" id="score-w2">—</span>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="bar-w2"></canvas>
+            </div>
+            <div class="signals-list" id="signals-w2"></div>
+            <div id="front-body-w2"></div>
+            <div class="flip-hint">🔄 클릭하면 지표 해설 보기 →</div>
+          </div>
+
+          <!-- 뒷면 -->
+          <div class="card-back" id="back-w2">
+            <div class="back-header">
+              <span class="back-title">📊 채권 &amp; 금리 — 지표 해설</span>
+              <button class="flip-btn"
+                onclick="event.stopPropagation();toggleFlip('w2')">◀ 돌아가기</button>
+            </div>
+            <div id="back-body-w2"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           W3 · 사모크레딧 환매
+           ───────────────────────────────────── -->
+      <div class="card-flip-wrapper" id="flip-w3" onclick="toggleFlip('w3')">
+        <div class="card-flip-inner">
+
+          <!-- 앞면 -->
+          <div class="card-front" id="front-w3">
+            <div class="card-header">
+              <span class="card-icon">💳</span>
+              <div>
+                <div class="card-title">W3 · 사모크레딧 환매</div>
+                <div class="card-subtitle">Private Credit Redemption</div>
+              </div>
+              <span class="card-weight-badge" id="weight-w3">가중치 20%</span>
+              <span class="card-score-badge grade-green" id="score-w3">—</span>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="bar-w3"></canvas>
+            </div>
+            <div class="signals-list" id="signals-w3"></div>
+            <div id="front-body-w3"></div>
+            <div class="flip-hint">🔄 클릭하면 지표 해설 보기 →</div>
+          </div>
+
+          <!-- 뒷면 -->
+          <div class="card-back" id="back-w3">
+            <div class="back-header">
+              <span class="back-title">💳 사모크레딧 — 지표 해설</span>
+              <button class="flip-btn"
+                onclick="event.stopPropagation();toggleFlip('w3')">◀ 돌아가기</button>
+            </div>
+            <div id="back-body-w3"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────
+           W4 · 대형 IPO 유동성
+           ───────────────────────────────────── -->
+      <div class="card-flip-wrapper" id="flip-w4" onclick="toggleFlip('w4')">
+        <div class="card-flip-inner">
+
+          <!-- 앞면 -->
+          <div class="card-front" id="front-w4">
+            <div class="card-header">
+              <span class="card-icon">🏦</span>
+              <div>
+                <div class="card-title">W4 · 대형 IPO 유동성</div>
+                <div class="card-subtitle">Large-IPO Liquidity</div>
+              </div>
+              <span class="card-weight-badge" id="weight-w4">가중치 25%</span>
+              <span class="card-score-badge grade-green" id="score-w4">—</span>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="bar-w4"></canvas>
+            </div>
+            <div class="signals-list" id="signals-w4"></div>
+            <div id="front-body-w4"></div>
+            <div class="flip-hint">🔄 클릭하면 지표 해설 보기 →</div>
+          </div>
+
+          <!-- 뒷면 -->
+          <div class="card-back" id="back-w4">
+            <div class="back-header">
+              <span class="back-title">🏦 대형 IPO — 지표 해설</span>
+              <button class="flip-btn"
+                onclick="event.stopPropagation();toggleFlip('w4')">◀ 돌아가기</button>
+            </div>
+            <div id="back-body-w4"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /.warnings-grid -->
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       HISTORY CHART
+       ══════════════════════════════════════════ -->
+  <section class="history-section">
+    <div class="section-title">📈 복합 위험 점수 추이 (최근 30일)</div>
+    <div class="history-chart-wrapper">
+      <canvas id="history-chart"></canvas>
+    </div>
+  </section>
+
+</div><!-- /.container -->
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+     ══════════════════════════════════════════ -->
+<footer class="site-footer">
+  <div>데이터 출처: Yahoo Finance · FRED (Federal Reserve Economic Data) · SEC EDGAR</div>
+  <div>본 대시보드는 참고용이며 투자 권유가 아닙니다. 투자 결정은 본인 책임 하에 이루어져야 합니다.</div>
+</footer>
+
+<!-- ══════════════════════════════════════════
+     SCRIPTS
+     ══════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="charts.js"></script>
+<script src="dashboard.js"></script>
+
+</body>
+</html>
