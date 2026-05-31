@@ -1,9 +1,9 @@
 // ============================================================
 // dashboard.js  –  대시보드 렌더링 및 인터랙션
 // 수정사항:
+//   Bug Fix 1 – STATUS_WEIGHT 상수 추가 (ReferenceError 해결)
+//   Bug Fix 2 – Anthropic 기업가치 $900B → $965B 텍스트 수정
 //   Bug Fix 3 – loadHistory() 완료 후 equalizeCardHeights() 재호출
-//   + Anthropic $900B 반영된 카드 뒷면 해설 업데이트
-//   + statusClassMap 한글→CSS 클래스 매핑 유지
 // ============================================================
 
 "use strict";
@@ -14,10 +14,10 @@ const HISTORY_URL = "./data/history.jsonl";
 
 // ── 가중치 설정 ───────────────────────────────────────────
 const WEIGHTS = {
-  w1: 0.25,   // 주도주 압축
-  w2: 0.30,   // 채권 자경단 (금리)
-  w3: 0.20,   // 사모 크레딧
-  w4: 0.25,   // 대어급 IPO
+  w1: 0.25,
+  w2: 0.30,
+  w3: 0.20,
+  w4: 0.25,
 };
 
 const WEIGHT_LABELS = {
@@ -27,6 +27,17 @@ const WEIGHT_LABELS = {
   w4: "25%",
 };
 
+// ── IPO 상태별 가중치 ─────────────────────────────────────
+// ✅ Bug Fix 1: STATUS_WEIGHT 미정의 ReferenceError 해결
+// 백엔드 collector_ipo.py 의 STATUS_WEIGHT 와 동기화
+const STATUS_WEIGHT = {
+  "루머":     0.1,
+  "검토중":   0.3,
+  "신청완료": 1.0,
+  "가격확정": 1.0,
+  "상장완료": 0.0,
+};
+
 // ── IPO 상태 → CSS 클래스 매핑 ───────────────────────────
 const statusClassMap = {
   "신청완료":   "Filed",
@@ -34,6 +45,7 @@ const statusClassMap = {
   "공모가확정": "Priced",
   "거래중":     "Trading",
   "루머":       "Rumor",
+  "상장완료":   "Trading",
 };
 
 // ── 등급별 색상 ───────────────────────────────────────────
@@ -69,7 +81,7 @@ function toggleFlip(prefix) {
 
 
 // ════════════════════════════════════════════════════════════
-// 카드 높이 균일화  ← Bug Fix 3: loadHistory 후에도 재호출
+// 카드 높이 균일화
 // ════════════════════════════════════════════════════════════
 
 function equalizeCardHeights() {
@@ -110,19 +122,19 @@ window.addEventListener("resize", equalizeCardHeights);
 function buildBackContent(prefix, raw) {
   // ── W1: 주도주 압축 ────────────────────────────────────
   if (prefix === "w1") {
-    const spy    = (raw.spy_ytd              ?? 0).toFixed(2);
-    const rsp    = (raw.rsp_ytd              ?? 0).toFixed(2);
-    const diff   = ((raw.spy_ytd ?? 0) - (raw.rsp_ytd ?? 0)).toFixed(2);
-    const pct    = raw.spread_percentile     ?? "N/A";
-    const rsp1w  = raw.rsp_1w_return         != null
-                   ? (raw.rsp_1w_return).toFixed(2)
-                   : null;
-    const isNeg  = raw.rsp_is_negative_while_spy_positive ?? false;
+    const spy   = (raw.spy_ytd  ?? 0).toFixed(2);
+    const rsp   = (raw.rsp_ytd  ?? 0).toFixed(2);
+    const diff  = ((raw.spy_ytd ?? 0) - (raw.rsp_ytd ?? 0)).toFixed(2);
+    const pct   = raw.spread_percentile ?? "N/A";
+    const rsp1w = raw.rsp_1w_return != null
+                  ? (raw.rsp_1w_return).toFixed(2)
+                  : null;
+    const isNeg = raw.rsp_is_negative_while_spy_positive ?? false;
 
     const rsp1wHtml = rsp1w !== null
       ? `<div class="back-metric">
            <span class="back-label">RSP 1주 수익률</span>
-           <span class="back-value ${parseFloat(rsp1w) < 0 ? 'val-red' : 'val-green'}">
+           <span class="back-value ${parseFloat(rsp1w) < 0 ? "val-red" : "val-green"}">
              ${rsp1w > 0 ? "+" : ""}${rsp1w}%
            </span>
          </div>`
@@ -180,18 +192,20 @@ function buildBackContent(prefix, raw) {
 
   // ── W2: 채권 자경단 (금리) ─────────────────────────────
   if (prefix === "w2") {
-    const y10      = (raw.us10y_yield         ?? 0).toFixed(2);
-    const y2       = (raw.us2y_yield          ?? 0).toFixed(2);
+    const y10     = (raw.us10y_yield         ?? 0).toFixed(2);
+    const y2      = (raw.us2y_yield          ?? 0).toFixed(2);
     const termSprd = ((raw.us10y_yield ?? 0) - (raw.us2y_yield ?? 0)).toFixed(2);
-    const realYld  = (raw.tips_10y_real_yield ?? 0).toFixed(2);
-    const isInv    = parseFloat(termSprd) < 0;
+    const realYld = (raw.tips_10y_real_yield ?? 0).toFixed(2);
+    const isInv   = parseFloat(termSprd) < 0;
 
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
         <div class="back-metric">
           <span class="back-label">미국 10년물 국채금리</span>
-          <span class="back-value ${parseFloat(y10) >= 4.5 ? 'val-red' : ''}">${y10}%</span>
+          <span class="back-value ${parseFloat(y10) >= 4.5 ? "val-red" : ""}">
+            ${y10}%
+          </span>
         </div>
         <div class="back-metric">
           <span class="back-label">미국 2년물 국채금리</span>
@@ -199,7 +213,7 @@ function buildBackContent(prefix, raw) {
         </div>
         <div class="back-metric">
           <span class="back-label">장단기 금리차 (10Y–2Y)</span>
-          <span class="back-value ${isInv ? 'val-red' : 'val-green'}">
+          <span class="back-value ${isInv ? "val-red" : "val-green"}">
             ${parseFloat(termSprd) >= 0 ? "+" : ""}${termSprd}%p
           </span>
         </div>
@@ -239,16 +253,20 @@ function buildBackContent(prefix, raw) {
 
   // ── W3: 사모 크레딧 ────────────────────────────────────
   if (prefix === "w3") {
-    const hy     = (raw.hy_spread_bps ?? 0).toFixed(0);
-    const ig     = (raw.ig_spread_bps ?? 0).toFixed(0);
-    const hyPct  = raw.hy_spread_percentile ?? "N/A";
+    const hy    = (raw.hy_spread_bps ?? raw.hy_bps ?? 0).toFixed(0);
+    const ig    = (raw.ig_spread_bps ?? raw.ig_bps ?? 0).toFixed(0);
+    const hyPct = raw.hy_spread_percentile ?? "N/A";
 
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
         <div class="back-metric">
           <span class="back-label">HY 스프레드 (고수익채권)</span>
-          <span class="back-value ${parseInt(hy) >= 400 ? 'val-red' : parseInt(hy) >= 300 ? 'val-yellow' : 'val-green'}">
+          <span class="back-value ${
+            parseInt(hy) >= 400 ? "val-red"
+            : parseInt(hy) >= 300 ? "val-yellow"
+            : "val-green"
+          }">
             ${hy} bps
           </span>
         </div>
@@ -291,17 +309,20 @@ function buildBackContent(prefix, raw) {
 
   // ── W4: 대어급 IPO ─────────────────────────────────────
   if (prefix === "w4") {
-    const totalBn   = (raw.total_weighted_bn  ?? 0).toLocaleString();
-    const filed     = raw.filed_count         ?? 0;
-    const priced    = raw.priced_count        ?? 0;
-    const ipoList   = raw.ipo_list            ?? [];
+    const totalBn = (raw.total_valuation_bn ?? raw.total_weighted_bn ?? 0).toLocaleString();
+    const filed   = raw.filed_count  ?? 0;
+    const priced  = raw.priced_count ?? 0;
+    const ipoList = raw.ipo_list     ?? [];
 
     return `
       <div class="back-section">
         <h4>📊 수치 해설</h4>
         <div class="back-metric">
           <span class="back-label">가중 IPO 파이프라인</span>
-          <span class="back-value ${parseFloat(totalBn.replace(/,/g,'')) >= 1500 ? 'val-red' : 'val-yellow'}">
+          <span class="back-value ${
+            parseFloat(String(totalBn).replace(/,/g, "")) >= 1500
+              ? "val-red" : "val-yellow"
+          }">
 
             $${totalBn}B
           </span>
@@ -325,8 +346,8 @@ function buildBackContent(prefix, raw) {
         </p>
         <p>
           현재 가중 파이프라인은 <strong>$${totalBn}B</strong>입니다.
-          스페이스X($1,750B)의 역대 최대 IPO를 포함해
-          OpenAI($852B), Anthropic($900B) 등이 줄줄이 대기 중으로,
+          스페이스X($1,800B)의 역대 최대 IPO를 포함해
+          OpenAI($852B), Anthropic($965B) 등이 줄줄이 대기 중으로,
           역사상 전례 없는 규모입니다.
         </p>
         <p>
@@ -371,13 +392,14 @@ function renderIPOTable(ipoList) {
   }
 
   const rows = ipoList.map(item => {
-    const cssKey    = statusClassMap[item.status] ?? "Rumor";
-    const valuation = item.valuation_bn
+    const cssKey     = statusClassMap[item.status] ?? "Rumor";
+    const valuation  = item.valuation_bn
       ? `$${item.valuation_bn.toLocaleString()}B`
       : "–";
-    const weight    = (STATUS_WEIGHT?.[item.status] ?? 0.1) * 100;
+    // ✅ Bug Fix 1: STATUS_WEIGHT 이제 정의됨 → ReferenceError 해결
+    const weight     = (STATUS_WEIGHT[item.status] ?? 0.1) * 100;
     const weightedBn = item.valuation_bn
-      ? `$${Math.round(item.valuation_bn * (STATUS_WEIGHT?.[item.status] ?? 0.1)).toLocaleString()}B`
+      ? `$${Math.round(item.valuation_bn * (STATUS_WEIGHT[item.status] ?? 0.1)).toLocaleString()}B`
       : "–";
 
     return `
@@ -413,12 +435,12 @@ function renderIPOTable(ipoList) {
 // ════════════════════════════════════════════════════════════
 
 function renderWarningCard(prefix, title, score, raw) {
-  const color   = scoreBarColor(score);
-  const gClass  = gradeClass(score);
-  const weight  = WEIGHT_LABELS[prefix];
+  const color    = scoreBarColor(score);
+  const gClass   = gradeClass(score);
+  const weight   = WEIGHT_LABELS[prefix];
   const backHtml = buildBackContent(prefix, raw);
 
-  // W4는 IPO 테이블 추가
+  // W4는 카드 앞면에 IPO 테이블 추가
   const extraHtml = prefix === "w4"
     ? renderIPOTable(raw.ipo_list ?? [])
     : "";
@@ -473,10 +495,10 @@ function renderDashboard(data) {
   const compColor = scoreBarColor(composite);
   const compClass = gradeClass(composite);
 
-  let grade, gradeLabel;
-  if (composite >= 70) { grade = "RED";    gradeLabel = "🔴 위험"; }
-  else if (composite >= 40) { grade = "YELLOW"; gradeLabel = "🟡 주의"; }
-  else { grade = "GREEN";  gradeLabel = "🟢 안전"; }
+  let gradeLabel;
+  if (composite >= 70)      gradeLabel = "🔴 위험";
+  else if (composite >= 40) gradeLabel = "🟡 주의";
+  else                      gradeLabel = "🟢 안전";
 
   // ── 종합 카드 ────────────────────────────────────────────
   const compositeEl = document.getElementById("composite-card");
@@ -494,14 +516,14 @@ function renderDashboard(data) {
           </div>
           <div class="composite-bars">
             ${["w1","w2","w3","w4"].map(p => {
-              const s = data[`${p}_score`] ?? 0;
-              const lbl = {w1:"주도주",w2:"금리",w3:"크레딧",w4:"IPO"}[p];
+              const s   = data[`${p}_score`] ?? 0;
+              const lbl = { w1:"주도주", w2:"금리", w3:"크레딧", w4:"IPO" }[p];
               return `
                 <div class="mini-bar-row">
                   <span class="mini-bar-label">${lbl}</span>
                   <div class="mini-bar-bg">
                     <div class="mini-bar-fill"
-                         style="width:${s}%;background:${scoreBarColor(s)}">
+                         style="width:${s}%; background:${scoreBarColor(s)}">
                     </div>
                   </div>
                   <span class="mini-bar-val">${s}점</span>
@@ -513,7 +535,7 @@ function renderDashboard(data) {
       </div>
       <div class="composite-timestamp">
         데이터 기준: ${data.timestamp
-          ? new Date(data.timestamp).toLocaleString("ko-KR", {timeZone:"Asia/Seoul"})
+          ? new Date(data.timestamp).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
           : "N/A"}
         <span class="ts-hint">
           (매일 07:00 KST 자동 갱신 · latest_scores.json 파일 기준)
@@ -542,26 +564,26 @@ function renderDashboard(data) {
     ).join("");
   }
 
-  // ── 높이 균일화 (차트 렌더 완료 후) ────────────────────
+  // ── 높이 균일화 ──────────────────────────────────────────
   setTimeout(equalizeCardHeights, 0);
 }
 
 
 // ════════════════════════════════════════════════════════════
-// 히스토리 로드  ← Bug Fix 3: 완료 후 equalizeCardHeights 재호출
+// 히스토리 로드
 // ════════════════════════════════════════════════════════════
 
 async function loadHistory() {
   try {
-    const res  = await fetch(HISTORY_URL);
-    const text = await res.text();
+    const res   = await fetch(HISTORY_URL);
+    const text  = await res.text();
     const lines = text.trim().split("\n").filter(Boolean);
 
     const scores = lines.map(line => {
       try {
         const obj = JSON.parse(line);
         return {
-          // composite 키 이름 양쪽 모두 대응 (Bug Fix: 키 불일치 방어)
+          // composite 키 이름 양쪽 모두 대응 (키 불일치 방어)
           score: obj.composite_score ?? obj.score ?? obj.perfect_storm_score ?? 0,
           date:  obj.date ?? obj.timestamp?.slice(0, 10) ?? "",
         };
@@ -589,7 +611,7 @@ async function loadHistory() {
     }
   }
 
-  // ── Bug Fix 3: IPO 테이블 렌더 후 높이 재계산 ──────────
+  // ✅ Bug Fix 3: IPO 테이블 렌더 후 높이 재계산
   setTimeout(equalizeCardHeights, 150);
 }
 
@@ -600,17 +622,20 @@ async function loadHistory() {
 
 async function loadData() {
   try {
-    const res  = await fetch(DATA_URL);
+    const res = await fetch(DATA_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
     renderDashboard(data);
-    await loadHistory();   // 히스토리는 대시보드 렌더 후 로드
+    await loadHistory();
 
   } catch (e) {
     console.error("[loadData] 실패:", e);
-    document.getElementById("composite-card").innerHTML =
-      `<p class="error-msg">⚠️ 데이터 로드 실패: ${e.message}</p>`;
+    const el = document.getElementById("composite-card");
+    if (el) {
+      el.innerHTML =
+        `<p class="error-msg">⚠️ 데이터 로드 실패: ${e.message}</p>`;
+    }
   }
 }
 
