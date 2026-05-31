@@ -1,7 +1,7 @@
 {
   "composite_score": 35.0,
   "grade": "GREEN",
-  "timestamp": "2026-05-31T14:09:27.779274+00:00",
+  "timestamp": "2026-05-31T14:22:29.579156+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-05-31T14:09:24.305007+00:00"
+    "timestamp": "2026-05-31T14:22:26.207262+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-05-31T14:09:25.685280+00:00"
+    "timestamp": "2026-05-31T14:22:27.833045+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,7 +38,7 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-05-31T14:09:27.495527+00:00"
+    "timestamp": "2026-05-31T14:22:29.460144+00:00"
   },
   "w4": {
     "score": 80,
@@ -134,7 +134,7 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-05-31T14:09:27.779203+00:00"
+    "timestamp": "2026-05-31T14:22:29.579112+00:00"
   },
   "ai_validation": {
     "validation_passed": null,
@@ -143,7 +143,7 @@
     "score_checks": [],
     "anomalies": [],
     "recommendations": [],
-    "validated_at": "2026-05-31T14:09:46.014494+00:00",
+    "validated_at": "2026-05-31T14:22:47.874304+00:00",
     "model": null
   }
 }
