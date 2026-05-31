@@ -6,7 +6,8 @@ collector_credit.py
 import logging
 from datetime import datetime, timezone
 
-from backend.data_pipeline.fred_client import get_latest_value, get_series
+# ✅ 수정: get_series 제거 → fetch_series 로 교체 (fred_client 실제 함수명)
+from backend.data_pipeline.fred_client import get_latest_value, fetch_series
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ IG_SERIES_ID = "BAMLC0A0CM"    # ICE BofA US Corporate OAS  (단위: %)
 # HY: FRED BAMLH0A0HYM2 2026-05-28
 # IG: FRED BAMLC0A0CM   2026-05-25
 HY_FALLBACK: float = 272.0
-IG_FALLBACK: float = 74.0   # ✅ 수정: 77 → 74
+IG_FALLBACK: float = 74.0
 
 # 1개월 변화량 계산을 위한 관측 수
 LOOKBACK_DAYS: int = 22
@@ -79,7 +80,7 @@ def collect_credit_data() -> dict:
     logger.info("신용 스프레드 수집 시작")
 
     # ── HY 스프레드 수집 (% → bps 변환)
-    hy_pct = get_latest_value(HY_SERIES_ID)
+    hy_pct = get_latest_value(HY_SERIES_ID, fallback=None)
     if hy_pct is None:
         logger.warning("HY FRED 수집 실패 → fallback %.1f bps", HY_FALLBACK)
         hy_bps = HY_FALLBACK
@@ -87,7 +88,7 @@ def collect_credit_data() -> dict:
         hy_bps = hy_pct * 100
 
     # ── IG 스프레드 수집 (% → bps 변환)
-    ig_pct = get_latest_value(IG_SERIES_ID)
+    ig_pct = get_latest_value(IG_SERIES_ID, fallback=None)
     if ig_pct is None:
         logger.warning("IG FRED 수집 실패 → fallback %.1f bps", IG_FALLBACK)
         ig_bps = IG_FALLBACK
@@ -95,20 +96,26 @@ def collect_credit_data() -> dict:
         ig_bps = ig_pct * 100
 
     # ── HY 1개월 변화량 계산
+    # ✅ 수정: get_series → fetch_series (fred_client 실제 함수명)
+    # fetch_series 는 sort_order="desc" 기본값이므로 asc 로 명시
     hy_change_bps: float = 0.0
     try:
-        series = get_series(HY_SERIES_ID, limit=LOOKBACK_DAYS + 5)
+        series = fetch_series(
+            HY_SERIES_ID,
+            limit=LOOKBACK_DAYS + 5,
+            sort_order="asc",
+        )
         if series and len(series) >= 2:
-            latest_val = series[-1].get("value")
             oldest_val = series[0].get("value")
-            if latest_val is not None and oldest_val is not None:
+            latest_val = series[-1].get("value")
+            if oldest_val is not None and latest_val is not None:
                 hy_change_bps = (float(latest_val) - float(oldest_val)) * 100
     except Exception as exc:
         logger.warning("HY 변화량 계산 실패: %s", exc)
 
     # ── 점수 및 등급
-    raw_score      = _score_hy(hy_bps, hy_change_bps)
-    grade, color   = _grade(raw_score)
+    raw_score    = _score_hy(hy_bps, hy_change_bps)
+    grade, color = _grade(raw_score)
 
     # ── 시그널 메시지
     signals: list[str] = []
