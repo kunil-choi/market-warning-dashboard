@@ -142,7 +142,7 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 }
 
 .warning-bars { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.3rem; }
-.warning-bar-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; }
+.warning-bar-item  { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; }
 .warning-bar-label { width: 130px; color: var(--text-muted); flex-shrink: 0; font-size: 0.72rem; }
 .warning-bar-track { flex: 1; height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
 .warning-bar-fill  { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
@@ -150,7 +150,6 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 
 /* ════════════════════════════════════════════
    WARNING CARDS GRID
-   — 데스크톱: 4열, 태블릿: 2열, 모바일: 1열
    ════════════════════════════════════════════ */
 .warnings-grid {
   display: grid;
@@ -167,10 +166,7 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 }
 
 /* ── 플립 래퍼 ── */
-.card-flip-wrapper {
-  cursor: pointer;
-  /* 높이는 JS equalizeCardHeights()가 결정 */
-}
+.card-flip-wrapper { cursor: pointer; }
 
 .card-flip-inner {
   position: relative;
@@ -183,7 +179,7 @@ h1 { font-size: 1.1rem; font-weight: 700; }
   transform: rotateY(180deg);
 }
 
-/* 앞면 — normal flow → wrapper 높이 결정 */
+/* ── 앞면 ── */
 .card-front {
   width: 100%;
   backface-visibility: hidden;
@@ -201,7 +197,7 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 .card-front.grade-CRITICAL { border-color: var(--red);    box-shadow: 0 0 16px rgba(239,68,68,0.2); }
 .card-front.grade-HIGH     { border-color: var(--orange); }
 
-/* 뒷면 — absolute, 앞면 위에 덮임 */
+/* ── 뒷면 ── */
 .card-back {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -230,7 +226,6 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 .card-title    { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
 .card-subtitle { font-size: 0.88rem; font-weight: 700; }
 
-/* 가중치 배지 */
 .card-weight-badge {
   font-size: 0.65rem;
   font-weight: 700;
@@ -249,6 +244,11 @@ h1 { font-size: 1.1rem; font-weight: 700; }
   font-family: monospace;
   flex-shrink: 0;
 }
+
+/* 점수 색상 클래스 — Bug5 추가 */
+.grade-red    { color: #ef4444; }
+.grade-yellow { color: #f59e0b; }
+.grade-green  { color: #10b981; }
 
 /* ── METRICS ── */
 .metrics-grid {
@@ -279,6 +279,8 @@ h1 { font-size: 1.1rem; font-weight: 700; }
   padding: 0.35rem 0.55rem;
   border-radius: 6px;
   line-height: 1.4;
+  background: rgba(255,255,255,0.03);
+  border-left: 3px solid var(--border);
 }
 
 .signal-item.RED    { background: rgba(239,68,68,0.12);  border-left: 3px solid var(--red); }
@@ -295,10 +297,16 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 /* ── 차트 영역 ── */
 .chart-wrapper {
   flex-shrink: 0;
-  height: 100px;
+  height: 12px;      /* 미니바 높이로 축소 — 빈 박스 제거 */
   position: relative;
+  display: flex;
+  align-items: center;
 }
-.chart-wrapper canvas { width: 100% !important; height: 100% !important; }
+.chart-wrapper canvas {
+  width: 100% !important;
+  height: 8px !important;
+  display: block;
+}
 
 /* ── IPO 테이블 ── */
 .ipo-table-wrapper { overflow-x: auto; flex-shrink: 0; }
@@ -328,6 +336,7 @@ h1 { font-size: 1.1rem; font-weight: 700; }
   padding-top: 0.3rem;
   flex-shrink: 0;
 }
+
 .flip-hint-back {
   font-size: 0.64rem;
   color: var(--border-glow);
@@ -339,7 +348,117 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 }
 
 /* ════════════════════════════════════════════
-   뒷면 내용 스타일
+   뒷면 콘텐츠 스타일 — Bug3 신규 추가
+   ════════════════════════════════════════════ */
+
+/* 뒷면 전체 래퍼 */
+.back-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  height: 100%;
+}
+
+/* 뒷면 섹션 구분 */
+.back-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.back-section h4 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-accent);
+  margin-bottom: 0.2rem;
+}
+
+.back-section p {
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+/* 수치 행 */
+.back-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.73rem;
+}
+
+.back-label {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.back-value {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--text-accent);
+  font-size: 0.75rem;
+}
+
+/* 값 색상 유틸 */
+.val-red    { color: #ef4444 !important; }
+.val-yellow { color: #f59e0b !important; }
+.val-green  { color: #10b981 !important; }
+
+/* 경고/안전 텍스트 */
+.back-warning {
+  font-size: 0.74rem;
+  color: #fca5a5;
+  background: rgba(239,68,68,0.1);
+  border-left: 3px solid var(--red);
+  padding: 0.3rem 0.55rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.back-ok {
+  font-size: 0.74rem;
+  color: #6ee7b7;
+  background: rgba(16,185,129,0.1);
+  border-left: 3px solid var(--green);
+  padding: 0.3rem 0.55rem;
+  border-radius: 0 6px 6px 0;
+}
+
+/* 뒷면 조언 박스 */
+.back-advice {
+  font-size: 0.73rem;
+  color: var(--gold);
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  line-height: 1.55;
+  flex-shrink: 0;
+}
+
+/* 돌아가기 버튼 — Bug4 추가 */
+.flip-btn {
+  margin-left: auto;
+  background: rgba(56,189,248,0.12);
+  border: 1px solid rgba(56,189,248,0.3);
+  color: var(--text-accent);
+  font-size: 0.68rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.flip-btn:hover {
+  background: rgba(56,189,248,0.22);
+}
+
+/* ════════════════════════════════════════════
+   기존 뒷면 스타일 (하위 호환)
    ════════════════════════════════════════════ */
 .back-header {
   display: flex;
@@ -362,7 +481,6 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 .back-grade-LOW      { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid #10b981; }
 .back-grade-UNKNOWN  { background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid #64748b; }
 
-/* 수치 해설 블록 */
 .back-metrics-explain {
   display: flex;
   flex-direction: column;
@@ -391,7 +509,6 @@ h1 { font-size: 1.1rem; font-weight: 700; }
   line-height: 1.55;
 }
 
-/* 현재 상황 박스 */
 .back-situation {
   flex-shrink: 0;
   border-radius: 8px;
@@ -405,27 +522,14 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 .back-situation.YELLOW { background: rgba(234,179,8,0.08); border-left: 3px solid var(--yellow); color: #fef08a; }
 .back-situation.GREEN  { background: rgba(16,185,129,0.08);border-left: 3px solid var(--green);  color: #bbf7d0; }
 
-/* 위험도 미터 */
 .back-risk-meter { display: flex; align-items: center; gap: 0.55rem; flex-shrink: 0; }
 .back-risk-label { font-size: 0.7rem; color: var(--text-muted); width: 52px; flex-shrink: 0; }
 .back-risk-bar-track { flex: 1; height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
 .back-risk-bar-fill  { height: 100%; border-radius: 5px; transition: width 0.8s ease; }
 .back-risk-value { font-size: 0.78rem; font-weight: 700; font-family: monospace; width: 44px; text-align: right; }
 
-/* 조언 박스 */
-.back-advice {
-  font-size: 0.76rem;
-  color: var(--gold);
-  background: rgba(245,158,11,0.08);
-  border: 1px solid rgba(245,158,11,0.25);
-  border-radius: 8px;
-  padding: 0.5rem 0.7rem;
-  line-height: 1.55;
-  flex-shrink: 0;
-}
-
 /* ════════════════════════════════════════════
-   HISTORY — 선명한 단일 라인
+   HISTORY
    ════════════════════════════════════════════ */
 .history-section {
   display: block;
@@ -504,12 +608,10 @@ h1 { font-size: 1.1rem; font-weight: 700; }
 @media (max-width: 600px) {
   .container { padding: 0.75rem 0.75rem 2rem; }
 
-  /* 헤더 */
   .site-header { padding: 0.75rem 1rem; }
   h1 { font-size: 0.95rem; }
   .subtitle { font-size: 0.62rem; }
 
-  /* 종합 카드: 가로→세로 */
   .composite-card {
     flex-direction: column;
     align-items: center;
@@ -528,16 +630,14 @@ h1 { font-size: 1.1rem; font-weight: 700; }
   .warning-bar-label { width: 100px; font-size: 0.68rem; }
   .warning-bar-val   { font-size: 0.68rem; }
 
-  /* 카드 */
   .warnings-grid { gap: 0.75rem; }
   .card-front, .card-back { padding: 0.85rem; }
   .card-subtitle { font-size: 0.82rem; }
   .card-score-badge { font-size: 1.2rem; }
   .metric-value  { font-size: 0.8rem; }
   .signal-item   { font-size: 0.7rem; }
-  .chart-wrapper { height: 85px; }
+  .chart-wrapper { height: 10px; }
 
-  /* 히스토리 */
   .history-chart-wrapper { height: 150px; padding: 0.9rem 1rem; }
   .section-title { font-size: 0.88rem; }
 }
