@@ -208,7 +208,7 @@ function drawCreditChart(canvasId, history) {
   });
 }
 
-// ── 히스토리 차트 ──
+/* ── 히스토리 — 종합 점수 단일 라인 (선명하게) ── */
 let historyChartInstance = null;
 
 function drawHistoryChart(historyData) {
@@ -217,75 +217,96 @@ function drawHistoryChart(historyData) {
   if (historyChartInstance) historyChartInstance.destroy();
 
   const labels = historyData.map(d => d.date);
+  const scores = historyData.map(d => d.score ?? 0);
+
+  /* 점수별 색상 배열 */
+  const pointColors = scores.map(s =>
+    s >= 70 ? "#ef4444" : s >= 50 ? "#f97316" : s >= 35 ? "#eab308" : "#10b981"
+  );
+
+  /* 그라디언트 배경 */
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.clientHeight || 150);
+  gradient.addColorStop(0,   "rgba(239,68,68,0.25)");
+  gradient.addColorStop(0.5, "rgba(249,115,22,0.1)");
+  gradient.addColorStop(1,   "rgba(16,185,129,0.0)");
 
   historyChartInstance = new Chart(canvas, {
     type: "line",
     data: {
       labels,
-      datasets: [
-        {
-          label: "종합 위험 스코어",
-          data: historyData.map(d => d.score),
-          borderColor: "#ef4444",
-          borderWidth: 2.5,
-          pointRadius: 3,
-          pointBackgroundColor: historyData.map(d => scoreToColor(d.score)),
-          tension: 0.3,
-          fill: { target: "origin", above: "rgba(239,68,68,0.05)" },
-        },
-        {
-          label: "W1 주도주",
-          data: historyData.map(d => d.w1),
-          borderColor: "#38bdf8",
-          borderWidth: 1,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false,
-          borderDash: [3, 3],
-        },
-        {
-          label: "W2 금리",
-          data: historyData.map(d => d.w2),
-          borderColor: "#f59e0b",
-          borderWidth: 1,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false,
-          borderDash: [3, 3],
-        },
-        {
-          label: "W3 크레딧",
-          data: historyData.map(d => d.w3),
-          borderColor: "#a78bfa",
-          borderWidth: 1,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false,
-          borderDash: [3, 3],
-        },
-        {
-          label: "W4 IPO",
-          data: historyData.map(d => d.w4),
-          borderColor: "#34d399",
-          borderWidth: 1,
-          pointRadius: 0,
-          tension: 0.3,
-          fill: false,
-          borderDash: [3, 3],
-        },
-      ]
+      datasets: [{
+        label: "종합 위험 스코어",
+        data: scores,
+        borderColor: "#38bdf8",
+        borderWidth: 2.5,
+        pointRadius: scores.length <= 30 ? 4 : 2,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointColors,
+        pointHoverRadius: 6,
+        tension: 0.35,
+        fill: true,
+        backgroundColor: gradient,
+      }]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { display: true, labels: { color: "#94a3b8", font: { size: 10 }, boxWidth: 12 } },
-        tooltip: { mode: "index", intersect: false, backgroundColor: "#0d1b2e", borderColor: "#1e3a5f", borderWidth: 1 }
+        legend: { display: false },
+        tooltip: {
+          mode: "index",
+          intersect: false,
+          backgroundColor: "#0d1b2e",
+          borderColor: "#1e3a5f",
+          borderWidth: 1,
+          callbacks: {
+            label: ctx => {
+              const s = ctx.parsed.y;
+              const level = s >= 70 ? "🔴 위험" : s >= 50 ? "🟠 경계" : s >= 35 ? "🟡 주의" : "🟢 안정";
+              return ` 종합 점수: ${s.toFixed(1)} — ${level}`;
+            }
+          }
+        },
+        /* 위험 구간 배경 주석 */
+        annotation: undefined,
       },
       scales: {
-        x: { ticks: { color: "#475569", font: { size: 10 }, maxTicksLimit: 12 }, grid: { color: "rgba(255,255,255,0.04)" } },
-        y: { min: 0, max: 100, ticks: { color: "#475569", font: { size: 10 }, stepSize: 20 }, grid: { color: "rgba(255,255,255,0.04)" } }
+        x: {
+          ticks: {
+            color: "#475569",
+            font: { size: 10 },
+            maxTicksLimit: 10,
+            maxRotation: 0,
+          },
+          grid: { color: "rgba(255,255,255,0.04)" }
+        },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: {
+            color: "#475569",
+            font: { size: 10 },
+            stepSize: 25,
+            callback: v => {
+              if (v === 75) return "🔴 위험";
+              if (v === 50) return "🟠 경계";
+              if (v === 25) return "🟢 안정";
+              return v;
+            }
+          },
+          grid: {
+            color: ctx => {
+              if (ctx.tick.value === 70) return "rgba(239,68,68,0.3)";
+              if (ctx.tick.value === 50) return "rgba(249,115,22,0.25)";
+              if (ctx.tick.value === 35) return "rgba(234,179,8,0.2)";
+              return "rgba(255,255,255,0.04)";
+            },
+            lineWidth: ctx => [70, 50, 35].includes(ctx.tick.value) ? 1.5 : 1,
+          }
+        }
       },
-      animation: { duration: 800 }
+      animation: { duration: 1000, easing: "easeInOutQuart" }
     }
   });
 }
