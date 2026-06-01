@@ -5,7 +5,9 @@
 #   Fix9  – GitHub Actions 네트워크 지연 대응
 #   Fix10 – anthropic 라이브러리 내부 재시도 비활성화
 #   Fix11 – 모델명 수정: claude-3-5-sonnet-20241022 → claude-sonnet-4-5
-#   Fix12 – max_tokens 1024 → 2048 (JSON 응답 잘림 방지)
+#   Fix12 – max_tokens 2048로 증가
+#   Fix13 – _build_raw_summary에서 IPO 목록 제거 (JSON 잘림 방지)
+#           프롬프트 경량화로 응답 토큰 절감
 # ============================================================
 
 import os
@@ -28,7 +30,7 @@ VALIDATION_PROMPT = """
 - W2 채권 자경단 (가중치 30%): 10년물 금리 4.5% 임계선, 장단기 역전 여부
 - W3 사모 크레딧 (가중치 20%): HY 스프레드 기준, 400bps 이상 위험
 - W4 대어급 IPO  (가중치 25%): 가중 파이프라인 시총 대비 비율 기준
-- 종합점수 = W1×0.25 + W2×0.30 + W3×0.20 + W4×0.25
+- 종합점수 = W1x0.25 + W2x0.30 + W3x0.20 + W4x0.25
 - 등급: 0~39점 GREEN / 40~69점 YELLOW / 70~100점 RED
 
 ## 현실적 데이터 범위 기준
@@ -38,7 +40,8 @@ VALIDATION_PROMPT = """
 - IG 스프레드: 40bps ~ 500bps
 - SPY YTD: -50% ~ +60%
 - RSP YTD: -50% ~ +60%
-- IPO 기업가치: 1B ~ 5,000B
+- IPO 가중 파이프라인: 0B ~ 5000B
+- IPO 시총 대비 비율: 0% ~ 10%
 
 ## 수집된 원본 데이터
 {raw_data}
@@ -47,68 +50,54 @@ VALIDATION_PROMPT = """
 {scores}
 
 ## 검토 요청 사항
-1. 각 원본 데이터 수치가 현실적인 범위인지 (이상값 탐지)
-2. 각 W1~W4 원점수가 원본 데이터와 계산 규칙에 부합하는지
-3. 종합점수 계산이 가중치 기준과 정확히 일치하는지
+1. 각 원본 데이터 수치가 현실적인 범위인지
+2. 각 W1~W4 원점수가 계산 규칙에 부합하는지
+3. 종합점수 가중치 계산이 정확한지
 4. 등급 판정이 올바른지
-5. fallback 값 사용 여부 및 신뢰도 평가
+5. 이상값 또는 개선 권고 사항
 
-## 응답 형식 (반드시 순수 JSON만 출력, 마크다운 코드블록 없이)
-{{
-  "validation_passed": true,
-  "overall_assessment": "전체 평가 한 문장",
-  "data_checks": [
-    {{"field": "필드명", "value": "수치", "status": "OK", "comment": "설명"}}
-  ],
-  "score_checks": [
-    {{"indicator": "W1", "reported_score": 40, "expected_range": "30~55",
-      "status": "OK", "comment": "설명"}}
-  ],
-  "anomalies": [],
-  "recommendations": []
-}}
+## 응답 형식 (순수 JSON만 출력, 마크다운 없이)
+{{"validation_passed": true, "overall_assessment": "한 문장 평가", "data_checks": [{{"field": "필드명", "value": "수치", "status": "OK", "comment": "설명"}}], "score_checks": [{{"indicator": "W1", "reported_score": 0, "expected_range": "0~100", "status": "OK", "comment": "설명"}}], "anomalies": [], "recommendations": []}}
 """
 
 
 def _build_raw_summary(scores_data: dict) -> str:
+    """
+    Fix13: IPO 목록(ipo_list) 제거 — 핵심 수치만 포함
+    IPO 목록은 토큰을 과도하게 소모하여 JSON 잘림 유발
+    """
     w1 = scores_data.get("w1", {})
     w2 = scores_data.get("w2", {})
     w3 = scores_data.get("w3", {})
     w4 = scores_data.get("w4", {})
     summary = {
-        "W1_주도주압축": {
+        "W1": {
             "SPY_YTD_%":      w1.get("spy_ytd"),
             "RSP_YTD_%":      w1.get("rsp_ytd"),
-            "괴리율_%p":       w1.get("current_spread"),
-            "괴리_퍼센타일":   w1.get("spread_percentile"),
-            "RSP_1주수익률_%": w1.get("rsp_1w_return"),
+            "spread_%p":      w1.get("current_spread"),
+            "percentile":     w1.get("spread_percentile"),
+            "RSP_1w_%":       w1.get("rsp_1w_return"),
         },
-        "W2_채권자경단": {
-            "10년물금리_%":    w2.get("us10y_yield"),
-            "2년물금리_%":     w2.get("us2y_yield"),
-            "장단기금리차_%p": w2.get("term_spread"),
-            "TIPS실질금리_%":  w2.get("tips_10y_real_yield"),
-            "장단기역전여부":  w2.get("is_inverted"),
+        "W2": {
+            "10Y_%":          w2.get("us10y_yield"),
+            "2Y_%":           w2.get("us2y_yield"),
+            "term_spread_%p": w2.get("term_spread"),
+            "TIPS_%":         w2.get("tips_10y_real_yield"),
+            "inverted":       w2.get("is_inverted"),
         },
-        "W3_사모크레딧": {
-            "HY스프레드_bps":   w3.get("hy_bps"),
-            "IG스프레드_bps":   w3.get("ig_bps"),
-            "HY_1개월변화_bps": w3.get("hy_change_bps"),
+        "W3": {
+            "HY_bps":         w3.get("hy_bps"),
+            "IG_bps":         w3.get("ig_bps"),
+            "HY_1m_chg_bps":  w3.get("hy_change_bps"),
         },
-        "W4_대어급IPO": {
-            "가중파이프라인_B": w4.get("total_valuation_bn"),
-            "시총대비비율_%":   w4.get("pipeline_ratio_pct"),
-            "신청완료건수":     w4.get("filed_count"),
-            "공모가확정건수":   w4.get("priced_count"),
-            "IPO목록": [
-                {"기업": i.get("company"),
-                 "기업가치_B": i.get("valuation_bn"),
-                 "상태": i.get("status")}
-                for i in (w4.get("ipo_list") or [])
-            ],
+        "W4": {
+            "pipeline_B":     w4.get("total_valuation_bn"),
+            "ratio_%":        w4.get("pipeline_ratio_pct"),
+            "filed":          w4.get("filed_count"),
+            "priced":         w4.get("priced_count"),
         },
     }
-    return json.dumps(summary, ensure_ascii=False, indent=2)
+    return json.dumps(summary, ensure_ascii=False)
 
 
 def _build_scores_summary(scores_data: dict) -> str:
@@ -117,21 +106,18 @@ def _build_scores_summary(scores_data: dict) -> str:
     w3 = scores_data.get("w3_score") or 0
     w4 = scores_data.get("w4_score") or 0
     summary = {
-        "W1_원점수": w1,
-        "W2_원점수": w2,
-        "W3_원점수": w3,
-        "W4_원점수": w4,
-        "종합점수":  scores_data.get("composite_score"),
-        "등급":      scores_data.get("grade"),
-        "가중계산_검증": {
-            "W1×0.25": round(w1 * 0.25, 2),
-            "W2×0.30": round(w2 * 0.30, 2),
-            "W3×0.20": round(w3 * 0.20, 2),
-            "W4×0.25": round(w4 * 0.25, 2),
-            "합산":    round(w1*0.25 + w2*0.30 + w3*0.20 + w4*0.25, 2),
+        "W1": w1, "W2": w2, "W3": w3, "W4": w4,
+        "composite": scores_data.get("composite_score"),
+        "grade":     scores_data.get("grade"),
+        "calc": {
+            "W1x0.25": round(w1 * 0.25, 2),
+            "W2x0.30": round(w2 * 0.30, 2),
+            "W3x0.20": round(w3 * 0.20, 2),
+            "W4x0.25": round(w4 * 0.25, 2),
+            "sum":     round(w1*0.25 + w2*0.30 + w3*0.20 + w4*0.25, 2),
         },
     }
-    return json.dumps(summary, ensure_ascii=False, indent=2)
+    return json.dumps(summary, ensure_ascii=False)
 
 
 def validate_with_ai(scores_data: dict) -> dict:
@@ -167,7 +153,7 @@ def validate_with_ai(scores_data: dict) -> dict:
             )
             message = client.messages.create(
                 model="claude-sonnet-4-5",
-                max_tokens=2048,        # ✅ Fix12: 1024 → 2048 (JSON 잘림 방지)
+                max_tokens=2048,
                 messages=[{"role": "user", "content": prompt}],
             )
 
