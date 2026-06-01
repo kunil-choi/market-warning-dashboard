@@ -1,8 +1,9 @@
 # ============================================================
 # run_pipeline.py  –  파이프라인 메인 진입점
-# 수정: Bug7 – history.jsonl 같은 날 중복 기록 방지
-#       Fix1 – DATA_DIR 절대경로로 강제 지정 (frontend/data/)
-#       Fix2 – sys.path에 레포 루트 추가
+# 수정:
+#   Fix1 – DATA_DIR 절대경로 강제 지정 (frontend/data/)
+#   Fix2 – sys.path에 레포 루트 추가
+#   Bug7 – history.jsonl 같은 날 중복 기록 방지
 # ============================================================
 
 import json
@@ -32,13 +33,10 @@ LATEST_JSON     = DATA_DIR / "latest_scores.json"
 HISTORY_JSONL   = DATA_DIR / "history.jsonl"
 VALIDATION_JSON = DATA_DIR / "latest_validation.json"
 
+
 def _update_history(entry: dict) -> None:
-    """
-    Bug7 수정: 같은 날짜 항목이 이미 있으면 덮어씀 (중복 방지).
-    """
     today = entry["date"]
     lines = []
-
     if HISTORY_JSONL.exists():
         with open(HISTORY_JSONL, "r", encoding="utf-8") as f:
             for line in f:
@@ -51,17 +49,17 @@ def _update_history(entry: dict) -> None:
                         lines.append(line)
                 except json.JSONDecodeError:
                     lines.append(line)
-
     lines.append(json.dumps(entry, ensure_ascii=False))
-
     with open(HISTORY_JSONL, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
+
 def run_pipeline():
-    DATA_DIR.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info("=" * 60)
     logger.info("📊 파이프라인 시작")
+    logger.info(f"📁 저장 경로: {DATA_DIR.resolve()}")
     logger.info("=" * 60)
 
     # ── 1단계: 데이터 수집 및 점수 산출 ─────────────────────
@@ -74,7 +72,8 @@ def run_pipeline():
 
     logger.info(
         f"[1/3] 완료 — 종합={scores.get('composite_score')}점 "
-        f"등급={scores.get('grade')}"
+        f"등급={scores.get('grade')} "
+        f"W4={scores.get('w4_score')}"
     )
 
     # ── 2단계: AI 검증 ───────────────────────────────────────
@@ -86,8 +85,7 @@ def run_pipeline():
         validation = {
             "validation_passed":  None,
             "overall_assessment": f"검증 예외: {e}",
-            "data_checks": [], "score_checks": [],
-            "anomalies": [], "recommendations": [],
+            "data_checks": [], "anomalies": [], "recommendations": [],
             "validated_at": datetime.now(timezone.utc).isoformat(),
             "model": None,
         }
@@ -96,7 +94,7 @@ def run_pipeline():
     if passed is True:
         logger.info("[2/3] ✅ AI 검증 통과")
     elif passed is False:
-        logger.warning("[2/3] ⚠️  AI 검증 실패 — 데이터를 확인하세요")
+        logger.warning("[2/3] ⚠️  AI 검증 실패")
         for a in validation.get("anomalies", []):
             logger.warning(f"         이상: {a}")
         for r in validation.get("recommendations", []):
@@ -112,7 +110,7 @@ def run_pipeline():
     try:
         with open(LATEST_JSON, "w", encoding="utf-8") as f:
             json.dump(scores, f, ensure_ascii=False, indent=2)
-        logger.info(f"저장 완료: {LATEST_JSON}")
+        logger.info(f"저장 완료: {LATEST_JSON.resolve()}")
     except Exception as e:
         logger.error(f"latest_scores.json 저장 실패: {e}")
         sys.exit(1)
@@ -120,7 +118,7 @@ def run_pipeline():
     try:
         with open(VALIDATION_JSON, "w", encoding="utf-8") as f:
             json.dump(validation, f, ensure_ascii=False, indent=2)
-        logger.info(f"저장 완료: {VALIDATION_JSON}")
+        logger.info(f"저장 완료: {VALIDATION_JSON.resolve()}")
     except Exception as e:
         logger.warning(f"latest_validation.json 저장 실패: {e}")
 
@@ -136,7 +134,7 @@ def run_pipeline():
             "validation_passed": passed,
         }
         _update_history(history_entry)
-        logger.info(f"히스토리 업데이트: {HISTORY_JSONL}")
+        logger.info(f"히스토리 업데이트: {HISTORY_JSONL.resolve()}")
     except Exception as e:
         logger.warning(f"history.jsonl 저장 실패: {e}")
 
@@ -145,10 +143,12 @@ def run_pipeline():
         f"✅ 파이프라인 완료 | "
         f"종합={scores.get('composite_score')}점 | "
         f"등급={scores.get('grade')} | "
+        f"W4={scores.get('w4_score')}점 | "
         f"AI검증={'통과' if passed is True else '실패' if passed is False else '스킵'}"
     )
     logger.info("=" * 60)
     return scores
+
 
 if __name__ == "__main__":
     run_pipeline()
