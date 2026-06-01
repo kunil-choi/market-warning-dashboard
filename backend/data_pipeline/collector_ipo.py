@@ -69,7 +69,7 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "source":       "SEC EDGAR S-1 공개 2026-05-20",
         "filed_date":   "2026-05-20",
         "listed_date":  "2026-06-12",   # 예정 상장일 → 이후 자동 전환
-        "ticker":       "SPCX",         # Fix16: 티커 확인용
+        "ticker":       "CBRS",         # Cerebras 실제 상장 티커 (SPCX는 상장폐지)
     },
     {
         "company":      "OpenAI",
