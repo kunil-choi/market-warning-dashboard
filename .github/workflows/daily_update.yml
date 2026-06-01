@@ -34,7 +34,7 @@ jobs:
           FRED_API_KEY:      ${{ secrets.FRED_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PYTHONPATH:        ${{ github.workspace }}
-        run: python backend/data_pipeline/run_pipeline.py
+        run: python -m backend.data_pipeline.run_pipeline
 
       - name: Commit Updated Data
         run: |
