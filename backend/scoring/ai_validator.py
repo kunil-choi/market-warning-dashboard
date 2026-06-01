@@ -1,13 +1,9 @@
 # ============================================================
-# ai_validator.py  –  Claude AI 기반 검증
+# ai_validator.py  –  Claude AI 기반 원천 데이터 신뢰성 검증
 # 수정:
-#   Bug4  – _build_raw_summary W3 키명 수정
-#   Fix9  – GitHub Actions 네트워크 지연 대응
-#   Fix10 – anthropic 라이브러리 내부 재시도 비활성화
-#   Fix11 – 모델명 수정: claude-3-5-sonnet-20241022 → claude-sonnet-4-5
-#   Fix12 – max_tokens 2048로 증가
-#   Fix13 – _build_raw_summary에서 IPO 목록 제거 (JSON 잘림 방지)
-#           프롬프트 경량화로 응답 토큰 절감
+#   Fix-V1 – 검증 목적 변경: 점수 계산 검증 → 원천 데이터 신뢰성 검증
+#   Fix-V2 – IPO 목록 프롬프트 제외 → 토큰 절감
+#   Fix-V3 – EDGAR 403 로그 레벨 WARNING → INFO 로 낮춤
 # ============================================================
 
 import os
@@ -21,103 +17,83 @@ import anthropic
 logger = logging.getLogger(__name__)
 
 VALIDATION_PROMPT = """
-당신은 금융 데이터 검증 전문가입니다.
-아래의 시장 경고 대시보드 데이터와 산출 점수를 검토하고,
-데이터 이상 여부와 계산 정확성을 확인해주세요.
+당신은 금융 데이터 신뢰성 검증 전문가입니다.
+아래는 시장 경고 대시보드가 각 기관 API에서 수집한 원천 데이터입니다.
+각 수치가 실제 시장 현황과 일치하는 신뢰할 수 있는 데이터인지 검증해주세요.
 
-## 점수 계산 규칙
-- W1 주도주 압축 (가중치 25%): SPY-RSP 괴리율 기반, 괴리 클수록 고점수
-- W2 채권 자경단 (가중치 30%): 10년물 금리 4.5% 임계선, 장단기 역전 여부
-- W3 사모 크레딧 (가중치 20%): HY 스프레드 기준, 400bps 이상 위험
-- W4 대어급 IPO  (가중치 25%): 가중 파이프라인 시총 대비 비율 기준
-- 종합점수 = W1x0.25 + W2x0.30 + W3x0.20 + W4x0.25
-- 등급: 0~39점 GREEN / 40~69점 YELLOW / 70~100점 RED
+## 데이터 출처
+- W1 SPY/RSP 수익률: yfinance (Yahoo Finance API)
+- W2 금리 데이터: FRED API (미국 연방준비제도)
+- W3 HY/IG 스프레드: FRED API (ICE BofA 채권 인덱스)
+- W4 IPO 파이프라인: SEC EDGAR + 언론 보도 (Reuters, Bloomberg, CNBC)
 
-## 현실적 데이터 범위 기준
-- 10년물 금리: 2.0% ~ 6.0%
-- 2년물 금리: 1.0% ~ 6.0%
-- HY 스프레드: 150bps ~ 2000bps
-- IG 스프레드: 40bps ~ 500bps
-- SPY YTD: -50% ~ +60%
-- RSP YTD: -50% ~ +60%
-- IPO 가중 파이프라인: 0B ~ 5000B
-- IPO 시총 대비 비율: 0% ~ 10%
-
-## 수집된 원본 데이터
+## 수집된 원천 데이터
 {raw_data}
 
-## 산출된 점수
-{scores}
+## 검증 요청 사항
+1. 각 수치가 현재 시장 상황에서 현실적으로 가능한 범위인지
+2. 데이터 간 일관성 (예: 10년물과 2년물 금리 관계, HY와 IG 스프레드 관계)
+3. fallback 값 사용 여부 탐지 (FRED fallback: 10년물 4.45%, HY 272bps 등)
+4. IPO 기업들의 상태·기업가치가 최근 언론 보도와 일치하는지
+5. 데이터 수집 시점 기준 이상값(outlier) 여부
 
-## 검토 요청 사항
-1. 각 원본 데이터 수치가 현실적인 범위인지
-2. 각 W1~W4 원점수가 계산 규칙에 부합하는지
-3. 종합점수 가중치 계산이 정확한지
-4. 등급 판정이 올바른지
-5. 이상값 또는 개선 권고 사항
-
-## 응답 형식 (순수 JSON만 출력, 마크다운 없이)
-{{"validation_passed": true, "overall_assessment": "한 문장 평가", "data_checks": [{{"field": "필드명", "value": "수치", "status": "OK", "comment": "설명"}}], "score_checks": [{{"indicator": "W1", "reported_score": 0, "expected_range": "0~100", "status": "OK", "comment": "설명"}}], "anomalies": [], "recommendations": []}}
+## 응답 형식 (반드시 순수 JSON만 출력, 마크다운 코드블록 없이)
+{{
+  "validation_passed": true,
+  "overall_assessment": "전체 신뢰성 평가 한 문장",
+  "data_checks": [
+    {{"source": "FRED", "field": "us10y_yield", "value": "4.45", "status": "FALLBACK", "comment": "fallback 값 사용 의심"}},
+    {{"source": "yfinance", "field": "spy_ytd", "value": "11.24", "status": "OK", "comment": "현재 시장 범위 내"}}
+  ],
+  "anomalies": ["이상 항목 설명"],
+  "recommendations": ["개선 권고 사항"]
+}}
 """
 
-
 def _build_raw_summary(scores_data: dict) -> str:
-    """
-    Fix13: IPO 목록(ipo_list) 제거 — 핵심 수치만 포함
-    IPO 목록은 토큰을 과도하게 소모하여 JSON 잘림 유발
-    """
     w1 = scores_data.get("w1", {})
     w2 = scores_data.get("w2", {})
     w3 = scores_data.get("w3", {})
     w4 = scores_data.get("w4", {})
+
+    # Fix-V2: IPO 목록 제외, 핵심 수치만 포함
     summary = {
-        "W1": {
-            "SPY_YTD_%":      w1.get("spy_ytd"),
-            "RSP_YTD_%":      w1.get("rsp_ytd"),
-            "spread_%p":      w1.get("current_spread"),
-            "percentile":     w1.get("spread_percentile"),
-            "RSP_1w_%":       w1.get("rsp_1w_return"),
+        "W1_주도주압축_yfinance": {
+            "SPY_YTD_%":        w1.get("spy_ytd"),
+            "RSP_YTD_%":        w1.get("rsp_ytd"),
+            "SPY_RSP_괴리율_%p": w1.get("current_spread"),
+            "괴리_퍼센타일":     w1.get("spread_percentile"),
+            "RSP_1주수익률_%":   w1.get("rsp_1w_return"),
+            "RSP_역행신호":      w1.get("rsp_is_negative_while_spy_positive"),
         },
-        "W2": {
-            "10Y_%":          w2.get("us10y_yield"),
-            "2Y_%":           w2.get("us2y_yield"),
-            "term_spread_%p": w2.get("term_spread"),
-            "TIPS_%":         w2.get("tips_10y_real_yield"),
-            "inverted":       w2.get("is_inverted"),
+        "W2_금리_FRED": {
+            "미국10년물_%":      w2.get("us10y_yield"),
+            "미국2년물_%":       w2.get("us2y_yield"),
+            "장단기스프레드_%p": w2.get("term_spread"),
+            "TIPS실질금리_%":    w2.get("tips_10y_real_yield"),
+            "장단기역전":        w2.get("is_inverted"),
         },
-        "W3": {
-            "HY_bps":         w3.get("hy_bps"),
-            "IG_bps":         w3.get("ig_bps"),
-            "HY_1m_chg_bps":  w3.get("hy_change_bps"),
+        "W3_크레딧스프레드_FRED": {
+            "HY스프레드_bps":    w3.get("hy_bps"),
+            "IG스프레드_bps":    w3.get("ig_bps"),
+            "HY_1개월변화_bps":  w3.get("hy_change_bps"),
         },
-        "W4": {
-            "pipeline_B":     w4.get("total_valuation_bn"),
-            "ratio_%":        w4.get("pipeline_ratio_pct"),
-            "filed":          w4.get("filed_count"),
-            "priced":         w4.get("priced_count"),
+        "W4_IPO파이프라인": {
+            "가중파이프라인_B":   w4.get("total_valuation_bn"),
+            "시총대비비율_%":     w4.get("pipeline_ratio_pct"),
+            "가격확정건수":       w4.get("priced_count"),
+            "신청완료건수":       w4.get("filed_count"),
+            "주요기업_상태": [
+                {
+                    "기업":      i.get("company"),
+                    "기업가치_B": i.get("valuation_bn"),
+                    "상태":      i.get("status"),
+                }
+                for i in (w4.get("ipo_list") or [])[:5]  # 상위 5개만
+            ],
         },
     }
-    return json.dumps(summary, ensure_ascii=False)
-
-
-def _build_scores_summary(scores_data: dict) -> str:
-    w1 = scores_data.get("w1_score") or 0
-    w2 = scores_data.get("w2_score") or 0
-    w3 = scores_data.get("w3_score") or 0
-    w4 = scores_data.get("w4_score") or 0
-    summary = {
-        "W1": w1, "W2": w2, "W3": w3, "W4": w4,
-        "composite": scores_data.get("composite_score"),
-        "grade":     scores_data.get("grade"),
-        "calc": {
-            "W1x0.25": round(w1 * 0.25, 2),
-            "W2x0.30": round(w2 * 0.30, 2),
-            "W3x0.20": round(w3 * 0.20, 2),
-            "W4x0.25": round(w4 * 0.25, 2),
-            "sum":     round(w1*0.25 + w2*0.30 + w3*0.20 + w4*0.25, 2),
-        },
-    }
-    return json.dumps(summary, ensure_ascii=False)
+    return json.dumps(summary, ensure_ascii=False, indent=2)
 
 
 def validate_with_ai(scores_data: dict) -> dict:
@@ -128,32 +104,23 @@ def validate_with_ai(scores_data: dict) -> dict:
 
     prompt = VALIDATION_PROMPT.format(
         raw_data=_build_raw_summary(scores_data),
-        scores=_build_scores_summary(scores_data),
     )
 
     logger.info("[AI검증] Claude API 호출 시작")
-
-    # Fix9: GitHub Actions cold start 안정화
-    time.sleep(5)
+    time.sleep(3)
 
     wait_times = [15, 30, 60]
 
     for attempt in range(1, 4):
         try:
-            # Fix10: 라이브러리 내부 재시도 비활성화
             client = anthropic.Anthropic(
                 api_key=api_key,
-                timeout=anthropic.Timeout(
-                    connect=10.0,
-                    read=50.0,
-                    write=10.0,
-                    pool=10.0,
-                ),
                 max_retries=0,
+                timeout=60.0,
             )
             message = client.messages.create(
-                model="claude-sonnet-4-5",
-                max_tokens=2048,
+                model="claude-sonnet-4-6",
+                max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}],
             )
 
@@ -168,13 +135,13 @@ def validate_with_ai(scores_data: dict) -> dict:
 
             result = json.loads(raw_text)
             result["validated_at"] = datetime.now(timezone.utc).isoformat()
-            result["model"]        = "claude-sonnet-4-5"
+            result["model"]        = "claude-sonnet-4-6"
 
             passed = result.get("validation_passed")
             if passed is True:
-                logger.info(f"[AI검증] ✅ 통과: {result.get('overall_assessment','')}")
+                logger.info(f"[AI검증] ✅ 통과: {result.get('overall_assessment', '')}")
             else:
-                logger.warning(f"[AI검증] ⚠️  실패: {result.get('overall_assessment','')}")
+                logger.warning(f"[AI검증] ⚠️  실패: {result.get('overall_assessment', '')}")
                 for a in result.get("anomalies", []):
                     logger.warning(f"[AI검증]   이상: {a}")
                 for r in result.get("recommendations", []):
@@ -188,7 +155,7 @@ def validate_with_ai(scores_data: dict) -> dict:
             time.sleep(wait_times[attempt - 1])
 
         except anthropic.RateLimitError:
-            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
+            wait = wait_times[attempt - 1]
             logger.warning(f"[AI검증] Rate Limit → {wait}초 대기 ({attempt}/3)")
             time.sleep(wait)
 
@@ -196,29 +163,26 @@ def validate_with_ai(scores_data: dict) -> dict:
             err_msg = str(e)
             logger.error(f"[AI검증] API 상태 오류 {e.status_code} ({attempt}/3): {err_msg}")
             if e.status_code in (500, 529):
-                wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
-                time.sleep(wait)
+                time.sleep(wait_times[attempt - 1])
             else:
                 return _skip_result(f"API 오류 {e.status_code}: {err_msg}")
 
         except anthropic.APIConnectionError as e:
-            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
-            logger.warning(f"[AI검증] 연결 오류 → {wait}초 대기 후 재시도 ({attempt}/3): {e}")
+            wait = wait_times[attempt - 1]
+            logger.warning(f"[AI검증] 연결 오류 ({attempt}/3): {e} → {wait}초 대기")
             time.sleep(wait)
 
         except anthropic.APIError as e:
             logger.error(f"[AI검증] 기타 API 오류 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"API 오류: {e}")
-            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
-            time.sleep(wait)
+            time.sleep(wait_times[attempt - 1])
 
         except Exception as e:
             logger.error(f"[AI검증] 예상치 못한 오류 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"알 수 없는 오류: {e}")
-            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
-            time.sleep(wait)
+            time.sleep(wait_times[attempt - 1])
 
     return _skip_result("3회 재시도 모두 실패")
 
@@ -228,7 +192,6 @@ def _skip_result(reason: str) -> dict:
         "validation_passed":  None,
         "overall_assessment": f"검증 스킵: {reason}",
         "data_checks":        [],
-        "score_checks":       [],
         "anomalies":          [],
         "recommendations":    [],
         "validated_at":       datetime.now(timezone.utc).isoformat(),
