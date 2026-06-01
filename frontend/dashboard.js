@@ -365,8 +365,9 @@ function buildBackContent(prefix, score, raw) {
       <div class="back-content">
         <div class="back-section">
           <h4>📐 수치 해설</h4>
+          <div class="back-metric"><span class="back-label">포함 기준</span><span class="back-value">2026-05-01 이후 액션 + 기업가치 $50B 이상</span></div>
           <div class="back-metric"><span class="back-label">가중 파이프라인</span><span class="back-value">기업가치 × 상태가중치 합산 (실제 흡수 위험)</span></div>
-          <div class="back-metric"><span class="back-label">상태별 가중치</span><span class="back-value">루머 10% / 검토중 30% / 신청완료 100% / 상장완료 0%</span></div>
+          <div class="back-metric"><span class="back-label">상태별 가중치</span><span class="back-value">가격확정 100% / 신청완료 70% / 검토중 10% / 루머·상장완료 0%</span></div>
           <div class="back-metric"><span class="back-label">시총 대비 비율</span><span class="back-value">가중 파이프라인 ÷ 미국 시총($69조) × 100</span></div>
         </div>
         <div class="back-section">
@@ -378,7 +379,8 @@ function buildBackContent(prefix, score, raw) {
         </div>
         <div class="back-section">
           <h4>🔢 점수 산출</h4>
-          <div class="back-metric"><span class="back-label">산출 방식</span><span class="back-value">시총 대비 비율 구간별 점수 + 신청완료 수 × 5점 (최대 20점)</span></div>
+          <div class="back-metric"><span class="back-label">기본 점수</span><span class="back-value">비율 구간별 점수 (10 / 30 / 50 / 75)</span></div>
+          <div class="back-metric"><span class="back-label">보너스</span><span class="back-value">가격확정 × 10점 + 신청완료 × 5점 (최대 20점)</span></div>
         </div>
       </div>`;
   }
