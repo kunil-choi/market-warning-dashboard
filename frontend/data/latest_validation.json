@@ -1,10 +1,10 @@
 {
   "validation_passed": null,
-  "overall_assessment": "검증 스킵: API 오류 404: Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-5-sonnet-20241022'}, 'request_id': 'req_011Cbbo3XcnJnL5jt8V3ZdGw'}",
+  "overall_assessment": "검증 스킵: JSON 파싱 오류: Unterminated string starting at: line 86 column 18 (char 1965)",
   "data_checks": [],
   "score_checks": [],
   "anomalies": [],
   "recommendations": [],
-  "validated_at": "2026-06-01T03:01:35.063123+00:00",
+  "validated_at": "2026-06-01T03:07:19.311595+00:00",
   "model": null
 }
