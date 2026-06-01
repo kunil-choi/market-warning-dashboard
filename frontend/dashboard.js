@@ -15,6 +15,9 @@
 //   Fix12 – 상장완료 기업 화면 표시 제외
 //   Fix13 – 카드 헤더: 배지를 제목 아래 배치 (index.html 과 연동)
 //   Fix14 – 시간 표시 24시간제 (hour12: false)
+//   Fix15 – ID 불일치 수정: signal-badge→algo-signal-badge, signal-desc→algo-signal-desc
+//            score-badge-w* → score-w*, front-w* → front-body-w*, back-w* → back-body-w*
+//   Fix16 – W3 키 불일치 수정: hy_spread→hy_bps, ig_spread→ig_bps, hy_spread_change_1m→hy_change_bps
 // ============================================================
 
 const DATA_URL    = "./data/latest_scores.json";
@@ -290,9 +293,10 @@ function buildFrontContent(prefix, score, raw) {
 
   /* ────────── W3: 사모신용 압박 ────────── */
   if (prefix === "w3") {
-    const hy     = raw?.hy_spread    ?? raw?.high_yield_spread ?? 0;
-    const ig     = raw?.ig_spread    ?? raw?.investment_grade_spread ?? 0;
-    const hyChg  = raw?.hy_spread_change_1m ?? raw?.hy_change ?? 0;
+    // Fix16: JSON 실제 키는 hy_bps, ig_bps, hy_change_bps
+    const hy     = raw?.hy_bps    ?? raw?.hy_spread    ?? raw?.high_yield_spread      ?? 0;
+    const ig     = raw?.ig_bps    ?? raw?.ig_spread    ?? raw?.investment_grade_spread ?? 0;
+    const hyChg  = raw?.hy_change_bps ?? raw?.hy_spread_change_1m ?? raw?.hy_change  ?? 0;
     const stress = raw?.stress_level ?? "";
 
     let sitColor = "GREEN", sitText = "";
@@ -504,7 +508,8 @@ function buildBackContent(prefix, score, raw) {
 
 /* ── 점수 배지 업데이트 ──────────────────────────────────── */
 function updateScoreBadge(prefix, score) {
-  const badge = document.getElementById(`score-badge-${prefix}`);
+  // Fix15: HTML ID는 score-w1 형식 (score-badge-w1 아님)
+  const badge = document.getElementById(`score-${prefix}`);
   if (!badge) return;
   const label = scoreLabel(score);
   const cls   = scoreGradeClass(score);
@@ -578,8 +583,8 @@ function renderComposite(data) {
   }
 
   // 알고 신호 배지
-  const sigBadge = document.getElementById("signal-badge");
-  const sigDesc  = document.getElementById("signal-desc");
+  const sigBadge = document.getElementById("algo-signal-badge");
+  const sigDesc  = document.getElementById("algo-signal-desc");
   if (sigBadge && sigDesc) {
     if      (comp >= 70) { sigBadge.textContent = "RISK ON";  sigBadge.style.background = "#ef4444"; sigDesc.textContent = "위험 경보 발령 — 방어적 포지션 전환"; }
     else if (comp >= 40) { sigBadge.textContent = "CAUTION";  sigBadge.style.background = "#f59e0b"; sigDesc.textContent = "경계 모드 — 선별적 포지션 관리"; }
@@ -616,11 +621,13 @@ function renderCard(prefix, scoreObj, rawObj) {
   updateScoreBadge(prefix, score);
 
   // 앞면
-  const frontEl = document.getElementById(`front-${prefix}`);
+  // Fix15: HTML ID는 front-body-w1 형식
+  const frontEl = document.getElementById(`front-body-${prefix}`);
   if (frontEl) frontEl.innerHTML = buildFrontContent(prefix, score, rawObj);
 
   // 뒷면
-  const backEl = document.getElementById(`back-${prefix}`);
+  // Fix15: HTML ID는 back-body-w1 형식
+  const backEl = document.getElementById(`back-body-${prefix}`);
   if (backEl) backEl.innerHTML = buildBackContent(prefix, score, rawObj);
 }
 
