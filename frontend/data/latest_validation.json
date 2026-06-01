@@ -2,11 +2,11 @@
   "validation_passed": true,
   "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호",
   "anomalies": [
-    "IPO 가격확정 0건으로 시장 활동 일시 저조"
+    "가격확정건수 0건으로 IPO활동 일시 정체"
   ],
   "recommendations": [
-    "IPO 파이프라인 대비 실제 확정건수 모니터링 필요"
+    "IPO파이프라인 대비 실제 확정건수 모니터링 강화"
   ],
-  "validated_at": "2026-06-01T05:33:36.640135+00:00",
+  "validated_at": "2026-06-01T07:53:45.684188+00:00",
   "model": "claude-sonnet-4-6"
 }

@@ -1,7 +1,7 @@
 {
   "composite_score": 35.0,
   "grade": "GREEN",
-  "timestamp": "2026-06-01T05:33:29.757142+00:00",
+  "timestamp": "2026-06-01T07:53:39.306212+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-01T05:33:24.145885+00:00"
+    "timestamp": "2026-06-01T07:53:35.926430+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-06-01T05:33:27.741400+00:00"
+    "timestamp": "2026-06-01T07:53:37.421058+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,7 +38,7 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-06-01T05:33:29.576509+00:00"
+    "timestamp": "2026-06-01T07:53:39.126291+00:00"
   },
   "w4": {
     "score": 80,
@@ -101,18 +101,18 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-01T05:33:29.757128+00:00"
+    "timestamp": "2026-06-01T07:53:39.306198+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
     "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호",
     "anomalies": [
-      "IPO 가격확정 0건으로 시장 활동 일시 저조"
+      "가격확정건수 0건으로 IPO활동 일시 정체"
     ],
     "recommendations": [
-      "IPO 파이프라인 대비 실제 확정건수 모니터링 필요"
+      "IPO파이프라인 대비 실제 확정건수 모니터링 강화"
     ],
-    "validated_at": "2026-06-01T05:33:36.640135+00:00",
+    "validated_at": "2026-06-01T07:53:45.684188+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
