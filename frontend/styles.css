@@ -1,695 +1,203 @@
-/* ════════════════════════════════════════════
-   글로벌 주식시장 위기경보 대시보드 – 전체 스타일
-   ════════════════════════════════════════════ */
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>글로벌 주식시장 위기경보 대시보드</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
 
-/* ── CSS 변수 ─────────────────────────────── */
-:root {
-  --bg-deep:    #060d1f;
-  --bg-card:    #0d1b35;
-  --bg-card2:   #0f2040;
-  --border:     #1e3a5f;
-  --border-glow:#2563eb44;
-  --text:       #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-accent:#38bdf8;
-  --red:        #ef4444;
-  --orange:     #f97316;
-  --yellow:     #f59e0b;
-  --green:      #10b981;
-  --gold:       #f59e0b;
-  --header-h:   64px;
-}
+<!-- ── 헤더 ─────────────────────────────────── -->
+<header class="site-header">
+  <div class="header-left">
+    <span class="logo">🌐</span>
+    <div>
+      <h1>글로벌 주식시장 위기경보 대시보드</h1>
+      <div class="subtitle">Global Stock Market Crisis Alert Dashboard</div>
+    </div>
+  </div>
+  <div id="last-updated" class="last-updated">데이터 로딩 중…</div>
+</header>
 
-/* ── 리셋 & 기본 ──────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg-deep);
-  color: var(--text);
-  font-family: 'Segoe UI', 'Noto Sans KR', system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  min-height: 100vh;
-}
+<div class="container">
 
-/* ── 헤더 ─────────────────────────────────── */
-.site-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.5rem;
-  height: var(--header-h);
-  background: linear-gradient(90deg, #0a1628 0%, #0d2040 100%);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.4);
-}
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.logo {
-  font-size: 1.6rem;
-  filter: drop-shadow(0 0 6px #ef444488);
-}
-.site-header h1 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  letter-spacing: -0.01em;
-}
-.subtitle {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-.last-updated {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
+  <!-- ── 퍼펙트스톰 배너 ──────────────────── -->
+  <section id="storm-section" class="storm-section">
+    <div class="storm-banner">
+      <span class="storm-icon">⛈️</span>
+      <div>
+        <div class="storm-title">⚠️ 퍼펙트스톰 경보 — 복합위험 극단 수준</div>
+        <div class="storm-desc">4개 지표가 동시에 위험 임계치를 초과했습니다. 즉각적인 포트폴리오 점검이 필요합니다.</div>
+        <div class="storm-chain">위험 전이 경로: 대형 IPO 유동성 흡수 → 신용 스프레드 확대 → 금리 상승 → 선도주 붕괴</div>
+      </div>
+    </div>
+  </section>
 
-/* ── 컨테이너 ─────────────────────────────── */
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 1.25rem 1.25rem 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
+  <!-- ── 복합 점수 ─────────────────────────── -->
+  <section class="composite-section">
+    <div id="composite-card" class="composite-card">
+      <div class="score-ring-wrapper">
+        <canvas id="composite-ring" width="160" height="160"></canvas>
+        <div class="score-center">
+          <span id="composite-number" class="score-number">—</span>
+          <span class="score-label">종합위험점수</span>
+        </div>
+      </div>
+      <div class="composite-right">
+        <div id="overall-label" class="overall-label">데이터 로딩 중</div>
+        <div id="action-rec"    class="action-rec">—</div>
+        <div class="algo-signal-box">
+          <span id="signal-badge" class="signal-badge">—</span>
+          <span id="signal-desc"  class="signal-desc">—</span>
+        </div>
+        <div id="hedge-rec" class="hedge-rec">—</div>
+        <div class="warning-bars" id="warning-bars"></div>
+      </div>
+    </div>
+  </section>
 
-/* ── 퍼펙트스톰 배너 ──────────────────────── */
-.storm-section { display: none; }
-.storm-banner {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-  background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.05));
-  border: 2px solid #ef4444;
-  border-radius: 14px;
-  padding: 1.1rem 1.4rem;
-  animation: pulseRed 2s ease-in-out infinite;
-}
-@keyframes pulseRed {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.3); }
-  50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
-}
-.storm-icon { font-size: 2.2rem; flex-shrink: 0; }
-.storm-title {
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #fca5a5;
-  letter-spacing: 0.05em;
-}
-.storm-desc {
-  font-size: 0.82rem;
-  color: #fecaca;
-  margin-top: 0.25rem;
-}
-.storm-chain {
-  font-size: 0.75rem;
-  color: #fca5a5;
-  margin-top: 0.5rem;
-  padding: 0.4rem 0.75rem;
-  background: rgba(239,68,68,0.1);
-  border-radius: 6px;
-}
+  <!-- ── 경고 카드 4장 ─────────────────────── -->
+  <section class="warnings-section">
+    <div class="warnings-grid">
 
-/* ── 복합점수 카드 ─────────────────────────── */
-.composite-section {}
-.composite-card {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1.25rem 1.5rem;
-  transition: border-color 0.3s;
-}
-.composite-card.grade-GREEN { border-color: #10b98155; }
-.composite-card.grade-YELLOW { border-color: #f59e0b88; }
-.composite-card.grade-RED { border-color: #ef444488; }
+      <!-- W1 선도주 압축 -->
+      <div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
+        <div class="card-flip-inner">
+          <div class="card-front" id="card-front-w1">
+            <div class="card-header">
+              <span class="card-icon">📉</span>
+              <div class="card-header-text">
+                <span class="card-title">W1. 선도주 압축</span>
+                <span class="card-subtitle">Lead-Stock Compression</span>
+                <div class="card-header-badges">
+                  <span class="card-weight-badge">가중치 25%</span>
+                  <span id="score-badge-w1" class="card-score-badge grade-green">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="chart-wrapper"><canvas id="bar-w1"></canvas></div>
+            <div id="front-w1" class="signals-list"></div>
+            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
+          </div>
+          <div class="card-back" id="card-back-w1">
+            <div class="back-header">
+              <span class="back-title">📉 W1 지표 해설</span>
+              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w1')">← 앞으로</button>
+            </div>
+            <div id="back-w1"></div>
+          </div>
+        </div>
+      </div>
 
-.score-ring-wrapper {
-  position: relative;
-  flex-shrink: 0;
-  width: 160px;
-  height: 160px;
-}
-.score-ring-wrapper canvas {
-  position: absolute;
-  top: 0; left: 0;
-}
-.score-center {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  pointer-events: none;
-}
-.score-number {
-  font-size: 2.2rem;
-  font-weight: 800;
-  line-height: 1;
-  font-family: monospace;
-}
-.score-label {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  display: block;
-  margin-top: 2px;
-}
+      <!-- W2 채권 감시탑 -->
+      <div class="card-flip-wrapper" id="flip-w2" onclick="toggleFlip('w2')">
+        <div class="card-flip-inner">
+          <div class="card-front" id="card-front-w2">
+            <div class="card-header">
+              <span class="card-icon">📊</span>
+              <div class="card-header-text">
+                <span class="card-title">W2. 채권 감시탑</span>
+                <span class="card-subtitle">Bond Watchdog &amp; Rates</span>
+                <div class="card-header-badges">
+                  <span class="card-weight-badge">가중치 30%</span>
+                  <span id="score-badge-w2" class="card-score-badge grade-green">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="chart-wrapper"><canvas id="bar-w2"></canvas></div>
+            <div id="front-w2" class="signals-list"></div>
+            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
+          </div>
+          <div class="card-back" id="card-back-w2">
+            <div class="back-header">
+              <span class="back-title">📊 W2 지표 해설</span>
+              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w2')">← 앞으로</button>
+            </div>
+            <div id="back-w2"></div>
+          </div>
+        </div>
+      </div>
 
-.composite-right {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-.overall-label {
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-.action-rec {
-  font-size: 0.82rem;
-  color: #cbd5e1;
-  line-height: 1.55;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255,255,255,0.04);
-  border-radius: 8px;
-  border-left: 3px solid var(--text-accent);
-}
-.algo-signal-box {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.signal-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 0.25rem 0.65rem;
-  border-radius: 999px;
-  color: #fff;
-  background: var(--green);
-}
-.signal-desc {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-.hedge-rec {
-  font-size: 0.76rem;
-  color: #94a3b8;
-  font-style: italic;
-}
+      <!-- W3 사모신용 압박 -->
+      <div class="card-flip-wrapper" id="flip-w3" onclick="toggleFlip('w3')">
+        <div class="card-flip-inner">
+          <div class="card-front" id="card-front-w3">
+            <div class="card-header">
+              <span class="card-icon">🏦</span>
+              <div class="card-header-text">
+                <span class="card-title">W3. 사모신용 압박</span>
+                <span class="card-subtitle">Private Credit Redemption</span>
+                <div class="card-header-badges">
+                  <span class="card-weight-badge">가중치 20%</span>
+                  <span id="score-badge-w3" class="card-score-badge grade-green">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="chart-wrapper"><canvas id="bar-w3"></canvas></div>
+            <div id="front-w3" class="signals-list"></div>
+            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
+          </div>
+          <div class="card-back" id="card-back-w3">
+            <div class="back-header">
+              <span class="back-title">🏦 W3 지표 해설</span>
+              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w3')">← 앞으로</button>
+            </div>
+            <div id="back-w3"></div>
+          </div>
+        </div>
+      </div>
 
-/* ── 경고 바 (복합카드 하단) ─────────────── */
-.warning-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-.warning-bar-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.warning-bar-label {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  width: 68px;
-  flex-shrink: 0;
-}
-.warning-bar-track {
-  flex: 1;
-  height: 6px;
-  background: #1e3a5f;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.warning-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.5s ease;
-}
-.warning-bar-val {
-  font-size: 0.7rem;
-  font-weight: 700;
-  font-family: monospace;
-  width: 24px;
-  text-align: right;
-  flex-shrink: 0;
-}
+      <!-- W4 대형 IPO 유동성 -->
+      <div class="card-flip-wrapper" id="flip-w4" onclick="toggleFlip('w4')">
+        <div class="card-flip-inner">
+          <div class="card-front" id="card-front-w4">
+            <div class="card-header">
+              <span class="card-icon">🚀</span>
+              <div class="card-header-text">
+                <span class="card-title">W4. 대형 IPO 유동성</span>
+                <span class="card-subtitle">Large-IPO Liquidity</span>
+                <div class="card-header-badges">
+                  <span class="card-weight-badge">가중치 25%</span>
+                  <span id="score-badge-w4" class="card-score-badge grade-green">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="chart-wrapper"><canvas id="bar-w4"></canvas></div>
+            <div id="front-w4" class="signals-list"></div>
+            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
+          </div>
+          <div class="card-back" id="card-back-w4">
+            <div class="back-header">
+              <span class="back-title">🚀 W4 지표 해설</span>
+              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w4')">← 앞으로</button>
+            </div>
+            <div id="back-w4"></div>
+          </div>
+        </div>
+      </div>
 
-/* ── 경고 카드 그리드 ─────────────────────── */
-.warnings-section {}
-.warnings-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  align-items: start;
-}
-@media (max-width: 1100px) {
-  .warnings-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px) {
-  .warnings-grid { grid-template-columns: 1fr; }
-}
+    </div><!-- .warnings-grid -->
+  </section>
 
-/* ── 카드 플립 ─────────────────────────────── */
-.card-flip-wrapper {
-  perspective: 1200px;
-  cursor: pointer;
-}
-.card-flip-inner {
-  position: relative;
-  transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
-  transform-style: preserve-3d;
-}
-.card-flip-wrapper.flipped .card-flip-inner {
-  transform: rotateY(180deg);
-}
-.card-front,
-.card-back {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  min-height: 320px;
-}
-.card-back {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  transform: rotateY(180deg);
-  background: var(--bg-card2);
-  min-height: 320px;
-  overflow-y: auto;
-}
+  <!-- ── 히스토리 차트 ──────────────────────── -->
+  <section class="history-section">
+    <div class="section-title">📈 종합위험점수 추이 (최근 30일)</div>
+    <div class="history-chart-wrapper">
+      <canvas id="history-chart"></canvas>
+    </div>
+  </section>
 
-/* ── 카드 헤더 ─────────────────────────────── */
-.card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.card-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
-.card-header > div {
-  flex: 1;
-  min-width: 0;
-}
-.card-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #f1f5f9;
-}
-.card-subtitle {
-  font-size: 0.67rem;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-.card-weight-badge {
-  font-size: 0.65rem;
-  color: var(--text-accent);
-  background: rgba(56,189,248,0.1);
-  border: 1px solid rgba(56,189,248,0.25);
-  border-radius: 999px;
-  padding: 0.15rem 0.5rem;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.card-score-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-family: monospace;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-.grade-green  { background: rgba(16,185,129,0.15);  color: #34d399; border: 1px solid #10b98155; }
-.grade-yellow { background: rgba(245,158,11,0.15);  color: #fbbf24; border: 1px solid #f59e0b55; }
-.grade-red    { background: rgba(239,68,68,0.15);   color: #f87171; border: 1px solid #ef444455; }
+</div><!-- .container -->
 
-/* ── 미니바 차트 ───────────────────────────── */
-.chart-wrapper {
-  width: 100%;
-  height: 8px;
-  flex-shrink: 0;
-}
-.chart-wrapper canvas { width: 100% !important; }
+<!-- ── 푸터 ─────────────────────────────────── -->
+<footer class="site-footer">
+  <div>데이터 출처: FRED API · Yahoo Finance · SEC EDGAR · Reuters · Bloomberg · CNBC</div>
+  <div>본 대시보드는 참고용 정보이며 투자 권유가 아닙니다. 투자 결정은 본인 책임입니다.</div>
+</footer>
 
-/* ── 시그널 리스트 ─────────────────────────── */
-.signals-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-.signal-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.4rem;
-  font-size: 0.72rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 5px;
-}
-.signal-item.RED    { background: rgba(239,68,68,0.08);  color: #fca5a5; }
-.signal-item.ORANGE { background: rgba(249,115,22,0.08); color: #fdba74; }
-.signal-item.YELLOW { background: rgba(245,158,11,0.08); color: #fde68a; }
-.signal-item.GREEN  { background: rgba(16,185,129,0.06); color: #6ee7b7; }
-
-.signal-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-.signal-dot.RED    { background: var(--red); }
-.signal-dot.ORANGE { background: var(--orange); }
-.signal-dot.YELLOW { background: var(--yellow); }
-.signal-dot.GREEN  { background: var(--green); }
-
-/* ── 플립 힌트 ─────────────────────────────── */
-.flip-hint {
-  font-size: 0.65rem;
-  color: #475569;
-  text-align: right;
-  margin-top: auto;
-  padding-top: 0.3rem;
-}
-
-/* ── 뒷면 ─────────────────────────────────── */
-.back-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.back-title {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #f1f5f9;
-}
-.flip-btn {
-  font-size: 0.68rem;
-  background: rgba(56,189,248,0.1);
-  border: 1px solid rgba(56,189,248,0.3);
-  color: var(--text-accent);
-  border-radius: 6px;
-  padding: 0.25rem 0.55rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.flip-btn:hover { background: rgba(56,189,248,0.2); }
-
-.back-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding-top: 0.4rem;
-}
-.back-section {}
-.back-section h4 {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text-accent);
-  margin-bottom: 0.35rem;
-}
-.back-section p {
-  font-size: 0.74rem;
-  color: #cbd5e1;
-  line-height: 1.6;
-}
-.back-metric {
-  display: flex;
-  gap: 0.5rem;
-  font-size: 0.72rem;
-  padding: 0.2rem 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-.back-label {
-  color: var(--text-muted);
-  flex-shrink: 0;
-  min-width: 120px;
-}
-.back-value { color: #cbd5e1; }
-
-/* ── 앞면 콘텐츠 ─────────────────────────── */
-.front-metrics-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.22rem;
-}
-.front-metric-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.22rem 0.5rem;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.72rem;
-}
-.front-metric-label {
-  color: var(--text-muted);
-  font-size: 0.69rem;
-}
-.front-metric-val {
-  font-family: monospace;
-  font-weight: 700;
-  font-size: 0.76rem;
-  color: var(--text-accent);
-}
-
-/* 상황 진단 박스 */
-.front-situation {
-  font-size: 0.74rem;
-  font-weight: 500;
-  line-height: 1.55;
-  padding: 0.4rem 0.65rem;
-  border-radius: 7px;
-}
-.front-situation.RED    { background: rgba(239,68,68,0.12);  border-left: 3px solid var(--red);    color: #fecaca; }
-.front-situation.ORANGE { background: rgba(249,115,22,0.12); border-left: 3px solid var(--orange); color: #fed7aa; }
-.front-situation.YELLOW { background: rgba(234,179,8,0.09);  border-left: 3px solid var(--yellow); color: #fef08a; }
-.front-situation.GREEN  { background: rgba(16,185,129,0.09); border-left: 3px solid var(--green);  color: #bbf7d0; }
-
-/* 투자 시사점 박스 */
-.front-advice {
-  font-size: 0.72rem;
-  color: var(--gold);
-  background: rgba(245,158,11,0.08);
-  border: 1px solid rgba(245,158,11,0.25);
-  border-radius: 8px;
-  padding: 0.4rem 0.65rem;
-  line-height: 1.55;
-}
-
-/* ── IPO 테이블 ─────────────────────────────── */
-.ipo-table-wrapper {
-  overflow-x: auto;
-  flex-shrink: 0;
-  margin-top: 0.3rem;
-}
-.ipo-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.7rem;
-}
-.ipo-table thead tr {
-  background: rgba(255,255,255,0.04);
-}
-.ipo-table th {
-  padding: 0.3rem 0.4rem;
-  text-align: left;
-  color: var(--text-muted);
-  font-weight: 600;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.ipo-table td {
-  padding: 0.28rem 0.4rem;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  color: #cbd5e1;
-  vertical-align: middle;
-}
-.ipo-table tr:last-child td { border-bottom: none; }
-.ipo-table tr:hover td { background: rgba(255,255,255,0.03); }
-
-/* IPO 상태 배지 */
-.status-badge {
-  display: inline-block;
-  font-size: 0.62rem;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.status-Rumor       { background: rgba(100,116,139,0.2); color: #94a3b8; }
-.status-Considering { background: rgba(245,158,11,0.15); color: #fbbf24; }
-.status-Filed       { background: rgba(239,68,68,0.15);  color: #f87171; }
-.status-Priced      { background: rgba(239,68,68,0.3);   color: #fca5a5; }
-.status-Trading     { background: rgba(16,185,129,0.15); color: #34d399; }
-
-/* ── 히스토리 차트 ─────────────────────────── */
-.history-section {}
-.section-title {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin-bottom: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.history-chart-wrapper {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1rem 1.2rem 0.8rem;
-  height: 220px;
-}
-.history-chart-wrapper canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* ── 값 색상 유틸 ──────────────────────────── */
-.val-red    { color: #ef4444 !important; }
-.val-yellow { color: #f59e0b !important; }
-.val-green  { color: #10b981 !important; }
-.val-orange { color: #f97316 !important; }
-
-/* ── 푸터 ─────────────────────────────────── */
-.site-footer {
-  text-align: center;
-  padding: 1.5rem 1rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.68rem;
-  color: #475569;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-/* ── 반응형 (모바일 768px 이하) ────────────── */
-@media (max-width: 768px) {
-  .composite-card {
-    flex-direction: column;
-    align-items: center;
-  }
-  .score-ring-wrapper { width: 140px; height: 140px; }
-  .composite-right { width: 100%; }
-  .history-chart-wrapper { height: 180px; }
-  .site-header h1 { font-size: 0.88rem; }
-  .subtitle { display: none; }
-}
-
-/* ── 반응형 (모바일 640px 이하) ────────────── */
-@media (max-width: 640px) {
-  .warnings-grid {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  .card-flip-wrapper {
-    height: auto !important;
-  }
-  .card-front, .card-back {
-    padding: 0.75rem;
-    min-height: unset;
-  }
-  .container {
-    gap: 0.75rem;
-    padding: 0.75rem 0.75rem 1.5rem;
-  }
-}
-
-/* ── 반응형 (모바일 480px 이하) ────────────── */
-@media (max-width: 480px) {
-  .container { padding: 0.6rem; gap: 0.6rem; }
-  .card-front, .card-back { padding: 0.65rem; }
-  .ipo-table { font-size: 0.62rem; }
-  .warnings-grid { gap: 0.4rem; }
-}
-
-/* ── W4 뒷면 임계치 테이블 ──────────────────────────────── */
-.back-threshold-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.70rem;
-  margin: 0.5rem 0;
-}
-.back-threshold-table th {
-  background: rgba(255,255,255,0.08);
-  padding: 0.35rem 0.4rem;
-  text-align: left;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-  white-space: nowrap;
-}
-.back-threshold-table td {
-  padding: 0.35rem 0.4rem;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  vertical-align: top;
-  line-height: 1.4;
-}
-.back-threshold-table small {
-  display: block;
-  color: rgba(255,255,255,0.45);
-  font-size: 0.62rem;
-  margin-top: 0.15rem;
-}
-.back-threshold-table .tr-green td  { border-left: 3px solid #4ade80; }
-.back-threshold-table .tr-yellow td { border-left: 3px solid #facc15; }
-.back-threshold-table .tr-orange td { border-left: 3px solid #fb923c; }
-.back-threshold-table .tr-red td    { border-left: 3px solid #f87171; }
-.back-threshold-table .tr-red-dark td {
-  border-left: 3px solid #dc2626;
-  background: rgba(220,38,38,0.08);
-}
-
-/* 뒷면 수식 블록 */
-.back-formula {
-  background: rgba(0,0,0,0.25);
-  border-radius: 6px;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.72rem;
-  line-height: 1.7;
-}
-.back-formula p { margin: 0.2rem 0 0; }
-.back-formula code {
-  display: block;
-  background: rgba(255,255,255,0.07);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  margin: 0.1rem 0 0.4rem;
-  font-family: 'Courier New', monospace;
-  font-size: 0.68rem;
-  color: #93c5fd;
-  word-break: break-all;
-}
-
-/* 뒷면 경고 노트 */
-.back-note {
-  font-size: 0.70rem;
-  color: rgba(255,255,255,0.7);
-  background: rgba(251,191,36,0.08);
-  border-left: 3px solid #facc15;
-  padding: 0.45rem 0.6rem;
-  border-radius: 0 4px 4px 0;
-  line-height: 1.5;
-  margin-top: 0.5rem;
-}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="charts.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
