@@ -1,0 +1,149 @@
+{
+  "composite_score": 35.0,
+  "grade": "GREEN",
+  "timestamp": "2026-06-01T02:33:55.420157+00:00",
+  "w1_score": 12,
+  "w2_score": 30,
+  "w3_score": 15,
+  "w4_score": 80,
+  "w1": {
+    "score": 12,
+    "grade": "GREEN",
+    "spy_ytd": 11.24,
+    "rsp_ytd": 9.48,
+    "current_spread": 1.76,
+    "spread_percentile": 52,
+    "rsp_1w_return": 2.01,
+    "rsp_is_negative_while_spy_positive": false,
+    "timestamp": "2026-06-01T02:33:49.887609+00:00"
+  },
+  "w2": {
+    "score": 30,
+    "grade": "GREEN",
+    "us10y_yield": 4.45,
+    "us2y_yield": 3.99,
+    "term_spread": 0.46,
+    "tips_10y_real_yield": 2.06,
+    "is_inverted": false,
+    "timestamp": "2026-06-01T02:33:53.556446+00:00"
+  },
+  "w3": {
+    "score": 15,
+    "grade": "정상",
+    "color": "green",
+    "hy_bps": 272.0,
+    "ig_bps": 73.0,
+    "hy_change_bps": -57.0,
+    "signals": [
+      "📢 HY 스프레드 272 bps — 주의 구간",
+      "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
+    ],
+    "timestamp": "2026-06-01T02:33:55.352038+00:00"
+  },
+  "w4": {
+    "score": 80,
+    "grade": "위험",
+    "color": "red",
+    "total_valuation_bn": 2523.0,
+    "filed_count": 3,
+    "priced_count": 0,
+    "signals": [
+      "📋 SpaceX: S-1 제출 완료 ($1800B)",
+      "🔍 OpenAI: IPO 검토 중 ($852B)",
+      "🔍 Anthropic: IPO 검토 중 ($965B)",
+      "🔍 Databricks: IPO 검토 중 ($134B)",
+      "🔍 Stripe: IPO 검토 중 ($159B)",
+      "✅ Cerebras: 상장 완료 (점수 제외)",
+      "📋 Revolut: S-1 제출 완료 ($75B)",
+      "📋 Discord: S-1 제출 완료 ($15B)"
+    ],
+    "alerts": [
+      "⚠️ 활성 파이프라인 $2523B — 매우 높음"
+    ],
+    "ipo_list": [
+      {
+        "company": "SpaceX",
+        "valuation_bn": 1800,
+        "status": "신청완료",
+        "source": "Reuters/Bloomberg 2026-05-15",
+        "filed_date": "2026-04-01",
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "OpenAI",
+        "valuation_bn": 852,
+        "status": "검토중",
+        "source": "Bloomberg 2026-03-31",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "Anthropic",
+        "valuation_bn": 965,
+        "status": "검토중",
+        "source": "Anthropic 공식 / Reuters 2026-05-28",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "Databricks",
+        "valuation_bn": 134,
+        "status": "검토중",
+        "source": "CNBC 2026-02-09",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "Stripe",
+        "valuation_bn": 159,
+        "status": "검토중",
+        "source": "Reuters 2026-02-24",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "Cerebras",
+        "valuation_bn": 95,
+        "status": "상장완료",
+        "source": "CNBC / Reuters 2026-05-14",
+        "filed_date": "2026-04-17",
+        "listed_date": "2026-05-14",
+        "ticker": "CBRS"
+      },
+      {
+        "company": "Revolut",
+        "valuation_bn": 75,
+        "status": "신청완료",
+        "source": "Bloomberg 2026",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "Discord",
+        "valuation_bn": 15,
+        "status": "신청완료",
+        "source": "Bloomberg 2026",
+        "filed_date": null,
+        "listed_date": null,
+        "ticker": null
+      }
+    ],
+    "timestamp": "2026-06-01T02:33:55.420103+00:00"
+  },
+  "ai_validation": {
+    "validation_passed": null,
+    "overall_assessment": "검증 스킵: 3회 재시도 모두 실패",
+    "data_checks": [],
+    "score_checks": [],
+    "anomalies": [],
+    "recommendations": [],
+    "validated_at": "2026-06-01T02:34:14.431697+00:00",
+    "model": null
+  }
+}
