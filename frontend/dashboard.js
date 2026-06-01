@@ -67,9 +67,16 @@ function scoreGradeClass(s) {
 /* ── 카드 높이 균등화 ────────────────────────────────────── */
 function equalizeCardHeights() {
   const wrappers = document.querySelectorAll(".card-flip-wrapper");
+  // Reset heights so we can measure natural content size
   wrappers.forEach(w => { w.style.height = ""; });
   let maxH = 0;
-  wrappers.forEach(w => { maxH = Math.max(maxH, w.offsetHeight); });
+  wrappers.forEach(w => {
+    // card-front is position:absolute so offsetHeight of wrapper = min-height only.
+    // Measure the actual scrollHeight of the card-front instead.
+    const front = w.querySelector(".card-front");
+    const h = front ? front.scrollHeight : w.offsetHeight;
+    maxH = Math.max(maxH, h);
+  });
   if (maxH > 0) {
     wrappers.forEach(w => { w.style.height = maxH + "px"; });
   }
