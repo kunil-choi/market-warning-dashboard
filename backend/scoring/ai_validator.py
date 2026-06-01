@@ -5,7 +5,8 @@
 #          hy_spread_bps  → hy_bps
 #          ig_spread_bps  → ig_bps
 #          hy_1m_change_bps → hy_change_bps
-#          (collector_credit.py 실제 반환 키와 일치)
+#   Fix9 – GitHub Actions 네트워크 지연 대응
+#          재시도 대기 시간 증가, timeout 명시, max_tokens 축소
 # ============================================================
 
 import os
@@ -27,7 +28,7 @@ VALIDATION_PROMPT = """
 - W1 주도주 압축 (가중치 25%): SPY-RSP 괴리율 기반, 괴리 클수록 고점수
 - W2 채권 자경단 (가중치 30%): 10년물 금리 4.5% 임계선, 장단기 역전 여부
 - W3 사모 크레딧 (가중치 20%): HY 스프레드 기준, 400bps 이상 위험
-- W4 대어급 IPO  (가중치 25%): 가중 파이프라인 $1,500B 임계선
+- W4 대어급 IPO  (가중치 25%): 가중 파이프라인 시총 대비 비율 기준
 - 종합점수 = W1×0.25 + W2×0.30 + W3×0.20 + W4×0.25
 - 등급: 0~39점 GREEN / 40~69점 YELLOW / 70~100점 RED
 
@@ -97,9 +98,10 @@ def _build_raw_summary(scores_data: dict) -> str:
             "HY_1개월변화_bps":  w3.get("hy_change_bps"),
         },
         "W4_대어급IPO": {
-            "가중파이프라인_B": w4.get("total_valuation_bn"),
-            "신청완료건수":     w4.get("filed_count"),
-            "공모가확정건수":   w4.get("priced_count"),
+            "가중파이프라인_B":      w4.get("total_valuation_bn"),
+            "시총대비비율_%":        w4.get("pipeline_ratio_pct"),
+            "신청완료건수":          w4.get("filed_count"),
+            "공모가확정건수":        w4.get("priced_count"),
             "IPO목록": [
                 {"기업": i.get("company"),
                  "기업가치_B": i.get("valuation_bn"),
@@ -147,12 +149,20 @@ def validate_with_ai(scores_data: dict) -> dict:
 
     logger.info("[AI검증] Claude API 호출 시작")
 
+    # ✅ Fix9: GitHub Actions cold start 안정화 — 첫 호출 전 5초 대기
+    time.sleep(5)
+
+    wait_times = [15, 30, 60]
+
     for attempt in range(1, 4):
         try:
-            client  = anthropic.Anthropic(api_key=api_key)
+            client = anthropic.Anthropic(
+                api_key=api_key,
+                timeout=60.0,
+            )
             message = client.messages.create(
                 model="claude-3-5-sonnet-20241022",
-                max_tokens=2048,
+                max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}],
             )
 
@@ -184,34 +194,40 @@ def validate_with_ai(scores_data: dict) -> dict:
             logger.error(f"[AI검증] JSON 파싱 실패 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"JSON 파싱 오류: {e}")
+            time.sleep(wait_times[attempt - 1])
 
         except anthropic.RateLimitError:
-            logger.warning(f"[AI검증] Rate Limit → 5초 대기 ({attempt}/3)")
-            time.sleep(5)
+            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
+            logger.warning(f"[AI검증] Rate Limit → {wait}초 대기 ({attempt}/3)")
+            time.sleep(wait)
 
         except anthropic.APIStatusError as e:
             err_msg = str(e)
             logger.error(f"[AI검증] API 상태 오류 {e.status_code} ({attempt}/3): {err_msg}")
             if e.status_code in (500, 529):
-                time.sleep(5)
+                wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
+                time.sleep(wait)
             else:
                 return _skip_result(f"API 오류 {e.status_code}: {err_msg}")
 
         except anthropic.APIConnectionError as e:
-            logger.warning(f"[AI검증] 연결 오류 ({attempt}/3): {e}")
-            time.sleep(5)
+            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
+            logger.warning(f"[AI검증] 연결 오류 → {wait}초 대기 후 재시도 ({attempt}/3): {e}")
+            time.sleep(wait)
 
         except anthropic.APIError as e:
             logger.error(f"[AI검증] 기타 API 오류 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"API 오류: {e}")
-            time.sleep(5)
+            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
+            time.sleep(wait)
 
         except Exception as e:
             logger.error(f"[AI검증] 예상치 못한 오류 ({attempt}/3): {e}")
             if attempt == 3:
                 return _skip_result(f"알 수 없는 오류: {e}")
-            time.sleep(5)
+            wait = wait_times[min(attempt - 1, len(wait_times) - 1)]
+            time.sleep(wait)
 
     return _skip_result("3회 재시도 모두 실패")
 
