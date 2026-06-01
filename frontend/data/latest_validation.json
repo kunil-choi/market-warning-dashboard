@@ -1,9 +1,12 @@
 {
-  "validation_passed": null,
-  "overall_assessment": "검증 스킵: API 오류 404: Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-5-sonnet-20241022'}, 'request_id': 'req_011Cbbvfs7riTASkUPpRVoDK'}",
-  "data_checks": [],
-  "anomalies": [],
-  "recommendations": [],
-  "validated_at": "2026-06-01T04:41:35.727633+00:00",
-  "model": null
+  "validation_passed": true,
+  "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호",
+  "anomalies": [
+    "IPO 가격확정 0건으로 시장 활동 일시 저조"
+  ],
+  "recommendations": [
+    "IPO 파이프라인 대비 실제 확정건수 모니터링 필요"
+  ],
+  "validated_at": "2026-06-01T05:33:36.640135+00:00",
+  "model": "claude-sonnet-4-6"
 }
