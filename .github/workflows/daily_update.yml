@@ -11,7 +11,7 @@ permissions:
 jobs:
   update-dashboard:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Checkout Repository
@@ -33,16 +33,13 @@ jobs:
         env:
           FRED_API_KEY:      ${{ secrets.FRED_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # ✅ 수정: 레포 루트를 PYTHONPATH에 추가 (backend 패키지 인식)
-          PYTHONPATH: ${{ github.workspace }}
-        # ✅ 수정: 실제 파일 경로로 직접 실행
+          PYTHONPATH:        ${{ github.workspace }}
         run: python backend/data_pipeline/run_pipeline.py
 
       - name: Commit Updated Data
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # ✅ 수정: 실제 저장 경로인 frontend/data/ 로 변경
           git add frontend/data/latest_scores.json frontend/data/history.jsonl frontend/data/latest_validation.json
           git diff --staged --quiet || git commit -m "📊 자동 업데이트: $(date +'%Y-%m-%d %H:%M KST')"
           git push
