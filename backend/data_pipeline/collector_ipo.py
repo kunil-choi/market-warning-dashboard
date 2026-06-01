@@ -7,6 +7,7 @@
 #   Fix9  – 기산 시점 2026-05-01 이후 액션 기업만 포함
 #   Fix10 – 대형 IPO 기준 $50B 이상
 #   Fix11 – 가중치 재설계: 루머 0.0 / 검토중 0.1 / 신청완료 0.7 / 가격확정 1.0
+#   Fix12 – EDGAR 403 로그 레벨 WARNING → INFO
 # ============================================================
 
 import socket
@@ -25,21 +26,10 @@ logger = logging.getLogger(__name__)
 # 상수 정의
 # ──────────────────────────────────────────────
 
-# 미국 전체 주식시장 시가총액 (Siblis Research 2026-01-01 기준, 단위: B$)
 US_MARKET_CAP_BN: float = 69_000.0
-
-# 대형 IPO 기준 (역사적으로 시장에 실질 영향을 주는 규모)
 LARGE_IPO_THRESHOLD_BN: float = 50.0
-
-# 기산 시점: 이 날짜 이후 액션이 있는 기업만 포함
 ACTIVE_FROM: date = date(2026, 5, 1)
 
-# Fix11: 가중치 재설계
-# - 루머:     시장 영향 없음, 노이즈 제외
-# - 검토중:   실현까지 1~2년 이상, 불확실성 높음 → 0.1
-# - 신청완료: S-1 제출 후 철회율 ~30% 감안 → 0.7
-# - 가격확정: 수일 내 상장 확정, 최고 위험 → 1.0
-# - 상장완료: 이미 시장에 소화됨 → 0.0
 STATUS_WEIGHT: dict[str, float] = {
     "루머":     0.0,
     "검토중":   0.1,
@@ -78,27 +68,13 @@ MEGA_COMPANIES: set[str] = {
 
 # ──────────────────────────────────────────────
 # Fallback 데이터
-# Fix9:  active_date = 2026-05-01 이후 실제 액션 날짜 기록
-# Fix10: $50B 미만 또는 5월 이후 액션 없는 기업 제외
-#
-# 포함 기준:
-#   SpaceX    $1,800B 가격확정 - S-1 공개 2026-05-20, 상장 2026-06-12 예정
-#   OpenAI    $852B   신청완료 - 비공개 S-1 제출 2026-05-20, 9월 상장 목표
-#   Anthropic $965B   검토중   - 2026년 하반기 목표, 10월 예상
-#   Databricks $134B  검토중   - Q3 2026 S-1 예정
-#
-# 제외 기준:
-#   Stripe   - "서두르지 않는다" 발언, 5월 이후 구체 액션 없음
-#   Revolut  - 2028년 목표, 5월 이후 액션 없음
-#   Discord  - $50B 미만 ($15B), 5월 이후 액션 없음
-#   Cerebras - 상장완료 (2026-05-14)
 # ──────────────────────────────────────────────
 MEGA_IPO_FALLBACK: list[dict] = [
     {
         "company":      "SpaceX",
         "valuation_bn": 1800,
         "status":       "가격확정",
-        "active_date":  "2026-05-20",   # S-1 공개일
+        "active_date":  "2026-05-20",
         "source":       "SEC EDGAR S-1 공개 2026-05-20 / 상장 예정 2026-06-12",
         "filed_date":   "2026-05-20",
         "listed_date":  None,
@@ -108,7 +84,7 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "company":      "OpenAI",
         "valuation_bn": 852,
         "status":       "신청완료",
-        "active_date":  "2026-05-20",   # 비공개 S-1 제출일
+        "active_date":  "2026-05-20",
         "source":       "CNBC / NYT 2026-05-20 비공개 S-1 제출",
         "filed_date":   "2026-05-20",
         "listed_date":  None,
@@ -118,7 +94,7 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "company":      "Anthropic",
         "valuation_bn": 965,
         "status":       "검토중",
-        "active_date":  "2026-05-28",   # $965B 밸류에이션 공식 확인일
+        "active_date":  "2026-05-28",
         "source":       "Anthropic 공식 / Reuters 2026-05-28",
         "filed_date":   None,
         "listed_date":  None,
@@ -128,7 +104,7 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "company":      "Databricks",
         "valuation_bn": 134,
         "status":       "검토중",
-        "active_date":  "2026-05-01",   # Q3 2026 S-1 예정 보도
+        "active_date":  "2026-05-01",
         "source":       "tech-insider.org 2026-05",
         "filed_date":   None,
         "listed_date":  None,
@@ -174,10 +150,6 @@ def normalize_status(raw: str) -> str:
     return "루머"
 
 def _is_active(item: dict) -> bool:
-    """
-    Fix9: active_date 또는 filed_date 가 ACTIVE_FROM(2026-05-01) 이후인지 확인.
-    날짜 정보가 없으면 포함(보수적 접근).
-    """
     for key in ("active_date", "filed_date", "listed_date"):
         val = item.get(key)
         if val:
@@ -187,12 +159,10 @@ def _is_active(item: dict) -> bool:
                     return True
             except ValueError:
                 continue
-    # 날짜 정보가 전혀 없으면 포함 (누락 방지)
     has_any_date = any(item.get(k) for k in ("active_date", "filed_date", "listed_date"))
     return not has_any_date
 
 def _is_large(item: dict) -> bool:
-    """Fix10: $50B 이상만 대형 IPO로 분류."""
     val = item.get("valuation_bn") or 0.0
     return val >= LARGE_IPO_THRESHOLD_BN
 
@@ -239,8 +209,9 @@ def fetch_edgar_rss() -> list[dict]:
                 "ticker":       None,
             })
         logger.info("EDGAR %d건 수집", len(results))
-except Exception as exc:
-    logger.info("EDGAR 수집 실패 (fallback 사용): %s", exc)
+    except Exception as exc:
+        # Fix12: EDGAR 403 등 수집 실패는 INFO 레벨 (fallback으로 정상 처리됨)
+        logger.info("EDGAR 수집 실패 (fallback 사용): %s", exc)
     return results
 
 # ──────────────────────────────────────────────
@@ -279,12 +250,6 @@ def merge_ipo_lists(edgar: list[dict], fallback: list[dict]) -> list[dict]:
 # ──────────────────────────────────────────────
 
 def calculate_ipo_score(ipo_list: list[dict]) -> dict:
-    """
-    Fix9:  2026-05-01 이후 액션 기업만 포함
-    Fix10: $50B 이상 대형 IPO만 포함
-    Fix11: 가중치 재설계 (루머 0.0 / 검토중 0.1 / 신청완료 0.7 / 가격확정 1.0)
-    Fix8:  미국 시총 대비 비율 방식
-    """
     if not isinstance(ipo_list, list):
         logger.error("calculate_ipo_score: list 를 받아야 하지만 %s 수신", type(ipo_list))
         ipo_list = []
@@ -308,7 +273,7 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
             signals.append(f"✅ {company}: 상장 완료 (점수 제외)")
             continue
 
-        # Fix9: 기산 시점 이후 액션 없으면 제외
+        # Fix9: 기산 시점 이전 액션 제외
         if not _is_active(item):
             signals.append(f"⏸ {company}: 2026-05-01 이전 액션 — 제외")
             continue
@@ -336,7 +301,7 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     # Fix8: 시총 대비 비율 계산
     pipeline_ratio_pct = round(total_valuation_bn / US_MARKET_CAP_BN * 100, 4)
 
-    # 비율 기반 기본 점수 (역사적 근거)
+    # 비율 기반 기본 점수
     if pipeline_ratio_pct >= 0.45:
         base_score = 75
         alerts.append(
