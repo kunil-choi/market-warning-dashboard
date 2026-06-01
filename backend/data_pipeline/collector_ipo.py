@@ -6,8 +6,9 @@
 #   Fix8  – 절대금액 → 미국 시총 대비 비율 방식
 #   Fix9  – 기산 시점 2026-05-01 이후 액션 기업만 포함
 #   Fix10 – 대형 IPO 기준 $50B 이상
-#   Fix11 – 가중치 재설계: 루머 0.0 / 검토중 0.1 / 신청완료 0.7 / 가격확정 1.0
-#   Fix12 – EDGAR 호출 완전 제거 (클라우드 IP 차단으로 매번 실패)
+#   Fix11 – 가중치 재설계: 루머 0.0 / 검토중 0.1 / 제출완료 0.7 / 가격확정 1.0
+#   Fix12 – EDGAR 호출 완전 제거
+#   Fix13 – '신청완료' → '제출완료' 용어 통일 / 상장완료 기업 fallback 제거
 # ============================================================
 
 import socket
@@ -31,7 +32,7 @@ ACTIVE_FROM: date = date(2026, 5, 1)
 STATUS_WEIGHT: dict[str, float] = {
     "루머":     0.0,
     "검토중":   0.1,
-    "신청완료": 0.7,
+    "제출완료": 0.7,
     "가격확정": 1.0,
     "상장완료": 0.0,
 }
@@ -39,7 +40,7 @@ STATUS_WEIGHT: dict[str, float] = {
 STATUS_PRIORITY: dict[str, int] = {
     "루머":     1,
     "검토중":   2,
-    "신청완료": 3,
+    "제출완료": 3,
     "가격확정": 4,
     "상장완료": 5,
 }
@@ -48,6 +49,7 @@ STATUS_PRIORITY: dict[str, int] = {
 # Fallback 데이터
 # 출처: Reuters, Bloomberg, CNBC, SEC EDGAR (2026-05 기준)
 # 포함 기준: 2026-05-01 이후 액션 + $50B 이상
+# 상장완료 기업 제외 (Cerebras 등)
 # ──────────────────────────────────────────────
 MEGA_IPO_FALLBACK: list[dict] = [
     {
@@ -63,7 +65,7 @@ MEGA_IPO_FALLBACK: list[dict] = [
     {
         "company":      "OpenAI",
         "valuation_bn": 852,
-        "status":       "신청완료",
+        "status":       "제출완료",
         "active_date":  "2026-05-20",
         "source":       "CNBC / NYT 2026-05-20 비공개 S-1 제출",
         "filed_date":   "2026-05-20",
@@ -108,6 +110,7 @@ def parse_valuation(raw: str) -> Optional[float]:
         return float(m.group(1))
     return None
 
+
 def normalize_status(raw: str) -> str:
     if not raw:
         return "루머"
@@ -116,11 +119,12 @@ def normalize_status(raw: str) -> str:
         return "상장완료"
     if any(k in r for k in ("priced", "pricing", "가격확정")):
         return "가격확정"
-    if any(k in r for k in ("filed", "s-1", "신청완료", "confidential")):
-        return "신청완료"
+    if any(k in r for k in ("filed", "s-1", "제출완료", "신청완료", "confidential")):
+        return "제출완료"
     if any(k in r for k in ("considering", "검토", "talks", "in discussion", "preparing")):
         return "검토중"
     return "루머"
+
 
 def _is_active(item: dict) -> bool:
     for key in ("active_date", "filed_date", "listed_date"):
@@ -134,6 +138,7 @@ def _is_active(item: dict) -> bool:
                 continue
     has_any_date = any(item.get(k) for k in ("active_date", "filed_date", "listed_date"))
     return not has_any_date
+
 
 def _is_large(item: dict) -> bool:
     val = item.get("valuation_bn") or 0.0
@@ -162,8 +167,8 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
         status  = item.get("status", "루머")
         val_bn  = item.get("valuation_bn") or 0.0
 
+        # 상장완료: 점수 계산 및 화면 표시 모두 제외
         if status == "상장완료":
-            signals.append(f"✅ {company}: 상장 완료 (점수 제외)")
             continue
 
         if not _is_active(item):
@@ -181,7 +186,7 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
         if status == "가격확정":
             priced_count += 1
             signals.append(f"🚨 {company}: 가격 확정 — 상장 임박 (${val_bn:.0f}B × {weight})")
-        elif status == "신청완료":
+        elif status == "제출완료":
             filed_count += 1
             signals.append(f"📋 {company}: S-1 제출 완료 (${val_bn:.0f}B × {weight})")
         elif status == "검토중":
@@ -251,9 +256,7 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
 def collect_ipo_data() -> dict:
     """
     Fix12: EDGAR 호출 완전 제거.
-    GitHub Actions Azure IP가 SEC에 의해 차단되며,
-    어차피 EDGAR에는 기업가치 데이터가 없어 fallback이 덮어쓰므로
-    fallback 데이터만 사용하는 것이 더 정확하고 안정적.
+    Fix13: 상장완료 기업 fallback에서 제거, 용어 통일.
     """
     logger.info("IPO 데이터 수집 시작 (fallback 전용)")
     logger.info("수집 기업 수: %d개", len(MEGA_IPO_FALLBACK))
