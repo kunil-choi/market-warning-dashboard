@@ -78,7 +78,7 @@ def validate_with_ai(scores_data: dict) -> dict:
                 timeout=60.0,
             )
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-6",
                 max_tokens=256,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -94,7 +94,7 @@ def validate_with_ai(scores_data: dict) -> dict:
 
             result = json.loads(raw_text)
             result["validated_at"] = datetime.now(timezone.utc).isoformat()
-            result["model"]        = "claude-3-5-sonnet-20241022"
+            result["model"]        = "claude-sonnet-4-6"
 
             passed = result.get("validation_passed")
             if passed is True:
