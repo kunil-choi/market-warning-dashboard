@@ -1,13 +1,10 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호",
-  "anomalies": [
-    "HY스프레드 -57bps 급축소는 단기 변동폭으로 재확인 필요"
-  ],
+  "overall_assessment": "2025년 중반 시장 환경과 일치하며 데이터 정합성 양호",
+  "anomalies": [],
   "recommendations": [
-    "HY변화 기준기간 명시",
-    "IPO파이프라인 날짜 타임스탬프 추가"
+    "HY스프레드 -57bps 급축소 모니터링 필요"
   ],
-  "validated_at": "2026-06-01T03:54:35.640190+00:00",
+  "validated_at": "2026-06-01T04:00:44.301293+00:00",
   "model": "claude-sonnet-4-6"
 }

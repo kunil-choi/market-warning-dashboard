@@ -1,7 +1,7 @@
 {
   "composite_score": 37.5,
   "grade": "GREEN",
-  "timestamp": "2026-06-01T03:54:28.798268+00:00",
+  "timestamp": "2026-06-01T04:00:38.622211+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-01T03:54:25.556887+00:00"
+    "timestamp": "2026-06-01T04:00:10.352520+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-06-01T03:54:26.985392+00:00"
+    "timestamp": "2026-06-01T04:00:28.928683+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,7 +38,7 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-06-01T03:54:28.797659+00:00"
+    "timestamp": "2026-06-01T04:00:38.621675+00:00"
   },
   "w4": {
     "score": 90,
@@ -100,19 +100,16 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-01T03:54:28.798256+00:00"
+    "timestamp": "2026-06-01T04:00:38.622200+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호",
-    "anomalies": [
-      "HY스프레드 -57bps 급축소는 단기 변동폭으로 재확인 필요"
-    ],
+    "overall_assessment": "2025년 중반 시장 환경과 일치하며 데이터 정합성 양호",
+    "anomalies": [],
     "recommendations": [
-      "HY변화 기준기간 명시",
-      "IPO파이프라인 날짜 타임스탬프 추가"
+      "HY스프레드 -57bps 급축소 모니터링 필요"
     ],
-    "validated_at": "2026-06-01T03:54:35.640190+00:00",
+    "validated_at": "2026-06-01T04:00:44.301293+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
