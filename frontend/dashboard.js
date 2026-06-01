@@ -374,7 +374,6 @@ function buildFrontContent(prefix, score, raw) {
         </div>
       </div>
       ${alerts.length ? `<div class="front-situation ${sitColor}">${alerts[0]}</div>` : `<div class="front-situation ${sitColor}">${sitText}</div>`}
-      ${renderIPOTable(ipoList)}
       <div class="front-advice">💡 ${advice}</div>`;
   }
 
@@ -636,7 +635,7 @@ async function renderHistoryChart() {
 
     const recent = rows.slice(-30);
     const labels = recent.map(r => r.date?.slice(5) ?? "");
-    const data   = recent.map(r => r.composite_score ?? 0);
+    const data   = recent.map(r => r.composite_score ?? r.score ?? 0);
 
     const canvas = document.getElementById("history-chart");
     if (!canvas) return;
