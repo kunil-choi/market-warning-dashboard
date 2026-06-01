@@ -26,11 +26,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy data to frontend
-        run: |
-          mkdir -p frontend/data
-          cp -r data/. frontend/data/ 2>/dev/null || true
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
