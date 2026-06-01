@@ -280,8 +280,7 @@ function buildFrontContent(prefix, score, raw) {
         <div class="front-metric-row"><span class="front-metric-label">가격확정 기업 수</span><span class="front-metric-val ${priced>0?'val-red':'val-green'}">${priced}개</span></div>
       </div>
       <div class="front-situation ${sitColor}">${sitText}</div>
-      <div class="front-advice">💡 ${advice}</div>
-      <div class="ipo-table-wrapper">${renderIPOTable(ipoList)}</div>`;
+      <div class="front-advice">💡 ${advice}</div>`;
   }
 
   return "";
