@@ -1,7 +1,7 @@
 {
   "composite_score": 37.5,
   "grade": "GREEN",
-  "timestamp": "2026-06-01T03:13:36.937013+00:00",
+  "timestamp": "2026-06-01T03:48:35.802522+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-01T03:13:33.580706+00:00"
+    "timestamp": "2026-06-01T03:48:32.486151+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-06-01T03:13:35.018616+00:00"
+    "timestamp": "2026-06-01T03:48:33.896150+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,46 +38,44 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-06-01T03:13:36.791482+00:00"
+    "timestamp": "2026-06-01T03:48:35.680619+00:00"
   },
   "w4": {
     "score": 90,
     "grade": "위험",
     "color": "red",
-    "total_valuation_bn": 2523.0,
-    "pipeline_ratio_pct": 3.6565,
+    "total_valuation_bn": 2506.3,
+    "pipeline_ratio_pct": 3.6323,
     "us_market_cap_bn": 69000.0,
-    "filed_count": 3,
-    "priced_count": 0,
+    "filed_count": 1,
+    "priced_count": 1,
     "signals": [
-      "📋 SpaceX: S-1 제출 완료 ($1800B)",
-      "🔍 OpenAI: IPO 검토 중 ($852B)",
-      "🔍 Anthropic: IPO 검토 중 ($965B)",
-      "🔍 Databricks: IPO 검토 중 ($134B)",
-      "🔍 Stripe: IPO 검토 중 ($159B)",
-      "✅ Cerebras: 상장 완료 (점수 제외)",
-      "📋 Revolut: S-1 제출 완료 ($75B)",
-      "📋 Discord: S-1 제출 완료 ($15B)"
+      "🚨 SpaceX: 가격 확정 — 상장 임박 ($1800B × 1.0)",
+      "📋 OpenAI: S-1 제출 완료 ($852B × 0.7)",
+      "🔍 Anthropic: IPO 검토 중 ($965B × 0.1)",
+      "🔍 Databricks: IPO 검토 중 ($134B × 0.1)"
     ],
     "alerts": [
-      "🚨 파이프라인 비율 3.66% — 닷컴버블(0.45%) 초과, 전례 없는 수준"
+      "🚨 파이프라인 비율 3.63% — 닷컴버블(0.45%) 초과, 전례 없는 수준"
     ],
     "ipo_list": [
       {
         "company": "SpaceX",
         "valuation_bn": 1800,
-        "status": "신청완료",
-        "source": "Reuters/Bloomberg 2026-05-15",
-        "filed_date": "2026-04-01",
+        "status": "가격확정",
+        "active_date": "2026-05-20",
+        "source": "SEC EDGAR S-1 공개 2026-05-20 / 상장 예정 2026-06-12",
+        "filed_date": "2026-05-20",
         "listed_date": null,
         "ticker": null
       },
       {
         "company": "OpenAI",
         "valuation_bn": 852,
-        "status": "검토중",
-        "source": "Bloomberg 2026-03-31",
-        "filed_date": null,
+        "status": "신청완료",
+        "active_date": "2026-05-20",
+        "source": "CNBC / NYT 2026-05-20 비공개 S-1 제출",
+        "filed_date": "2026-05-20",
         "listed_date": null,
         "ticker": null
       },
@@ -85,6 +83,7 @@
         "company": "Anthropic",
         "valuation_bn": 965,
         "status": "검토중",
+        "active_date": "2026-05-28",
         "source": "Anthropic 공식 / Reuters 2026-05-28",
         "filed_date": null,
         "listed_date": null,
@@ -94,195 +93,22 @@
         "company": "Databricks",
         "valuation_bn": 134,
         "status": "검토중",
-        "source": "CNBC 2026-02-09",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
-        "company": "Stripe",
-        "valuation_bn": 159,
-        "status": "검토중",
-        "source": "Reuters 2026-02-24",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
-        "company": "Cerebras",
-        "valuation_bn": 95,
-        "status": "상장완료",
-        "source": "CNBC / Reuters 2026-05-14",
-        "filed_date": "2026-04-17",
-        "listed_date": "2026-05-14",
-        "ticker": "CBRS"
-      },
-      {
-        "company": "Revolut",
-        "valuation_bn": 75,
-        "status": "신청완료",
-        "source": "Bloomberg 2026",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
-        "company": "Discord",
-        "valuation_bn": 15,
-        "status": "신청완료",
-        "source": "Bloomberg 2026",
+        "active_date": "2026-05-01",
+        "source": "tech-insider.org 2026-05",
         "filed_date": null,
         "listed_date": null,
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-01T03:13:36.936995+00:00"
+    "timestamp": "2026-06-01T03:48:35.802504+00:00"
   },
   "ai_validation": {
-    "validation_passed": false,
-    "overall_assessment": "W4 IPO 점수가 비정상적으로 높게 산출되었으며, 3.66% 파이프라인 비율로 90점은 계산 로직 오류 가능성이 높습니다.",
-    "data_checks": [
-      {
-        "field": "SPY_YTD_%",
-        "value": "11.24",
-        "status": "OK",
-        "comment": "정상 범위 내 수익률"
-      },
-      {
-        "field": "RSP_YTD_%",
-        "value": "9.48",
-        "status": "OK",
-        "comment": "정상 범위 내 수익률"
-      },
-      {
-        "field": "spread_%p",
-        "value": "1.76",
-        "status": "OK",
-        "comment": "SPY-RSP 괴리율 1.76%p는 소폭 차이로 정상"
-      },
-      {
-        "field": "10Y_%",
-        "value": "4.45",
-        "status": "OK",
-        "comment": "4.5% 임계선 직전의 합리적 수치"
-      },
-      {
-        "field": "2Y_%",
-        "value": "3.99",
-        "status": "OK",
-        "comment": "정상 범위 내 금리"
-      },
-      {
-        "field": "term_spread_%p",
-        "value": "0.46",
-        "status": "OK",
-        "comment": "정상 기울기, 역전 없음"
-      },
-      {
-        "field": "HY_bps",
-        "value": "272.0",
-        "status": "OK",
-        "comment": "400bps 기준 대비 양호한 수준"
-      },
-      {
-        "field": "IG_bps",
-        "value": "73.0",
-        "status": "OK",
-        "comment": "정상 범위 내 투자등급 스프레드"
-      },
-      {
-        "field": "pipeline_B",
-        "value": "2523.0",
-        "status": "OK",
-        "comment": "0~5000B 범위 내이나 높은 편"
-      },
-      {
-        "field": "ratio_%",
-        "value": "3.6565",
-        "status": "WARNING",
-        "comment": "3.66%는 0~10% 범위 내이나 이 수치로 90점은 과도함"
-      }
-    ],
-    "score_checks": [
-      {
-        "indicator": "W1",
-        "reported_score": 12,
-        "expected_range": "10~15",
-        "status": "OK",
-        "comment": "SPY-RSP 괴리 1.76%p, percentile 52는 낮은 위험도로 12점 적정"
-      },
-      {
-        "indicator": "W2",
-        "reported_score": 30,
-        "expected_range": "25~35",
-        "status": "OK",
-        "comment": "10년물 4.45%로 임계선 근접, 역전 없음으로 30점 합리적"
-      },
-      {
-        "indicator": "W3",
-        "reported_score": 15,
-        "expected_range": "10~20",
-        "status": "OK",
-        "comment": "HY 272bps는 400bps 대비 안전, 1개월 -57bps 개선으로 15점 적정"
-      },
-      {
-        "indicator": "W4",
-        "reported_score": 90,
-        "expected_range": "30~45",
-        "status": "CRITICAL_ERROR",
-        "comment": "파이프라인 비율 3.66%로 90점은 명백한 오류. 일반적으로 5% 미만은 30~40점대 예상"
-      },
-      {
-        "indicator": "composite",
-        "reported_score": 37.5,
-        "expected_range": "25~35",
-        "status": "ERROR",
-        "comment": "W4 오류로 인해 실제는 25~30점대가 적정. 계산식 자체는 정확(3+9+3+22.5=37.5)"
-      }
-    ],
-    "anomalies": [
-      {
-        "severity": "CRITICAL",
-        "indicator": "W4",
-        "issue": "IPO 점수 산출 로직 오류",
-        "detail": "파이프라인 2523B, 시총대비 3.66%로 90점은 비정상. 규칙에 명시된 '0~10% 범위'에서 3.66%는 중하위 수준이므로 30~40점이 합리적",
-        "impact": "종합점수가 실제보다 15~20점 상향 왜곡"
-      },
-      {
-        "severity": "MODERATE",
-        "indicator": "W4",
-        "issue": "filed 3건, priced 0건 데이터",
-        "detail": "접수 3건 대비 pricing 0건은 실제 시장 활동이 저조함을 의미하는데 90점 고위험 평가와 모순",
-        "impact": "정성적 지표와 정량적 점수 간 불일치"
-      }
-    ],
-    "recommendations": [
-      {
-        "priority": "HIGH",
-        "category": "계산 로직 수정",
-        "recommendation": "W4 점수 산출 공식 재검토 필요. 3.66% 비율은 10% 상한의 36.6% 수준으로 35~40점이 적정",
-        "expected_impact": "종합점수 37.5 → 22~27점으로 하향 조정 예상"
-      },
-      {
-        "priority": "HIGH",
-        "category": "등급 재판정",
-        "recommendation": "W4 수정 시 종합점수가 22~27점으로 GREEN 등급 유지되나, 현재 37.5점도 GREEN 범위로 등급 자체는 정확",
-        "expected_impact": "등급은 변동 없으나 점수 신뢰도 향상"
-      },
-      {
-        "priority": "MEDIUM",
-        "category": "데이터 검증",
-        "recommendation": "IPO pipeline_B 2523B의 시총 기준 확인 필요. S&P500 시총 기준이면 약 50~55T 추정되어 비율 계산 재확인 요망",
-        "expected_impact": "분모 확인으로 비율 정확성 제고"
-      },
-      {
-        "priority": "LOW",
-        "category": "규칙 명확화",
-        "recommendation": "각 지표별 점수 산출 공식을 문서화하여 투명성 확보 (예: W4는 비율 X% → Y점 매핑 테이블)",
-        "expected_impact": "향후 검증 용이성 향상"
-      }
-    ],
-    "validated_at": "2026-06-01T03:14:13.654181+00:00",
-    "model": "claude-sonnet-4-5"
+    "validation_passed": null,
+    "overall_assessment": "검증 스킵: JSON 파싱 오류: Unterminated string starting at: line 45 column 18 (char 1548)",
+    "data_checks": [],
+    "anomalies": [],
+    "recommendations": [],
+    "validated_at": "2026-06-01T03:50:22.010002+00:00",
+    "model": null
   }
 }
