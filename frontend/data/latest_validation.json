@@ -1,9 +1,13 @@
 {
-  "validation_passed": null,
-  "overall_assessment": "검증 스킵: JSON 파싱 오류: Unterminated string starting at: line 45 column 18 (char 1548)",
-  "data_checks": [],
-  "anomalies": [],
-  "recommendations": [],
-  "validated_at": "2026-06-01T03:50:22.010002+00:00",
-  "model": null
+  "validation_passed": true,
+  "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호",
+  "anomalies": [
+    "HY스프레드 -57bps 급축소는 단기 변동폭으로 재확인 필요"
+  ],
+  "recommendations": [
+    "HY변화 기준기간 명시",
+    "IPO파이프라인 날짜 타임스탬프 추가"
+  ],
+  "validated_at": "2026-06-01T03:54:35.640190+00:00",
+  "model": "claude-sonnet-4-6"
 }
