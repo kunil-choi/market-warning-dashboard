@@ -1,10 +1,10 @@
 {
   "validation_passed": null,
-  "overall_assessment": "검증 스킵: JSON 파싱 오류: Unterminated string starting at: line 86 column 18 (char 1965)",
+  "overall_assessment": "검증 스킵: JSON 파싱 오류: Unterminated string starting at: line 50 column 5 (char 3328)",
   "data_checks": [],
   "score_checks": [],
   "anomalies": [],
   "recommendations": [],
-  "validated_at": "2026-06-01T03:07:19.311595+00:00",
+  "validated_at": "2026-06-01T03:11:16.143475+00:00",
   "model": null
 }

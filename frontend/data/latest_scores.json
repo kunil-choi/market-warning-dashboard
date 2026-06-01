@@ -1,7 +1,7 @@
 {
   "composite_score": 37.5,
   "grade": "GREEN",
-  "timestamp": "2026-06-01T03:05:46.818785+00:00",
+  "timestamp": "2026-06-01T03:08:52.459155+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-01T03:05:41.215638+00:00"
+    "timestamp": "2026-06-01T03:08:49.164283+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-06-01T03:05:44.882741+00:00"
+    "timestamp": "2026-06-01T03:08:50.586164+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,7 +38,7 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-06-01T03:05:46.675280+00:00"
+    "timestamp": "2026-06-01T03:08:52.379327+00:00"
   },
   "w4": {
     "score": 90,
@@ -136,16 +136,16 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-01T03:05:46.818755+00:00"
+    "timestamp": "2026-06-01T03:08:52.459135+00:00"
   },
   "ai_validation": {
     "validation_passed": null,
-    "overall_assessment": "검증 스킵: JSON 파싱 오류: Unterminated string starting at: line 86 column 18 (char 1965)",
+    "overall_assessment": "검증 스킵: JSON 파싱 오류: Unterminated string starting at: line 50 column 5 (char 3328)",
     "data_checks": [],
     "score_checks": [],
     "anomalies": [],
     "recommendations": [],
-    "validated_at": "2026-06-01T03:07:19.311595+00:00",
+    "validated_at": "2026-06-01T03:11:16.143475+00:00",
     "model": null
   }
 }
