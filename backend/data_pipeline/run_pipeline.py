@@ -1,13 +1,24 @@
 # ============================================================
 # run_pipeline.py  –  파이프라인 메인 진입점
-# 수정: Bug7 – history.jsonl 같은 날 중복 기록 방지
+# 수정:
+#   Bug7  – history.jsonl 같은 날 중복 기록 방지
+#   Fix1  – DATA_DIR을 frontend/data/ 절대 경로로 수정
+#   Fix2  – sys.path에 레포 루트 추가 (import 안정성 보장)
 # ============================================================
 
 import json
 import logging
 import sys
+import os
 from datetime import datetime, timezone
 from pathlib import Path
+
+# ✅ Fix2: 어떤 실행 방식에서도 import가 작동하도록
+#    이 파일 위치: backend/data_pipeline/run_pipeline.py
+#    레포 루트:   ../../  →  2단계 위
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from backend.scoring.scoring_engine import run_full_scoring
 from backend.scoring.ai_validator   import validate_with_ai
@@ -19,7 +30,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DATA_DIR        = Path("data")
+# ✅ Fix1: 저장 경로를 frontend/data/ 절대 경로로 고정
+#    GitHub Actions, 로컬 실행 어디서든 동일하게 동작
+DATA_DIR        = REPO_ROOT / "frontend" / "data"
 LATEST_JSON     = DATA_DIR / "latest_scores.json"
 HISTORY_JSONL   = DATA_DIR / "history.jsonl"
 VALIDATION_JSON = DATA_DIR / "latest_validation.json"
@@ -40,11 +53,10 @@ def _update_history(entry: dict) -> None:
                     continue
                 try:
                     obj = json.loads(line)
-                    # 오늘 날짜 항목은 제거 (새 항목으로 교체)
                     if obj.get("date") != today:
                         lines.append(line)
                 except json.JSONDecodeError:
-                    lines.append(line)  # 파싱 불가 행은 보존
+                    lines.append(line)
 
     lines.append(json.dumps(entry, ensure_ascii=False))
 
@@ -53,10 +65,11 @@ def _update_history(entry: dict) -> None:
 
 
 def run_pipeline():
-    DATA_DIR.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info("=" * 60)
     logger.info("📊 파이프라인 시작")
+    logger.info(f"   저장 경로: {DATA_DIR}")
     logger.info("=" * 60)
 
     # ── 1단계: 데이터 수집 및 점수 산출 ─────────────────────
@@ -122,8 +135,8 @@ def run_pipeline():
     try:
         history_entry = {
             "date":              datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "score":             scores.get("composite_score"),   # dashboard.js / charts.js 호환
-            "composite_score":   scores.get("composite_score"),   # 하위 호환 유지
+            "score":             scores.get("composite_score"),
+            "composite_score":   scores.get("composite_score"),
             "w1_score":          scores.get("w1_score"),
             "w2_score":          scores.get("w2_score"),
             "w3_score":          scores.get("w3_score"),
@@ -131,7 +144,7 @@ def run_pipeline():
             "grade":             scores.get("grade"),
             "validation_passed": passed,
         }
-        _update_history(history_entry)   # Bug7 수정: 중복 방지 함수 사용
+        _update_history(history_entry)
         logger.info(f"히스토리 업데이트: {HISTORY_JSONL}")
     except Exception as e:
         logger.warning(f"history.jsonl 저장 실패: {e}")
