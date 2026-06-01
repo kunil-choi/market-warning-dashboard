@@ -20,4 +20,4 @@
 {"date": "2026-05-28", "score": 36.0, "composite_score": 36.0, "grade": "GREEN", "w1_score": 10, "w2_score": 31, "w3_score": 16, "w4_score": 80}
 {"date": "2026-05-29", "score": 35.5, "composite_score": 35.5, "grade": "GREEN", "w1_score": 10, "w2_score": 30, "w3_score": 15, "w4_score": 80}
 {"date": "2026-05-30", "score": 35.0, "composite_score": 35.0, "grade": "GREEN", "w1_score": 12, "w2_score": 30, "w3_score": 15, "w4_score": 80}
-{"date": "2026-06-01", "score": 35.0, "composite_score": 35.0, "w1_score": 12, "w2_score": 30, "w3_score": 15, "w4_score": 80, "grade": "GREEN", "validation_passed": true}
+{"date": "2026-06-01", "score": 34.4, "composite_score": 34.4, "w1_score": 12, "w2_score": 30, "w3_score": 12, "w4_score": 80, "grade": "GREEN", "validation_passed": true}

@@ -1,94 +1,95 @@
 {
-  "composite_score": 35.0,
+  "composite_score": 34.4,
   "grade": "GREEN",
-  "timestamp": "2026-05-31T15:44:31.097175+00:00",
+  "timestamp": "2026-06-01T23:22:54.677965+00:00",
   "w1_score": 12,
   "w2_score": 30,
-  "w3_score": 15,
+  "w3_score": 12,
   "w4_score": 80,
   "w1": {
     "score": 12,
     "grade": "GREEN",
-    "spy_ytd": 11.24,
-    "rsp_ytd": 9.48,
-    "current_spread": 1.76,
+    "spy_ytd": 11.54,
+    "rsp_ytd": 9.68,
+    "current_spread": 1.86,
     "spread_percentile": 52,
-    "rsp_1w_return": 2.01,
+    "rsp_1w_return": 1.27,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-05-31T15:44:25.610734+00:00"
+    "timestamp": "2026-06-01T23:22:50.087604+00:00"
   },
   "w2": {
     "score": 30,
     "grade": "GREEN",
     "us10y_yield": 4.45,
-    "us2y_yield": 3.99,
-    "term_spread": 0.46,
-    "tips_10y_real_yield": 2.06,
+    "us2y_yield": 3.98,
+    "term_spread": 0.47,
+    "tips_10y_real_yield": 2.07,
     "is_inverted": false,
-    "timestamp": "2026-05-31T15:44:29.211646+00:00"
+    "timestamp": "2026-06-01T23:22:51.688928+00:00"
   },
   "w3": {
-    "score": 15,
+    "score": 12,
     "grade": "정상",
     "color": "green",
     "bdc_nav_discount": 3.5,
     "bdc_nav_date": "2026-05-30",
-    "sloos_ci_pct": 14.5,
-    "sloos_source": "fallback",
+    "sloos_ci_pct": 8.1,
+    "sloos_source": "FRED",
     "ci_delq_pct": 1.55,
     "ci_delq_source": "fallback",
-    "hy_bps": 272.0,
-    "ig_bps": 73.0,
-    "hy_change_bps": -57.0,
+    "hy_bps": 274.0,
+    "ig_bps": 74.0,
+    "hy_change_bps": -24.0,
     "s_bdc": 5,
-    "s_sloos": 40,
+    "s_sloos": 20,
     "s_ci": 20,
     "s_hy_level": 15,
     "s_hy_change": 0,
     "signals": [
       "✅ BDC NAV 할인율 3.5% — 시장이 사모 마크 신뢰",
-      "⚠️ C&I 대출 긴축 14.5% — 신용 공급 수축 진행",
+      "📢 C&I 대출 긴축 8.1% — 소폭 긴축",
       "✅ C&I 연체율 1.55% — 정상 범위",
-      "📊 HY 스프레드 272 bps — 정상 (후행 보조)"
+      "📊 HY 스프레드 274 bps — 정상 (후행 보조)"
     ],
-    "timestamp": "2026-05-31T15:44:31.005183+00:00"
+    "timestamp": "2026-06-01T23:22:54.493104+00:00"
   },
   "w4": {
     "score": 80,
     "grade": "위험",
     "color": "red",
-    "total_valuation_bn": 2523.0,
-    "filed_count": 3,
+    "total_valuation_bn": 2326.3,
+    "pipeline_ratio_pct": 3.3714,
+    "us_market_cap_bn": 69000.0,
+    "filed_count": 1,
     "priced_count": 0,
+    "listed_count": 1,
     "signals": [
-      "📋 SpaceX: S-1 제출 완료 ($1800B)",
-      "🔍 OpenAI: IPO 검토 중 ($852B)",
-      "🔍 Anthropic: IPO 검토 중 ($965B)",
-      "🔍 Databricks: IPO 검토 중 ($134B)",
-      "🔍 Stripe: IPO 검토 중 ($159B)",
-      "✅ Cerebras: 상장 완료 (점수 제외)",
-      "📋 Revolut: S-1 제출 완료 ($75B)",
-      "📋 Discord: S-1 제출 완료 ($15B)"
+      "📊 SpaceX: 상장완료(0~3개월) — 매물 출회 위험 ($1800B × 0.9)",
+      "📋 OpenAI: S-1 제출 완료 ($852B × 0.7)",
+      "🔍 Anthropic: IPO 검토 중 ($965B × 0.1)",
+      "🔍 Databricks: IPO 검토 중 ($134B × 0.1)"
     ],
     "alerts": [
-      "⚠️ 활성 파이프라인 $2523B — 매우 높음"
+      "🚨 파이프라인 비율 3.37% — 닷컴버블(0.45%) 초과, 전례 없는 수준"
     ],
     "ipo_list": [
       {
         "company": "SpaceX",
         "valuation_bn": 1800,
-        "status": "신청완료",
-        "source": "Reuters/Bloomberg 2026-05-15",
-        "filed_date": "2026-04-01",
-        "listed_date": null,
-        "ticker": null
+        "status": "상장완료",
+        "active_date": "2026-05-20",
+        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-01",
+        "filed_date": "2026-05-20",
+        "listed_date": "2026-06-12",
+        "ticker": "CBRS"
       },
       {
         "company": "OpenAI",
         "valuation_bn": 852,
-        "status": "검토중",
-        "source": "Bloomberg 2026-03-31",
-        "filed_date": null,
+        "status": "제출완료",
+        "active_date": "2026-05-20",
+        "source": "CNBC / NYT 2026-05-20 비공개 S-1 제출",
+        "filed_date": "2026-05-20",
         "listed_date": null,
         "ticker": null
       },
@@ -96,7 +97,8 @@
         "company": "Anthropic",
         "valuation_bn": 965,
         "status": "검토중",
-        "source": "Anthropic 공식 / Reuters 2026-05-28",
+        "active_date": "2026-05-28",
+        "source": "Anthropic 공식 / Reuters 2026-05-28 / 10월 상장 목표",
         "filed_date": null,
         "listed_date": null,
         "ticker": null
@@ -105,58 +107,25 @@
         "company": "Databricks",
         "valuation_bn": 134,
         "status": "검토중",
-        "source": "CNBC 2026-02-09",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
-        "company": "Stripe",
-        "valuation_bn": 159,
-        "status": "검토중",
-        "source": "Reuters 2026-02-24",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
-        "company": "Cerebras",
-        "valuation_bn": 95,
-        "status": "상장완료",
-        "source": "CNBC / Reuters 2026-05-14",
-        "filed_date": "2026-04-17",
-        "listed_date": "2026-05-14",
-        "ticker": "CBRS"
-      },
-      {
-        "company": "Revolut",
-        "valuation_bn": 75,
-        "status": "신청완료",
-        "source": "Bloomberg 2026",
-        "filed_date": null,
-        "listed_date": null,
-        "ticker": null
-      },
-      {
-        "company": "Discord",
-        "valuation_bn": 15,
-        "status": "신청완료",
-        "source": "Bloomberg 2026",
+        "active_date": "2026-05-01",
+        "source": "tech-insider.org 2026-05 / Q3 S-1 예정",
         "filed_date": null,
         "listed_date": null,
         "ticker": null
       }
     ],
-    "timestamp": "2026-05-31T15:44:31.097103+00:00"
+    "timestamp": "2026-06-01T23:22:54.677951+00:00"
   },
   "ai_validation": {
-    "validation_passed": null,
-    "overall_assessment": "검증 스킵: 3회 재시도 모두 실패",
-    "data_checks": [],
-    "score_checks": [],
-    "anomalies": [],
-    "recommendations": [],
-    "validated_at": "2026-05-31T15:44:50.261938+00:00",
-    "model": null
+    "validation_passed": true,
+    "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호, 장단기 스프레드 정상화 및 HY 스프레드 축소는 위험선호 지속을 시사",
+    "anomalies": [
+      "IPO 가격확정 0건으로 시장 활동 일시 정체 의심"
+    ],
+    "recommendations": [
+      "IPO 파이프라인 대비 실행률 모니터링 강화"
+    ],
+    "validated_at": "2026-06-01T23:23:01.984000+00:00",
+    "model": "claude-sonnet-4-6"
   }
 }
