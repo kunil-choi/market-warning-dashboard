@@ -2,11 +2,9 @@
 # ai_validator.py  –  Claude AI 기반 검증
 # 수정:
 #   Bug4 – _build_raw_summary W3 키명 수정
-#          hy_spread_bps  → hy_bps
-#          ig_spread_bps  → ig_bps
-#          hy_1m_change_bps → hy_change_bps
 #   Fix9 – GitHub Actions 네트워크 지연 대응
-#          재시도 대기 시간 증가, timeout 명시, max_tokens 축소
+#   Fix10 – anthropic 라이브러리 내부 재시도 비활성화
+#           (라이브러리 재시도 + 코드 재시도 이중 충돌 방지)
 # ============================================================
 
 import os
@@ -91,17 +89,16 @@ def _build_raw_summary(scores_data: dict) -> str:
             "TIPS실질금리_%":  w2.get("tips_10y_real_yield"),
             "장단기역전여부":  w2.get("is_inverted"),
         },
-        # Bug4 수정: collector_credit.py 실제 반환 키와 일치
         "W3_사모크레딧": {
-            "HY스프레드_bps":    w3.get("hy_bps"),
-            "IG스프레드_bps":    w3.get("ig_bps"),
-            "HY_1개월변화_bps":  w3.get("hy_change_bps"),
+            "HY스프레드_bps":   w3.get("hy_bps"),
+            "IG스프레드_bps":   w3.get("ig_bps"),
+            "HY_1개월변화_bps": w3.get("hy_change_bps"),
         },
         "W4_대어급IPO": {
-            "가중파이프라인_B":      w4.get("total_valuation_bn"),
-            "시총대비비율_%":        w4.get("pipeline_ratio_pct"),
-            "신청완료건수":          w4.get("filed_count"),
-            "공모가확정건수":        w4.get("priced_count"),
+            "가중파이프라인_B":  w4.get("total_valuation_bn"),
+            "시총대비비율_%":    w4.get("pipeline_ratio_pct"),
+            "신청완료건수":      w4.get("filed_count"),
+            "공모가확정건수":    w4.get("priced_count"),
             "IPO목록": [
                 {"기업": i.get("company"),
                  "기업가치_B": i.get("valuation_bn"),
@@ -149,16 +146,24 @@ def validate_with_ai(scores_data: dict) -> dict:
 
     logger.info("[AI검증] Claude API 호출 시작")
 
-    # ✅ Fix9: GitHub Actions cold start 안정화 — 첫 호출 전 5초 대기
+    # ✅ Fix9: GitHub Actions cold start 안정화
     time.sleep(5)
 
     wait_times = [15, 30, 60]
 
     for attempt in range(1, 4):
         try:
+            # ✅ Fix10: max_retries=0 으로 라이브러리 내부 재시도 완전 비활성화
+            #   → 우리 코드의 재시도 로직만 동작하도록 단일화
             client = anthropic.Anthropic(
                 api_key=api_key,
-                timeout=60.0,
+                timeout=anthropic.Timeout(
+                    connect=10.0,   # 연결 타임아웃 10초
+                    read=50.0,      # 읽기 타임아웃 50초
+                    write=10.0,     # 쓰기 타임아웃 10초
+                    pool=10.0,      # 풀 타임아웃 10초
+                ),
+                max_retries=0,      # ✅ 라이브러리 내부 재시도 비활성화
             )
             message = client.messages.create(
                 model="claude-3-5-sonnet-20241022",
