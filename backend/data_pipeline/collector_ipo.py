@@ -2,8 +2,13 @@
 collector_ipo.py
 IPO 파이프라인 데이터 수집 및 위험 점수 계산 모듈
 
-수정: Google News RSS 비활성화 (데이터 오염 방지)
-     EDGAR + Fallback 조합만 사용
+수정:
+  Fix8 – calculate_ipo_score(): 절대금액 임계치 → 미국 시총 대비 비율 방식으로 전환
+          근거: Jay R. Ritter IPO 통계(UF 2026) · Siblis Research 시총 데이터
+                < 0.15%  → 정상  (2010~16년 회복기 수준)
+                0.15~0.25% → 주의  (2021년 SPAC 붐 수준)
+                0.25~0.45% → 경고  (1999~2000년 닷컴버블 수준)
+                0.45% 이상 → 위험  (닷컴버블 초과, 전례 없음)
 """
 
 import socket
@@ -14,9 +19,6 @@ from typing import Optional
 
 import requests
 
-# feedparser는 Google News RSS 비활성화로 현재 미사용
-# (오염된 기업가치/상태 파싱 방지)
-
 socket.setdefaulttimeout(15)
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,9 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────
 # 상수 정의
 # ──────────────────────────────────────────────
+
+# 미국 전체 주식시장 시가총액 (Siblis Research 2026-01-01 기준, 단위: B$)
+US_MARKET_CAP_BN: float = 69_000.0
 
 STATUS_WEIGHT: dict[str, float] = {
     "루머":     0.1,
@@ -64,7 +69,6 @@ MEGA_COMPANIES: set[str] = {
 # ──────────────────────────────────────────────
 # Fallback 데이터 (최우선 신뢰 소스)
 # 출처: Reuters, Bloomberg, CNBC, Anthropic 공식 (2026-05-28 기준)
-# Google News RSS는 오염 위험으로 사용하지 않음
 # ──────────────────────────────────────────────
 MEGA_IPO_FALLBACK: list[dict] = [
     {
@@ -144,7 +148,7 @@ MEGA_IPO_FALLBACK: list[dict] = [
 HEADERS: dict[str, str] = {
     "User-Agent": (
         "Mozilla/5.0 (compatible; MarketDashboard/1.0; "
-        "+https://github.com/your-repo)"
+        "+https://github.com/kunil-choi/market-warning-dashboard)"
     )
 }
 
@@ -182,25 +186,10 @@ def normalize_status(raw: str) -> str:
 
 
 # ──────────────────────────────────────────────
-# EDGAR 수집 (신뢰 소스 — S-1 공식 제출만)
+# EDGAR 수집
 # ──────────────────────────────────────────────
 
 def fetch_edgar_rss() -> list[dict]:
-    """
-    SEC EDGAR Full-Text Search API에서 S-1 제출 목록을 수집한다.
-    공식 제출 데이터만 사용하므로 신뢰도 높음.
-    단, 기업가치(valuation_bn)는 EDGAR에 없으므로 None 반환.
-    → merge 시 fallback의 valuation_bn 유지됨.
-
-    수정 이력:
-      - efts.sec.gov/LATEST/search-index (구 URL, 403 Forbidden) 제거
-      - efts.sec.gov/LATEST/search-index?q=... (올바른 Full-Text Search API) 사용
-      - User-Agent 헤더 필수 (SEC 정책)
-    """
-    # SEC EDGAR Full-Text Search API (올바른 엔드포인트)
-    # 참고: https://efts.sec.gov/LATEST/search-index?q=...  → 403
-    #       https://efts.sec.gov/LATEST/search-index?q=...  → 올바른 EFTS API
-    # SEC는 efts.sec.gov 대신 공식 검색 API를 권장함
     url = (
         "https://efts.sec.gov/LATEST/search-index"
         "?q=%22S-1%22"
@@ -209,7 +198,6 @@ def fetch_edgar_rss() -> list[dict]:
         "&forms=S-1%2CS-1%2FA"
     )
 
-    # 헤더: SEC는 User-Agent에 연락처 이메일 포함을 권장 (403 방지)
     headers = {
         "User-Agent": (
             "MarketDashboard/1.0 (contact: dashboard@example.com; "
@@ -233,7 +221,7 @@ def fetch_edgar_rss() -> list[dict]:
                 continue
             results.append({
                 "company":      company,
-                "valuation_bn": None,       # EDGAR에는 기업가치 없음
+                "valuation_bn": None,
                 "status":       "신청완료",
                 "source":       "SEC EDGAR",
                 "filed_date":   src.get("display_date_filed"),
@@ -243,25 +231,17 @@ def fetch_edgar_rss() -> list[dict]:
         logger.info("EDGAR %d건 수집", len(results))
     except Exception as exc:
         logger.warning("EDGAR 수집 실패: %s", exc)
-        # EDGAR 실패 시 빈 리스트 반환 → fallback 데이터로 대체됨 (정상 동작)
     return results
 
 
 # ──────────────────────────────────────────────
 # 데이터 병합
-# EDGAR → Fallback 순서 (Google News RSS 제거)
 # ──────────────────────────────────────────────
 
 def merge_ipo_lists(
     edgar:    list[dict],
     fallback: list[dict],
 ) -> list[dict]:
-    """
-    EDGAR → Fallback 순서로 병합한다.
-    - 같은 기업은 STATUS_PRIORITY 가 높은 값 채택
-    - valuation_bn 은 None 이 아닌 값만 덮어씀
-      (EDGAR는 valuation_bn=None 이므로 fallback 값 유지)
-    """
     merged: dict[str, dict] = {}
 
     def _upsert(item: dict) -> None:
@@ -280,11 +260,9 @@ def merge_ipo_lists(
         if new_pri >= cur_pri:
             new_val = item.get("valuation_bn")
             merged[company] = dict(item)
-            # valuation_bn 은 None 이 아닐 때만 업데이트
             if new_val is None:
                 merged[company]["valuation_bn"] = existing.get("valuation_bn")
 
-    # EDGAR 먼저 (상태 업데이트용), Fallback 나중 (기업가치 보정용)
     for item in (edgar + fallback):
         _upsert(item)
 
@@ -292,12 +270,19 @@ def merge_ipo_lists(
 
 
 # ──────────────────────────────────────────────
-# 점수 계산
+# 점수 계산 (Fix8: 시총 대비 비율 방식)
 # ──────────────────────────────────────────────
 
 def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     """
     IPO 파이프라인 리스트를 받아 위험 점수(0-100)를 계산한다.
+
+    Fix8: 절대금액 임계치 → 미국 시총 대비 비율 방식으로 전환
+    역사적 근거:
+      1999 닷컴버블:  IPO $64.8B / 시총 $17.6조 = 0.37%
+      2000 버블붕괴:  IPO $64.8B / 시총 $14.2조 = 0.45%
+      2021 SPAC 붐:   IPO $119.4B / 시총 $52.3조 = 0.23%
+      2026 현재:      가중 $2,523B / 시총 $69조  = 3.66%
     """
     if not isinstance(ipo_list, list):
         logger.error(
@@ -339,21 +324,37 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
         else:
             signals.append(f"💬 {company}: 루머 단계 (${val_bn:.0f}B)")
 
-    if total_valuation_bn >= 3_000:
-        base_score = 80
-        alerts.append(f"🚨 활성 파이프라인 ${total_valuation_bn:.0f}B — 역대 최대")
-    elif total_valuation_bn >= 2_000:
-        base_score = 65
-        alerts.append(f"⚠️ 활성 파이프라인 ${total_valuation_bn:.0f}B — 매우 높음")
-    elif total_valuation_bn >= 1_000:
-        base_score = 45
-        alerts.append(f"📢 활성 파이프라인 ${total_valuation_bn:.0f}B — 주의")
-    elif total_valuation_bn >= 500:
-        base_score = 25
+    # ✅ Fix8: 시총 대비 비율 계산
+    pipeline_ratio_pct = round(total_valuation_bn / US_MARKET_CAP_BN * 100, 4)
+
+    # ✅ Fix8: 비율 기반 기본 점수
+    # < 0.15%  → 정상  (2010~16년 회복기)
+    # 0.15~0.25% → 주의  (2021 SPAC 붐)
+    # 0.25~0.45% → 경고  (1999~2000 닷컴버블)
+    # 0.45% 이상 → 위험  (닷컴버블 초과, 전례 없음)
+    if pipeline_ratio_pct >= 0.45:
+        base_score = 75
+        alerts.append(
+            f"🚨 파이프라인 비율 {pipeline_ratio_pct:.2f}% — "
+            f"닷컴버블(0.45%) 초과, 전례 없는 수준"
+        )
+    elif pipeline_ratio_pct >= 0.25:
+        base_score = 50
+        alerts.append(
+            f"⚠️ 파이프라인 비율 {pipeline_ratio_pct:.2f}% — "
+            f"1999~2000년 닷컴버블 수준"
+        )
+    elif pipeline_ratio_pct >= 0.15:
+        base_score = 30
+        alerts.append(
+            f"📢 파이프라인 비율 {pipeline_ratio_pct:.2f}% — "
+            f"2021년 SPAC 붐 수준"
+        )
     else:
         base_score = 10
 
-    bonus     = min(filed_count * 5 + priced_count * 3, 20)
+    # 보너스: 신청완료·가격확정 건수 (각 5점, 최대 20점)
+    bonus     = min(filed_count * 5 + priced_count * 5, 20)
     raw_score = min(base_score + bonus, 100)
 
     if raw_score >= 80:
@@ -365,17 +366,24 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     else:
         grade, color = "정상", "green"
 
+    logger.info(
+        "IPO 점수: %d점 (%s) | 가중파이프라인: $%.0fB | 시총대비: %.4f%%",
+        raw_score, grade, total_valuation_bn, pipeline_ratio_pct,
+    )
+
     return {
-        "score":               raw_score,
-        "grade":               grade,
-        "color":               color,
-        "total_valuation_bn":  round(total_valuation_bn, 1),
-        "filed_count":         filed_count,
-        "priced_count":        priced_count,
-        "signals":             signals,
-        "alerts":              alerts,
-        "ipo_list":            ipo_list,
-        "timestamp":           datetime.now(timezone.utc).isoformat(),
+        "score":                raw_score,
+        "grade":                grade,
+        "color":                color,
+        "total_valuation_bn":   round(total_valuation_bn, 1),
+        "pipeline_ratio_pct":   pipeline_ratio_pct,
+        "us_market_cap_bn":     US_MARKET_CAP_BN,
+        "filed_count":          filed_count,
+        "priced_count":         priced_count,
+        "signals":              signals,
+        "alerts":               alerts,
+        "ipo_list":             ipo_list,
+        "timestamp":            datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -394,17 +402,10 @@ def collect_ipo_data() -> dict:
     edgar_data = fetch_edgar_rss()
 
     # ✅ Google News RSS 완전 비활성화
-    # 이유: 기사 제목에서 잘못된 기업가치($3,000B)와
-    #       잘못된 상태(가격확정, 상장완료)를 파싱하여 데이터 오염 발생
-    news_data: list[dict] = []
     logger.info("Google News RSS 비활성화 — fallback 데이터 사용")
 
     merged = merge_ipo_lists(edgar_data, MEGA_IPO_FALLBACK)
     logger.info("병합 후 총 %d개 기업", len(merged))
 
     result = calculate_ipo_score(merged)
-    logger.info(
-        "IPO 점수: %d점 (%s) | 활성 파이프라인: $%.0fB",
-        result["score"], result["grade"], result["total_valuation_bn"],
-    )
     return result
