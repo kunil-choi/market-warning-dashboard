@@ -1,203 +1,433 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>글로벌 주식시장 위기경보 대시보드</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
+/* ============================================================
+   styles.css – 글로벌 주식시장 위기경보 대시보드
+   ============================================================ */
 
-<!-- ── 헤더 ─────────────────────────────────── -->
-<header class="site-header">
-  <div class="header-left">
-    <span class="logo">🌐</span>
-    <div>
-      <h1>글로벌 주식시장 위기경보 대시보드</h1>
-      <div class="subtitle">Global Stock Market Crisis Alert Dashboard</div>
-    </div>
-  </div>
-  <div id="last-updated" class="last-updated">데이터 로딩 중…</div>
-</header>
+/* ── 기본 리셋 & 변수 ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-<div class="container">
+:root {
+  --bg:        #0b1120;
+  --surface:   #111827;
+  --surface2:  #1e2d45;
+  --border:    #1e3a5f;
+  --text:      #e2e8f0;
+  --text-muted:#94a3b8;
+  --green:     #10b981;
+  --yellow:    #f59e0b;
+  --orange:    #f97316;
+  --red:       #ef4444;
+  --blue:      #3b82f6;
+  --radius:    12px;
+}
 
-  <!-- ── 퍼펙트스톰 배너 ──────────────────── -->
-  <section id="storm-section" class="storm-section">
-    <div class="storm-banner">
-      <span class="storm-icon">⛈️</span>
-      <div>
-        <div class="storm-title">⚠️ 퍼펙트스톰 경보 — 복합위험 극단 수준</div>
-        <div class="storm-desc">4개 지표가 동시에 위험 임계치를 초과했습니다. 즉각적인 포트폴리오 점검이 필요합니다.</div>
-        <div class="storm-chain">위험 전이 경로: 대형 IPO 유동성 흡수 → 신용 스프레드 확대 → 금리 상승 → 선도주 붕괴</div>
-      </div>
-    </div>
-  </section>
+html { font-size: 14px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
 
-  <!-- ── 복합 점수 ─────────────────────────── -->
-  <section class="composite-section">
-    <div id="composite-card" class="composite-card">
-      <div class="score-ring-wrapper">
-        <canvas id="composite-ring" width="160" height="160"></canvas>
-        <div class="score-center">
-          <span id="composite-number" class="score-number">—</span>
-          <span class="score-label">종합위험점수</span>
-        </div>
-      </div>
-      <div class="composite-right">
-        <div id="overall-label" class="overall-label">데이터 로딩 중</div>
-        <div id="action-rec"    class="action-rec">—</div>
-        <div class="algo-signal-box">
-          <span id="signal-badge" class="signal-badge">—</span>
-          <span id="signal-desc"  class="signal-desc">—</span>
-        </div>
-        <div id="hedge-rec" class="hedge-rec">—</div>
-        <div class="warning-bars" id="warning-bars"></div>
-      </div>
-    </div>
-  </section>
+/* ── 헤더 ────────────────────────────────────────────────── */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: .75rem; }
+.logo { font-size: 1.8rem; }
+.site-header h1 { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+.subtitle { font-size: .75rem; color: var(--text-muted); }
+.last-updated { font-size: .75rem; color: var(--text-muted); }
 
-  <!-- ── 경고 카드 4장 ─────────────────────── -->
-  <section class="warnings-section">
-    <div class="warnings-grid">
+/* ── 레이아웃 컨테이너 ───────────────────────────────────── */
+.container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
 
-      <!-- W1 선도주 압축 -->
-      <div class="card-flip-wrapper" id="flip-w1" onclick="toggleFlip('w1')">
-        <div class="card-flip-inner">
-          <div class="card-front" id="card-front-w1">
-            <div class="card-header">
-              <span class="card-icon">📉</span>
-              <div class="card-header-text">
-                <span class="card-title">W1. 선도주 압축</span>
-                <span class="card-subtitle">Lead-Stock Compression</span>
-                <div class="card-header-badges">
-                  <span class="card-weight-badge">가중치 25%</span>
-                  <span id="score-badge-w1" class="card-score-badge grade-green">—</span>
-                </div>
-              </div>
-            </div>
-            <div class="chart-wrapper"><canvas id="bar-w1"></canvas></div>
-            <div id="front-w1" class="signals-list"></div>
-            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
-          </div>
-          <div class="card-back" id="card-back-w1">
-            <div class="back-header">
-              <span class="back-title">📉 W1 지표 해설</span>
-              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w1')">← 앞으로</button>
-            </div>
-            <div id="back-w1"></div>
-          </div>
-        </div>
-      </div>
+/* ── 퍼펙트스톰 배너 ─────────────────────────────────────── */
+.storm-section { display: none; margin-bottom: 1.5rem; }
+.storm-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(239,68,68,.15);
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.storm-icon { font-size: 2.5rem; }
+.storm-title { font-size: 1.1rem; font-weight: 700; color: var(--red); margin-bottom: .25rem; }
+.storm-desc  { font-size: .85rem; color: var(--text); margin-bottom: .25rem; }
+.storm-chain { font-size: .78rem; color: var(--text-muted); }
 
-      <!-- W2 채권 감시탑 -->
-      <div class="card-flip-wrapper" id="flip-w2" onclick="toggleFlip('w2')">
-        <div class="card-flip-inner">
-          <div class="card-front" id="card-front-w2">
-            <div class="card-header">
-              <span class="card-icon">📊</span>
-              <div class="card-header-text">
-                <span class="card-title">W2. 채권 감시탑</span>
-                <span class="card-subtitle">Bond Watchdog &amp; Rates</span>
-                <div class="card-header-badges">
-                  <span class="card-weight-badge">가중치 30%</span>
-                  <span id="score-badge-w2" class="card-score-badge grade-green">—</span>
-                </div>
-              </div>
-            </div>
-            <div class="chart-wrapper"><canvas id="bar-w2"></canvas></div>
-            <div id="front-w2" class="signals-list"></div>
-            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
-          </div>
-          <div class="card-back" id="card-back-w2">
-            <div class="back-header">
-              <span class="back-title">📊 W2 지표 해설</span>
-              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w2')">← 앞으로</button>
-            </div>
-            <div id="back-w2"></div>
-          </div>
-        </div>
-      </div>
+/* ── 복합 점수 카드 ──────────────────────────────────────── */
+.composite-section { margin-bottom: 1.5rem; }
+.composite-card {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 2rem;
+}
+.score-ring-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 160px;
+  height: 160px;
+}
+.score-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.score-number { font-size: 2.4rem; font-weight: 800; line-height: 1; }
+.score-label  { font-size: .7rem; color: var(--text-muted); margin-top: .15rem; }
 
-      <!-- W3 사모신용 압박 -->
-      <div class="card-flip-wrapper" id="flip-w3" onclick="toggleFlip('w3')">
-        <div class="card-flip-inner">
-          <div class="card-front" id="card-front-w3">
-            <div class="card-header">
-              <span class="card-icon">🏦</span>
-              <div class="card-header-text">
-                <span class="card-title">W3. 사모신용 압박</span>
-                <span class="card-subtitle">Private Credit Redemption</span>
-                <div class="card-header-badges">
-                  <span class="card-weight-badge">가중치 20%</span>
-                  <span id="score-badge-w3" class="card-score-badge grade-green">—</span>
-                </div>
-              </div>
-            </div>
-            <div class="chart-wrapper"><canvas id="bar-w3"></canvas></div>
-            <div id="front-w3" class="signals-list"></div>
-            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
-          </div>
-          <div class="card-back" id="card-back-w3">
-            <div class="back-header">
-              <span class="back-title">🏦 W3 지표 해설</span>
-              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w3')">← 앞으로</button>
-            </div>
-            <div id="back-w3"></div>
-          </div>
-        </div>
-      </div>
+.composite-right { flex: 1; min-width: 0; }
+.overall-label {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+}
+.action-rec {
+  font-size: .9rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+.algo-signal-box {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+.signal-badge {
+  padding: .25rem .75rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 700;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+.signal-desc { font-size: .8rem; color: var(--text-muted); }
+.hedge-rec { font-size: .82rem; color: var(--text-muted); margin-bottom: .75rem; }
 
-      <!-- W4 대형 IPO 유동성 -->
-      <div class="card-flip-wrapper" id="flip-w4" onclick="toggleFlip('w4')">
-        <div class="card-flip-inner">
-          <div class="card-front" id="card-front-w4">
-            <div class="card-header">
-              <span class="card-icon">🚀</span>
-              <div class="card-header-text">
-                <span class="card-title">W4. 대형 IPO 유동성</span>
-                <span class="card-subtitle">Large-IPO Liquidity</span>
-                <div class="card-header-badges">
-                  <span class="card-weight-badge">가중치 25%</span>
-                  <span id="score-badge-w4" class="card-score-badge grade-green">—</span>
-                </div>
-              </div>
-            </div>
-            <div class="chart-wrapper"><canvas id="bar-w4"></canvas></div>
-            <div id="front-w4" class="signals-list"></div>
-            <div class="flip-hint">▶ 클릭하면 지표 해설</div>
-          </div>
-          <div class="card-back" id="card-back-w4">
-            <div class="back-header">
-              <span class="back-title">🚀 W4 지표 해설</span>
-              <button class="flip-btn" onclick="event.stopPropagation(); toggleFlip('w4')">← 앞으로</button>
-            </div>
-            <div id="back-w4"></div>
-          </div>
-        </div>
-      </div>
+/* 경고 바 */
+.warning-bars { display: flex; flex-direction: column; gap: .4rem; }
+.warning-bar-item {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.warning-bar-label {
+  font-size: .72rem;
+  color: var(--text-muted);
+  width: 3rem;
+  flex-shrink: 0;
+}
+.warning-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.warning-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .6s ease;
+}
+.warning-bar-val {
+  font-size: .72rem;
+  font-weight: 700;
+  width: 2rem;
+  text-align: right;
+  flex-shrink: 0;
+}
 
-    </div><!-- .warnings-grid -->
-  </section>
+/* ── 경고 카드 그리드 ────────────────────────────────────── */
+.warnings-section { margin-bottom: 1.5rem; }
+.warnings-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
 
-  <!-- ── 히스토리 차트 ──────────────────────── -->
-  <section class="history-section">
-    <div class="section-title">📈 종합위험점수 추이 (최근 30일)</div>
-    <div class="history-chart-wrapper">
-      <canvas id="history-chart"></canvas>
-    </div>
-  </section>
+/* ── 플립 카드 ───────────────────────────────────────────── */
+.card-flip-wrapper {
+  perspective: 1200px;
+  cursor: pointer;
+  min-height: 380px;
+}
+.card-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform .55s ease;
+  min-height: 380px;
+}
+.card-flip-wrapper.flipped .card-flip-inner {
+  transform: rotateY(180deg);
+}
+.card-front,
+.card-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.card-back {
+  transform: rotateY(180deg);
+  overflow-y: auto;
+}
 
-</div><!-- .container -->
+/* 카드 헤더 */
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  margin-bottom: .75rem;
+}
+.card-icon { font-size: 1.4rem; flex-shrink: 0; }
+.card-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  flex: 1;
+  min-width: 0;
+}
+.card-title    { font-size: .95rem; font-weight: 700; color: var(--text); }
+.card-subtitle { font-size: .72rem; color: var(--text-muted); }
+.card-header-badges {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+  margin-top: .25rem;
+}
+.card-weight-badge {
+  font-size: .68rem;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.card-score-badge {
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+}
+.grade-green  { background: rgba(16,185,129,.2);  color: var(--green);  border: 1px solid var(--green); }
+.grade-yellow { background: rgba(245,158,11,.2);  color: var(--yellow); border: 1px solid var(--yellow); }
+.grade-red    { background: rgba(239,68,68,.2);   color: var(--red);    border: 1px solid var(--red); }
 
-<!-- ── 푸터 ─────────────────────────────────── -->
-<footer class="site-footer">
-  <div>데이터 출처: FRED API · Yahoo Finance · SEC EDGAR · Reuters · Bloomberg · CNBC</div>
-  <div>본 대시보드는 참고용 정보이며 투자 권유가 아닙니다. 투자 결정은 본인 책임입니다.</div>
-</footer>
+/* 미니바 차트 */
+.chart-wrapper {
+  margin-bottom: .75rem;
+  height: 8px;
+}
+.chart-wrapper canvas { display: block; width: 100%; height: 8px; }
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="charts.js"></script>
-<script src="dashboard.js"></script>
-</body>
-</html>
+/* 신호 리스트 */
+.signals-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* 앞면 메트릭 블록 */
+.front-metrics-block {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  margin-bottom: .6rem;
+}
+.front-metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: .78rem;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  padding-bottom: .25rem;
+}
+.front-metric-label { color: var(--text-muted); }
+.front-metric-val   { font-weight: 600; font-family: monospace; }
+.val-green  { color: var(--green); }
+.val-yellow { color: var(--yellow); }
+.val-orange { color: var(--orange); }
+.val-red    { color: var(--red); }
+
+/* 상황 진단 */
+.front-situation {
+  font-size: .78rem;
+  padding: .5rem .7rem;
+  border-radius: 6px;
+  margin-bottom: .5rem;
+  line-height: 1.5;
+}
+.front-situation.GREEN  { background: rgba(16,185,129,.1);  border-left: 3px solid var(--green); }
+.front-situation.YELLOW { background: rgba(245,158,11,.1);  border-left: 3px solid var(--yellow); }
+.front-situation.ORANGE { background: rgba(249,115,22,.1);  border-left: 3px solid var(--orange); }
+.front-situation.RED    { background: rgba(239,68,68,.1);   border-left: 3px solid var(--red); }
+
+/* 투자 조언 */
+.front-advice {
+  font-size: .76rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* 플립 힌트 */
+.flip-hint {
+  font-size: .7rem;
+  color: var(--text-muted);
+  text-align: right;
+  margin-top: auto;
+  padding-top: .5rem;
+  opacity: .7;
+}
+
+/* 뒷면 */
+.back-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .75rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--border);
+}
+.back-title { font-size: .9rem; font-weight: 700; }
+.flip-btn {
+  font-size: .72rem;
+  padding: .2rem .6rem;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.flip-btn:hover { background: var(--border); }
+
+.back-content { font-size: .8rem; }
+.back-section { margin-bottom: 1rem; }
+.back-section h4 {
+  font-size: .82rem;
+  color: var(--blue);
+  margin-bottom: .4rem;
+}
+.back-metric {
+  display: flex;
+  gap: .5rem;
+  padding: .25rem 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.back-label {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 6rem;
+  font-size: .76rem;
+}
+.back-value { font-size: .76rem; }
+.back-formula {
+  background: var(--surface2);
+  padding: .5rem .75rem;
+  border-radius: 6px;
+  font-size: .76rem;
+}
+.back-formula code {
+  display: block;
+  font-family: monospace;
+  color: var(--yellow);
+  margin-top: .25rem;
+}
+
+/* ── IPO 테이블 ──────────────────────────────────────────── */
+.ipo-table-wrapper { overflow-x: auto; margin-top: .5rem; }
+.ipo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .75rem;
+}
+.ipo-table th {
+  text-align: left;
+  color: var(--text-muted);
+  padding: .3rem .5rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.ipo-table td {
+  padding: .3rem .5rem;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.ipo-table tr:last-child td { border-bottom: none; }
+
+/* 상태 배지 */
+.status-badge {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 600;
+  padding: .1rem .45rem;
+  border-radius: 999px;
+}
+.status-루머     { background: rgba(100,116,139,.2); color: #94a3b8; border: 1px solid #475569; }
+.status-검토중   { background: rgba(59,130,246,.2);  color: #93c5fd; border: 1px solid #3b82f6; }
+.status-제출완료 { background: rgba(249,115,22,.2);  color: #fdba74; border: 1px solid #f97316; }
+.status-가격확정 { background: rgba(239,68,68,.2);   color: #fca5a5; border: 1px solid #ef4444; }
+.status-상장완료 { background: rgba(16,185,129,.2);  color: #6ee7b7; border: 1px solid #10b981; }
+
+/* ── 히스토리 차트 ───────────────────────────────────────── */
+.history-section { margin-bottom: 1.5rem; }
+.section-title {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: .75rem;
+}
+.history-chart-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  height: 260px;
+}
+
+/* ── 푸터 ────────────────────────────────────────────────── */
+.site-footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: .75rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  line-height: 1.8;
+}
+
+/* ── 반응형 ─────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .warnings-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .composite-card { flex-direction: column; align-items: flex-start; }
+  .warnings-grid  { grid-template-columns: 1fr; }
+  .site-header h1 { font-size: .95rem; }
+}
