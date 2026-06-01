@@ -191,6 +191,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem;
+  padding-bottom: 0;          /* 하단 버튼 영역 별도 처리 */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -198,6 +199,7 @@ body {
 .card-back {
   transform: rotateY(180deg);
   overflow-y: auto;
+  padding-bottom: 1rem;
 }
 
 /* 카드 헤더 */
@@ -298,14 +300,47 @@ body {
   line-height: 1.5;
 }
 
-/* 플립 힌트 */
-.flip-hint {
-  font-size: .7rem;
-  color: var(--text-muted);
-  text-align: right;
+/* 플립 힌트 버튼 — 카드 하단 항상 고정 */
+.flip-hint-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
   margin-top: auto;
-  padding-top: .5rem;
-  opacity: .7;
+  flex-shrink: 0;             /* 절대 찌그러지지 않음 */
+  padding: .45rem .75rem;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  background: rgba(59,130,246,.08);
+  border-top: 1px solid rgba(59,130,246,.2);
+  border-radius: 0 0 var(--radius) var(--radius);
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+  letter-spacing: .02em;
+  transition: background .2s, color .2s;
+  user-select: none;
+}
+.flip-hint-btn:hover {
+  background: rgba(59,130,246,.18);
+  color: #93c5fd;
+}
+.flip-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-size: .6rem;
+  flex-shrink: 0;
+  transition: transform .25s;
+}
+.flip-hint-btn:hover .flip-hint-icon {
+  transform: scale(1.15);
 }
 
 /* 뒷면 */
