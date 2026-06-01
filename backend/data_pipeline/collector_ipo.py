@@ -239,8 +239,8 @@ def fetch_edgar_rss() -> list[dict]:
                 "ticker":       None,
             })
         logger.info("EDGAR %d건 수집", len(results))
-    except Exception as exc:
-        logger.warning("EDGAR 수집 실패: %s", exc)
+except Exception as exc:
+    logger.info("EDGAR 수집 실패 (fallback 사용): %s", exc)
     return results
 
 # ──────────────────────────────────────────────
