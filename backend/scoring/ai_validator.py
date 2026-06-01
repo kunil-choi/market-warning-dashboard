@@ -1,10 +1,10 @@
 # ============================================================
 # ai_validator.py  –  Claude AI 기반 검증
 # 수정:
-#   Bug4 – _build_raw_summary W3 키명 수정
-#   Fix9 – GitHub Actions 네트워크 지연 대응
+#   Bug4  – _build_raw_summary W3 키명 수정
+#   Fix9  – GitHub Actions 네트워크 지연 대응
 #   Fix10 – anthropic 라이브러리 내부 재시도 비활성화
-#           (라이브러리 재시도 + 코드 재시도 이중 충돌 방지)
+#   Fix11 – 모델명 수정: claude-3-5-sonnet-20241022 → claude-sonnet-4-5
 # ============================================================
 
 import os
@@ -146,27 +146,26 @@ def validate_with_ai(scores_data: dict) -> dict:
 
     logger.info("[AI검증] Claude API 호출 시작")
 
-    # ✅ Fix9: GitHub Actions cold start 안정화
+    # Fix9: GitHub Actions cold start 안정화
     time.sleep(5)
 
     wait_times = [15, 30, 60]
 
     for attempt in range(1, 4):
         try:
-            # ✅ Fix10: max_retries=0 으로 라이브러리 내부 재시도 완전 비활성화
-            #   → 우리 코드의 재시도 로직만 동작하도록 단일화
+            # Fix10: 라이브러리 내부 재시도 비활성화
             client = anthropic.Anthropic(
                 api_key=api_key,
                 timeout=anthropic.Timeout(
-                    connect=10.0,   # 연결 타임아웃 10초
-                    read=50.0,      # 읽기 타임아웃 50초
-                    write=10.0,     # 쓰기 타임아웃 10초
-                    pool=10.0,      # 풀 타임아웃 10초
+                    connect=10.0,
+                    read=50.0,
+                    write=10.0,
+                    pool=10.0,
                 ),
-                max_retries=0,      # ✅ 라이브러리 내부 재시도 비활성화
+                max_retries=0,
             )
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-5",  # ✅ Fix11: 모델명 수정
                 max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -182,7 +181,7 @@ def validate_with_ai(scores_data: dict) -> dict:
 
             result = json.loads(raw_text)
             result["validated_at"] = datetime.now(timezone.utc).isoformat()
-            result["model"]        = "claude-3-5-sonnet-20241022"
+            result["model"]        = "claude-sonnet-4-5"
 
             passed = result.get("validation_passed")
             if passed is True:
