@@ -624,3 +624,72 @@ body {
   .ipo-table { font-size: 0.62rem; }
   .warnings-grid { gap: 0.4rem; }
 }
+
+/* ── W4 뒷면 임계치 테이블 ──────────────────────────────── */
+.back-threshold-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.70rem;
+  margin: 0.5rem 0;
+}
+.back-threshold-table th {
+  background: rgba(255,255,255,0.08);
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  white-space: nowrap;
+}
+.back-threshold-table td {
+  padding: 0.35rem 0.4rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  vertical-align: top;
+  line-height: 1.4;
+}
+.back-threshold-table small {
+  display: block;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.62rem;
+  margin-top: 0.15rem;
+}
+.back-threshold-table .tr-green td  { border-left: 3px solid #4ade80; }
+.back-threshold-table .tr-yellow td { border-left: 3px solid #facc15; }
+.back-threshold-table .tr-orange td { border-left: 3px solid #fb923c; }
+.back-threshold-table .tr-red td    { border-left: 3px solid #f87171; }
+.back-threshold-table .tr-red-dark td {
+  border-left: 3px solid #dc2626;
+  background: rgba(220,38,38,0.08);
+}
+
+/* 뒷면 수식 블록 */
+.back-formula {
+  background: rgba(0,0,0,0.25);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.72rem;
+  line-height: 1.7;
+}
+.back-formula p { margin: 0.2rem 0 0; }
+.back-formula code {
+  display: block;
+  background: rgba(255,255,255,0.07);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  margin: 0.1rem 0 0.4rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.68rem;
+  color: #93c5fd;
+  word-break: break-all;
+}
+
+/* 뒷면 경고 노트 */
+.back-note {
+  font-size: 0.70rem;
+  color: rgba(255,255,255,0.7);
+  background: rgba(251,191,36,0.08);
+  border-left: 3px solid #facc15;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
