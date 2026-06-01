@@ -1,7 +1,7 @@
 {
   "composite_score": 37.5,
   "grade": "GREEN",
-  "timestamp": "2026-06-01T04:23:16.107375+00:00",
+  "timestamp": "2026-06-01T04:41:32.546868+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-01T04:23:12.460573+00:00"
+    "timestamp": "2026-06-01T04:41:29.087678+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-06-01T04:23:13.908959+00:00"
+    "timestamp": "2026-06-01T04:41:30.500464+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,7 +38,7 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-06-01T04:23:15.676293+00:00"
+    "timestamp": "2026-06-01T04:41:32.302782+00:00"
   },
   "w4": {
     "score": 90,
@@ -101,18 +101,15 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-01T04:23:16.107351+00:00"
+    "timestamp": "2026-06-01T04:41:32.546851+00:00"
   },
   "ai_validation": {
-    "validation_passed": true,
-    "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 확인됨",
-    "anomalies": [
-      "IPO 파이프라인 활동 극히 저조(확정1건)"
-    ],
-    "recommendations": [
-      "IPO 데이터 샘플 기간 재확인"
-    ],
-    "validated_at": "2026-06-01T04:23:22.080953+00:00",
-    "model": "claude-sonnet-4-6"
+    "validation_passed": null,
+    "overall_assessment": "검증 스킵: API 오류 404: Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-5-sonnet-20241022'}, 'request_id': 'req_011Cbbvfs7riTASkUPpRVoDK'}",
+    "data_checks": [],
+    "anomalies": [],
+    "recommendations": [],
+    "validated_at": "2026-06-01T04:41:35.727633+00:00",
+    "model": null
   }
 }
