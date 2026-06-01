@@ -1,22 +1,18 @@
 # ============================================================
 # run_pipeline.py  –  파이프라인 메인 진입점
-# 수정:
-#   Bug7  – history.jsonl 같은 날 중복 기록 방지
-#   Fix1  – DATA_DIR을 frontend/data/ 절대 경로로 수정
-#   Fix2  – sys.path에 레포 루트 추가 (import 안정성 보장)
+# 수정: Bug7 – history.jsonl 같은 날 중복 기록 방지
+#       Fix1 – DATA_DIR 절대경로로 강제 지정 (frontend/data/)
+#       Fix2 – sys.path에 레포 루트 추가
 # ============================================================
 
 import json
 import logging
 import sys
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-# ✅ Fix2: 어떤 실행 방식에서도 import가 작동하도록
-#    이 파일 위치: backend/data_pipeline/run_pipeline.py
-#    레포 루트:   ../../  →  2단계 위
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+# ── Fix2: 레포 루트를 sys.path에 추가 ──────────────────────
+REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -30,13 +26,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ✅ Fix1: 저장 경로를 frontend/data/ 절대 경로로 고정
-#    GitHub Actions, 로컬 실행 어디서든 동일하게 동작
+# ── Fix1: 절대경로로 강제 지정 ─────────────────────────────
 DATA_DIR        = REPO_ROOT / "frontend" / "data"
 LATEST_JSON     = DATA_DIR / "latest_scores.json"
 HISTORY_JSONL   = DATA_DIR / "history.jsonl"
 VALIDATION_JSON = DATA_DIR / "latest_validation.json"
-
 
 def _update_history(entry: dict) -> None:
     """
@@ -63,13 +57,11 @@ def _update_history(entry: dict) -> None:
     with open(HISTORY_JSONL, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
-
 def run_pipeline():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR.mkdir(exist_ok=True)
 
     logger.info("=" * 60)
     logger.info("📊 파이프라인 시작")
-    logger.info(f"   저장 경로: {DATA_DIR}")
     logger.info("=" * 60)
 
     # ── 1단계: 데이터 수집 및 점수 산출 ─────────────────────
@@ -135,7 +127,6 @@ def run_pipeline():
     try:
         history_entry = {
             "date":              datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "score":             scores.get("composite_score"),
             "composite_score":   scores.get("composite_score"),
             "w1_score":          scores.get("w1_score"),
             "w2_score":          scores.get("w2_score"),
@@ -158,7 +149,6 @@ def run_pipeline():
     )
     logger.info("=" * 60)
     return scores
-
 
 if __name__ == "__main__":
     run_pipeline()
