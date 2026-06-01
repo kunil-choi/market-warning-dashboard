@@ -125,7 +125,8 @@ def run_pipeline():
     try:
         history_entry = {
             "date":              datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "composite_score":   scores.get("composite_score"),
+            "score":             scores.get("composite_score"),   # dashboard.js / charts.js 호환
+            "composite_score":   scores.get("composite_score"),   # 하위 호환 유지
             "w1_score":          scores.get("w1_score"),
             "w2_score":          scores.get("w2_score"),
             "w3_score":          scores.get("w3_score"),
