@@ -7,7 +7,7 @@
 #   Fix9  – 기산 시점 2026-05-01 이후 액션 기업만 포함
 #   Fix10 – 대형 IPO 기준 $50B 이상
 #   Fix11 – 가중치 재설계: 루머 0.0 / 검토중 0.1 / 신청완료 0.7 / 가격확정 1.0
-#   Fix12 – EDGAR 403 로그 레벨 WARNING → INFO
+#   Fix12 – EDGAR 호출 완전 제거 (클라우드 IP 차단으로 매번 실패)
 # ============================================================
 
 import socket
@@ -15,8 +15,6 @@ import logging
 import re
 from datetime import datetime, timezone, date
 from typing import Optional
-
-import requests
 
 socket.setdefaulttimeout(15)
 
@@ -46,28 +44,10 @@ STATUS_PRIORITY: dict[str, int] = {
     "상장완료": 5,
 }
 
-EDGAR_ALIAS: dict[str, str] = {
-    "Space Exploration Technologies Corp": "SpaceX",
-    "Space Exploration Technologies":      "SpaceX",
-    "OpenAI OpCo LLC":                     "OpenAI",
-    "OpenAI Inc":                          "OpenAI",
-    "Anthropic PBC":                       "Anthropic",
-    "Anthropic, PBC":                      "Anthropic",
-    "Databricks Inc":                      "Databricks",
-    "Stripe Inc":                          "Stripe",
-    "Cerebras Systems Inc":                "Cerebras",
-    "Revolut Ltd":                         "Revolut",
-    "Discord Inc":                         "Discord",
-}
-
-MEGA_COMPANIES: set[str] = {
-    "SpaceX", "OpenAI", "Anthropic",
-    "Databricks", "Stripe", "Cerebras",
-    "Revolut", "Discord",
-}
-
 # ──────────────────────────────────────────────
 # Fallback 데이터
+# 출처: Reuters, Bloomberg, CNBC, SEC EDGAR (2026-05 기준)
+# 포함 기준: 2026-05-01 이후 액션 + $50B 이상
 # ──────────────────────────────────────────────
 MEGA_IPO_FALLBACK: list[dict] = [
     {
@@ -111,13 +91,6 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "ticker":       None,
     },
 ]
-
-HEADERS: dict[str, str] = {
-    "User-Agent": (
-        "Mozilla/5.0 (compatible; MarketDashboard/1.0; "
-        "+https://github.com/kunil-choi/market-warning-dashboard)"
-    )
-}
 
 # ──────────────────────────────────────────────
 # 유틸리티 함수
@@ -167,85 +140,6 @@ def _is_large(item: dict) -> bool:
     return val >= LARGE_IPO_THRESHOLD_BN
 
 # ──────────────────────────────────────────────
-# EDGAR 수집
-# ──────────────────────────────────────────────
-
-def fetch_edgar_rss() -> list[dict]:
-    url = (
-        "https://efts.sec.gov/LATEST/search-index"
-        "?q=%22S-1%22"
-        "&dateRange=custom"
-        "&startdt=2026-05-01"
-        "&forms=S-1%2CS-1%2FA"
-    )
-    headers = {
-        "User-Agent": (
-            "MarketDashboard/1.0 (contact: dashboard@example.com; "
-            "https://github.com/kunil-choi/market-warning-dashboard)"
-        ),
-        "Accept": "application/json",
-        "Accept-Encoding": "gzip, deflate",
-    }
-    results: list[dict] = []
-    try:
-        resp = requests.get(url, headers=headers, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
-        hits = data.get("hits", {}).get("hits", [])
-        for hit in hits:
-            src     = hit.get("_source", {})
-            entity  = src.get("entity_name", "")
-            company = EDGAR_ALIAS.get(entity, entity)
-            if company not in MEGA_COMPANIES:
-                continue
-            results.append({
-                "company":      company,
-                "valuation_bn": None,
-                "status":       "신청완료",
-                "active_date":  src.get("display_date_filed"),
-                "source":       "SEC EDGAR",
-                "filed_date":   src.get("display_date_filed"),
-                "listed_date":  None,
-                "ticker":       None,
-            })
-        logger.info("EDGAR %d건 수집", len(results))
-    except Exception as exc:
-        # Fix12: EDGAR 403 등 수집 실패는 INFO 레벨 (fallback으로 정상 처리됨)
-        logger.info("EDGAR 수집 실패 (fallback 사용): %s", exc)
-    return results
-
-# ──────────────────────────────────────────────
-# 데이터 병합
-# ──────────────────────────────────────────────
-
-def merge_ipo_lists(edgar: list[dict], fallback: list[dict]) -> list[dict]:
-    merged: dict[str, dict] = {}
-
-    def _upsert(item: dict) -> None:
-        if not isinstance(item, dict):
-            logger.warning("merge_ipo_lists: dict 아닌 항목 무시 (%s)", type(item))
-            return
-        company = item.get("company", "")
-        if not company:
-            return
-        existing = merged.get(company)
-        if existing is None:
-            merged[company] = dict(item)
-            return
-        new_pri = STATUS_PRIORITY.get(item.get("status", "루머"), 0)
-        cur_pri = STATUS_PRIORITY.get(existing.get("status", "루머"), 0)
-        if new_pri >= cur_pri:
-            new_val = item.get("valuation_bn")
-            merged[company] = dict(item)
-            if new_val is None:
-                merged[company]["valuation_bn"] = existing.get("valuation_bn")
-
-    for item in (edgar + fallback):
-        _upsert(item)
-
-    return list(merged.values())
-
-# ──────────────────────────────────────────────
 # 점수 계산
 # ──────────────────────────────────────────────
 
@@ -268,17 +162,14 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
         status  = item.get("status", "루머")
         val_bn  = item.get("valuation_bn") or 0.0
 
-        # 상장완료 제외
         if status == "상장완료":
             signals.append(f"✅ {company}: 상장 완료 (점수 제외)")
             continue
 
-        # Fix9: 기산 시점 이전 액션 제외
         if not _is_active(item):
             signals.append(f"⏸ {company}: 2026-05-01 이전 액션 — 제외")
             continue
 
-        # Fix10: $50B 미만 소형 IPO 제외
         if not _is_large(item):
             signals.append(f"⏸ {company}: ${val_bn:.0f}B — $50B 미만 제외")
             continue
@@ -298,10 +189,8 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
         else:
             signals.append(f"💬 {company}: 루머 단계 — 점수 제외")
 
-    # Fix8: 시총 대비 비율 계산
     pipeline_ratio_pct = round(total_valuation_bn / US_MARKET_CAP_BN * 100, 4)
 
-    # 비율 기반 기본 점수
     if pipeline_ratio_pct >= 0.45:
         base_score = 75
         alerts.append(
@@ -323,7 +212,6 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     else:
         base_score = 10
 
-    # 보너스: 가격확정 × 10점, 신청완료 × 5점 (최대 20점)
     bonus     = min(priced_count * 10 + filed_count * 5, 20)
     raw_score = min(base_score + bonus, 100)
 
@@ -361,10 +249,13 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
 # ──────────────────────────────────────────────
 
 def collect_ipo_data() -> dict:
-    logger.info("IPO 데이터 수집 시작")
-    edgar_data = fetch_edgar_rss()
-    logger.info("Google News RSS 비활성화 — fallback 데이터 사용")
-    merged = merge_ipo_lists(edgar_data, MEGA_IPO_FALLBACK)
-    logger.info("병합 후 총 %d개 기업", len(merged))
-    result = calculate_ipo_score(merged)
+    """
+    Fix12: EDGAR 호출 완전 제거.
+    GitHub Actions Azure IP가 SEC에 의해 차단되며,
+    어차피 EDGAR에는 기업가치 데이터가 없어 fallback이 덮어쓰므로
+    fallback 데이터만 사용하는 것이 더 정확하고 안정적.
+    """
+    logger.info("IPO 데이터 수집 시작 (fallback 전용)")
+    logger.info("수집 기업 수: %d개", len(MEGA_IPO_FALLBACK))
+    result = calculate_ipo_score(MEGA_IPO_FALLBACK)
     return result
