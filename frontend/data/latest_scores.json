@@ -1,7 +1,7 @@
 {
   "composite_score": 37.5,
   "grade": "GREEN",
-  "timestamp": "2026-06-01T02:51:06.620719+00:00",
+  "timestamp": "2026-06-01T03:01:29.856145+00:00",
   "w1_score": 12,
   "w2_score": 30,
   "w3_score": 15,
@@ -15,7 +15,7 @@
     "spread_percentile": 52,
     "rsp_1w_return": 2.01,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-01T02:51:00.927526+00:00"
+    "timestamp": "2026-06-01T03:01:24.299535+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.46,
     "tips_10y_real_yield": 2.06,
     "is_inverted": false,
-    "timestamp": "2026-06-01T02:51:04.813698+00:00"
+    "timestamp": "2026-06-01T03:01:27.890255+00:00"
   },
   "w3": {
     "score": 15,
@@ -38,7 +38,7 @@
       "📢 HY 스프레드 272 bps — 주의 구간",
       "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
     ],
-    "timestamp": "2026-06-01T02:51:06.567612+00:00"
+    "timestamp": "2026-06-01T03:01:29.644973+00:00"
   },
   "w4": {
     "score": 90,
@@ -136,16 +136,16 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-01T02:51:06.620698+00:00"
+    "timestamp": "2026-06-01T03:01:29.856127+00:00"
   },
   "ai_validation": {
     "validation_passed": null,
-    "overall_assessment": "검증 스킵: 3회 재시도 모두 실패",
+    "overall_assessment": "검증 스킵: API 오류 404: Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-5-sonnet-20241022'}, 'request_id': 'req_011Cbbo3XcnJnL5jt8V3ZdGw'}",
     "data_checks": [],
     "score_checks": [],
     "anomalies": [],
     "recommendations": [],
-    "validated_at": "2026-06-01T02:53:00.670568+00:00",
+    "validated_at": "2026-06-01T03:01:35.063123+00:00",
     "model": null
   }
 }
