@@ -2,8 +2,8 @@
 # ai_validator.py  –  Claude AI 기반 원천 데이터 신뢰성 검증
 # 수정:
 #   Fix-V1 – 검증 목적 변경: 점수 계산 검증 → 원천 데이터 신뢰성 검증
-#   Fix-V2 – IPO 목록 프롬프트 제외 → 토큰 절감
-#   Fix-V3 – EDGAR 403 로그 레벨 WARNING → INFO 로 낮춤
+#   Fix-V2 – IPO 목록 프롬프트 완전 제거 → 토큰 절감
+#   Fix-V3 – max_tokens 512로 축소 (응답 잘림 방지)
 # ============================================================
 
 import os
@@ -25,29 +25,19 @@ VALIDATION_PROMPT = """
 - W1 SPY/RSP 수익률: yfinance (Yahoo Finance API)
 - W2 금리 데이터: FRED API (미국 연방준비제도)
 - W3 HY/IG 스프레드: FRED API (ICE BofA 채권 인덱스)
-- W4 IPO 파이프라인: SEC EDGAR + 언론 보도 (Reuters, Bloomberg, CNBC)
+- W4 IPO 파이프라인: Reuters, Bloomberg, CNBC 보도 기반 fallback
 
 ## 수집된 원천 데이터
 {raw_data}
 
 ## 검증 요청 사항
 1. 각 수치가 현재 시장 상황에서 현실적으로 가능한 범위인지
-2. 데이터 간 일관성 (예: 10년물과 2년물 금리 관계, HY와 IG 스프레드 관계)
-3. fallback 값 사용 여부 탐지 (FRED fallback: 10년물 4.45%, HY 272bps 등)
-4. IPO 기업들의 상태·기업가치가 최근 언론 보도와 일치하는지
-5. 데이터 수집 시점 기준 이상값(outlier) 여부
+2. 데이터 간 일관성 (10년물↔2년물 관계, HY↔IG 스프레드 관계)
+3. fallback 값 사용 의심 여부 (FRED fallback: 10년물 4.45%, HY 272bps)
+4. IPO 기업 상태·기업가치가 최근 보도와 일치하는지
 
 ## 응답 형식 (반드시 순수 JSON만 출력, 마크다운 코드블록 없이)
-{{
-  "validation_passed": true,
-  "overall_assessment": "전체 신뢰성 평가 한 문장",
-  "data_checks": [
-    {{"source": "FRED", "field": "us10y_yield", "value": "4.45", "status": "FALLBACK", "comment": "fallback 값 사용 의심"}},
-    {{"source": "yfinance", "field": "spy_ytd", "value": "11.24", "status": "OK", "comment": "현재 시장 범위 내"}}
-  ],
-  "anomalies": ["이상 항목 설명"],
-  "recommendations": ["개선 권고 사항"]
-}}
+{{"validation_passed": true, "overall_assessment": "전체 신뢰성 평가 한 문장", "data_checks": [{{"source": "FRED", "field": "us10y_yield", "value": "4.45", "status": "FALLBACK", "comment": "fallback 값 사용 의심"}}, {{"source": "yfinance", "field": "spy_ytd", "value": "11.24", "status": "OK", "comment": "현재 시장 범위 내"}}], "anomalies": ["이상 항목"], "recommendations": ["권고 사항"]}}
 """
 
 def _build_raw_summary(scores_data: dict) -> str:
@@ -56,7 +46,6 @@ def _build_raw_summary(scores_data: dict) -> str:
     w3 = scores_data.get("w3", {})
     w4 = scores_data.get("w4", {})
 
-    # Fix-V2: IPO 목록 제외, 핵심 수치만 포함
     summary = {
         "W1_주도주압축_yfinance": {
             "SPY_YTD_%":        w1.get("spy_ytd"),
@@ -74,23 +63,15 @@ def _build_raw_summary(scores_data: dict) -> str:
             "장단기역전":        w2.get("is_inverted"),
         },
         "W3_크레딧스프레드_FRED": {
-            "HY스프레드_bps":    w3.get("hy_bps"),
-            "IG스프레드_bps":    w3.get("ig_bps"),
-            "HY_1개월변화_bps":  w3.get("hy_change_bps"),
+            "HY스프레드_bps":   w3.get("hy_bps"),
+            "IG스프레드_bps":   w3.get("ig_bps"),
+            "HY_1개월변화_bps": w3.get("hy_change_bps"),
         },
         "W4_IPO파이프라인": {
-            "가중파이프라인_B":   w4.get("total_valuation_bn"),
-            "시총대비비율_%":     w4.get("pipeline_ratio_pct"),
-            "가격확정건수":       w4.get("priced_count"),
-            "신청완료건수":       w4.get("filed_count"),
-            "주요기업_상태": [
-                {
-                    "기업":      i.get("company"),
-                    "기업가치_B": i.get("valuation_bn"),
-                    "상태":      i.get("status"),
-                }
-                for i in (w4.get("ipo_list") or [])[:5]  # 상위 5개만
-            ],
+            "가중파이프라인_B":  w4.get("total_valuation_bn"),
+            "시총대비비율_%":    w4.get("pipeline_ratio_pct"),
+            "가격확정건수":      w4.get("priced_count"),
+            "신청완료건수":      w4.get("filed_count"),
         },
     }
     return json.dumps(summary, ensure_ascii=False, indent=2)
@@ -120,7 +101,7 @@ def validate_with_ai(scores_data: dict) -> dict:
             )
             message = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=1024,
+                max_tokens=512,
                 messages=[{"role": "user", "content": prompt}],
             )
 
