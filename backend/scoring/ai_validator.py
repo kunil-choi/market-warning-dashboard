@@ -5,6 +5,7 @@
 #   Fix9  – GitHub Actions 네트워크 지연 대응
 #   Fix10 – anthropic 라이브러리 내부 재시도 비활성화
 #   Fix11 – 모델명 수정: claude-3-5-sonnet-20241022 → claude-sonnet-4-5
+#   Fix12 – max_tokens 1024 → 2048 (JSON 응답 잘림 방지)
 # ============================================================
 
 import os
@@ -95,10 +96,10 @@ def _build_raw_summary(scores_data: dict) -> str:
             "HY_1개월변화_bps": w3.get("hy_change_bps"),
         },
         "W4_대어급IPO": {
-            "가중파이프라인_B":  w4.get("total_valuation_bn"),
-            "시총대비비율_%":    w4.get("pipeline_ratio_pct"),
-            "신청완료건수":      w4.get("filed_count"),
-            "공모가확정건수":    w4.get("priced_count"),
+            "가중파이프라인_B": w4.get("total_valuation_bn"),
+            "시총대비비율_%":   w4.get("pipeline_ratio_pct"),
+            "신청완료건수":     w4.get("filed_count"),
+            "공모가확정건수":   w4.get("priced_count"),
             "IPO목록": [
                 {"기업": i.get("company"),
                  "기업가치_B": i.get("valuation_bn"),
@@ -165,8 +166,8 @@ def validate_with_ai(scores_data: dict) -> dict:
                 max_retries=0,
             )
             message = client.messages.create(
-                model="claude-sonnet-4-5",  # ✅ Fix11: 모델명 수정
-                max_tokens=1024,
+                model="claude-sonnet-4-5",
+                max_tokens=2048,        # ✅ Fix12: 1024 → 2048 (JSON 잘림 방지)
                 messages=[{"role": "user", "content": prompt}],
             )
 
