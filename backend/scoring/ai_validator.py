@@ -1,9 +1,8 @@
 # ============================================================
 # ai_validator.py  –  Claude AI 기반 원천 데이터 신뢰성 검증
 # 수정:
-#   Fix-V1 – 검증 목적 변경: 점수 계산 검증 → 원천 데이터 신뢰성 검증
-#   Fix-V2 – IPO 목록 프롬프트 완전 제거 → 토큰 절감
-#   Fix-V3 – max_tokens 512로 축소 (응답 잘림 방지)
+#   Fix-V4 – 응답 형식 최소화 (data_checks 제거, 핵심만 유지)
+#             → 응답 300자 이내로 제한
 # ============================================================
 
 import os
@@ -17,27 +16,17 @@ import anthropic
 logger = logging.getLogger(__name__)
 
 VALIDATION_PROMPT = """
-당신은 금융 데이터 신뢰성 검증 전문가입니다.
-아래는 시장 경고 대시보드가 각 기관 API에서 수집한 원천 데이터입니다.
-각 수치가 실제 시장 현황과 일치하는 신뢰할 수 있는 데이터인지 검증해주세요.
+당신은 금융 데이터 검증 전문가입니다.
+아래 수집된 시장 데이터가 현재 실제 시장 상황과 일치하는지 검증하세요.
 
-## 데이터 출처
-- W1 SPY/RSP 수익률: yfinance (Yahoo Finance API)
-- W2 금리 데이터: FRED API (미국 연방준비제도)
-- W3 HY/IG 스프레드: FRED API (ICE BofA 채권 인덱스)
-- W4 IPO 파이프라인: Reuters, Bloomberg, CNBC 보도 기반 fallback
-
-## 수집된 원천 데이터
+## 수집 데이터
 {raw_data}
 
-## 검증 요청 사항
-1. 각 수치가 현재 시장 상황에서 현실적으로 가능한 범위인지
-2. 데이터 간 일관성 (10년물↔2년물 관계, HY↔IG 스프레드 관계)
-3. fallback 값 사용 의심 여부 (FRED fallback: 10년물 4.45%, HY 272bps)
-4. IPO 기업 상태·기업가치가 최근 보도와 일치하는지
+## 응답 규칙
+- 반드시 아래 JSON 형식만 출력 (다른 텍스트 절대 금지)
+- 짧고 간결하게 (전체 200자 이내)
 
-## 응답 형식 (반드시 순수 JSON만 출력, 마크다운 코드블록 없이)
-{{"validation_passed": true, "overall_assessment": "전체 신뢰성 평가 한 문장", "data_checks": [{{"source": "FRED", "field": "us10y_yield", "value": "4.45", "status": "FALLBACK", "comment": "fallback 값 사용 의심"}}, {{"source": "yfinance", "field": "spy_ytd", "value": "11.24", "status": "OK", "comment": "현재 시장 범위 내"}}], "anomalies": ["이상 항목"], "recommendations": ["권고 사항"]}}
+{{"validation_passed": true, "overall_assessment": "한 문장 평가", "anomalies": [], "recommendations": []}}
 """
 
 def _build_raw_summary(scores_data: dict) -> str:
@@ -47,34 +36,23 @@ def _build_raw_summary(scores_data: dict) -> str:
     w4 = scores_data.get("w4", {})
 
     summary = {
-        "W1_주도주압축_yfinance": {
-            "SPY_YTD_%":        w1.get("spy_ytd"),
-            "RSP_YTD_%":        w1.get("rsp_ytd"),
-            "SPY_RSP_괴리율_%p": w1.get("current_spread"),
-            "괴리_퍼센타일":     w1.get("spread_percentile"),
-            "RSP_1주수익률_%":   w1.get("rsp_1w_return"),
-            "RSP_역행신호":      w1.get("rsp_is_negative_while_spy_positive"),
-        },
-        "W2_금리_FRED": {
-            "미국10년물_%":      w2.get("us10y_yield"),
-            "미국2년물_%":       w2.get("us2y_yield"),
-            "장단기스프레드_%p": w2.get("term_spread"),
-            "TIPS실질금리_%":    w2.get("tips_10y_real_yield"),
-            "장단기역전":        w2.get("is_inverted"),
-        },
-        "W3_크레딧스프레드_FRED": {
-            "HY스프레드_bps":   w3.get("hy_bps"),
-            "IG스프레드_bps":   w3.get("ig_bps"),
-            "HY_1개월변화_bps": w3.get("hy_change_bps"),
-        },
-        "W4_IPO파이프라인": {
-            "가중파이프라인_B":  w4.get("total_valuation_bn"),
-            "시총대비비율_%":    w4.get("pipeline_ratio_pct"),
-            "가격확정건수":      w4.get("priced_count"),
-            "신청완료건수":      w4.get("filed_count"),
-        },
+        "SPY_YTD":       w1.get("spy_ytd"),
+        "RSP_YTD":       w1.get("rsp_ytd"),
+        "괴리율":         w1.get("current_spread"),
+        "10년물":         w2.get("us10y_yield"),
+        "2년물":          w2.get("us2y_yield"),
+        "장단기스프레드": w2.get("term_spread"),
+        "TIPS":          w2.get("tips_10y_real_yield"),
+        "역전여부":       w2.get("is_inverted"),
+        "HY_bps":        w3.get("hy_bps"),
+        "IG_bps":        w3.get("ig_bps"),
+        "HY변화_bps":    w3.get("hy_change_bps"),
+        "IPO파이프라인_B": w4.get("total_valuation_bn"),
+        "시총대비_%":     w4.get("pipeline_ratio_pct"),
+        "가격확정건수":   w4.get("priced_count"),
+        "신청완료건수":   w4.get("filed_count"),
     }
-    return json.dumps(summary, ensure_ascii=False, indent=2)
+    return json.dumps(summary, ensure_ascii=False)
 
 
 def validate_with_ai(scores_data: dict) -> dict:
@@ -101,7 +79,7 @@ def validate_with_ai(scores_data: dict) -> dict:
             )
             message = client.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=512,
+                max_tokens=256,
                 messages=[{"role": "user", "content": prompt}],
             )
 
