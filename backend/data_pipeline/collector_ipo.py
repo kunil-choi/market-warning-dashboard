@@ -1,20 +1,18 @@
-"""
-collector_ipo.py
-IPO 파이프라인 데이터 수집 및 위험 점수 계산 모듈
-
-수정:
-  Fix8 – calculate_ipo_score(): 절대금액 임계치 → 미국 시총 대비 비율 방식으로 전환
-          근거: Jay R. Ritter IPO 통계(UF 2026) · Siblis Research 시총 데이터
-                < 0.15%  → 정상  (2010~16년 회복기 수준)
-                0.15~0.25% → 주의  (2021년 SPAC 붐 수준)
-                0.25~0.45% → 경고  (1999~2000년 닷컴버블 수준)
-                0.45% 이상 → 위험  (닷컴버블 초과, 전례 없음)
-"""
+# ============================================================
+# collector_ipo.py
+# IPO 파이프라인 데이터 수집 및 위험 점수 계산 모듈
+#
+# 수정:
+#   Fix8  – 절대금액 → 미국 시총 대비 비율 방식
+#   Fix9  – 기산 시점 2026-05-01 이후 액션 기업만 포함
+#   Fix10 – 대형 IPO 기준 $50B 이상
+#   Fix11 – 가중치 재설계: 루머 0.0 / 검토중 0.1 / 신청완료 0.7 / 가격확정 1.0
+# ============================================================
 
 import socket
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Optional
 
 import requests
@@ -30,10 +28,22 @@ logger = logging.getLogger(__name__)
 # 미국 전체 주식시장 시가총액 (Siblis Research 2026-01-01 기준, 단위: B$)
 US_MARKET_CAP_BN: float = 69_000.0
 
+# 대형 IPO 기준 (역사적으로 시장에 실질 영향을 주는 규모)
+LARGE_IPO_THRESHOLD_BN: float = 50.0
+
+# 기산 시점: 이 날짜 이후 액션이 있는 기업만 포함
+ACTIVE_FROM: date = date(2026, 5, 1)
+
+# Fix11: 가중치 재설계
+# - 루머:     시장 영향 없음, 노이즈 제외
+# - 검토중:   실현까지 1~2년 이상, 불확실성 높음 → 0.1
+# - 신청완료: S-1 제출 후 철회율 ~30% 감안 → 0.7
+# - 가격확정: 수일 내 상장 확정, 최고 위험 → 1.0
+# - 상장완료: 이미 시장에 소화됨 → 0.0
 STATUS_WEIGHT: dict[str, float] = {
-    "루머":     0.1,
-    "검토중":   0.3,
-    "신청완료": 1.0,
+    "루머":     0.0,
+    "검토중":   0.1,
+    "신청완료": 0.7,
     "가격확정": 1.0,
     "상장완료": 0.0,
 }
@@ -67,25 +77,40 @@ MEGA_COMPANIES: set[str] = {
 }
 
 # ──────────────────────────────────────────────
-# Fallback 데이터 (최우선 신뢰 소스)
-# 출처: Reuters, Bloomberg, CNBC, Anthropic 공식 (2026-05-28 기준)
+# Fallback 데이터
+# Fix9:  active_date = 2026-05-01 이후 실제 액션 날짜 기록
+# Fix10: $50B 미만 또는 5월 이후 액션 없는 기업 제외
+#
+# 포함 기준:
+#   SpaceX    $1,800B 가격확정 - S-1 공개 2026-05-20, 상장 2026-06-12 예정
+#   OpenAI    $852B   신청완료 - 비공개 S-1 제출 2026-05-20, 9월 상장 목표
+#   Anthropic $965B   검토중   - 2026년 하반기 목표, 10월 예상
+#   Databricks $134B  검토중   - Q3 2026 S-1 예정
+#
+# 제외 기준:
+#   Stripe   - "서두르지 않는다" 발언, 5월 이후 구체 액션 없음
+#   Revolut  - 2028년 목표, 5월 이후 액션 없음
+#   Discord  - $50B 미만 ($15B), 5월 이후 액션 없음
+#   Cerebras - 상장완료 (2026-05-14)
 # ──────────────────────────────────────────────
 MEGA_IPO_FALLBACK: list[dict] = [
     {
         "company":      "SpaceX",
         "valuation_bn": 1800,
-        "status":       "신청완료",
-        "source":       "Reuters/Bloomberg 2026-05-15",
-        "filed_date":   "2026-04-01",
+        "status":       "가격확정",
+        "active_date":  "2026-05-20",   # S-1 공개일
+        "source":       "SEC EDGAR S-1 공개 2026-05-20 / 상장 예정 2026-06-12",
+        "filed_date":   "2026-05-20",
         "listed_date":  None,
         "ticker":       None,
     },
     {
         "company":      "OpenAI",
         "valuation_bn": 852,
-        "status":       "검토중",
-        "source":       "Bloomberg 2026-03-31",
-        "filed_date":   None,
+        "status":       "신청완료",
+        "active_date":  "2026-05-20",   # 비공개 S-1 제출일
+        "source":       "CNBC / NYT 2026-05-20 비공개 S-1 제출",
+        "filed_date":   "2026-05-20",
         "listed_date":  None,
         "ticker":       None,
     },
@@ -93,6 +118,7 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "company":      "Anthropic",
         "valuation_bn": 965,
         "status":       "검토중",
+        "active_date":  "2026-05-28",   # $965B 밸류에이션 공식 확인일
         "source":       "Anthropic 공식 / Reuters 2026-05-28",
         "filed_date":   None,
         "listed_date":  None,
@@ -102,43 +128,8 @@ MEGA_IPO_FALLBACK: list[dict] = [
         "company":      "Databricks",
         "valuation_bn": 134,
         "status":       "검토중",
-        "source":       "CNBC 2026-02-09",
-        "filed_date":   None,
-        "listed_date":  None,
-        "ticker":       None,
-    },
-    {
-        "company":      "Stripe",
-        "valuation_bn": 159,
-        "status":       "검토중",
-        "source":       "Reuters 2026-02-24",
-        "filed_date":   None,
-        "listed_date":  None,
-        "ticker":       None,
-    },
-    {
-        "company":      "Cerebras",
-        "valuation_bn": 95,
-        "status":       "상장완료",
-        "source":       "CNBC / Reuters 2026-05-14",
-        "filed_date":   "2026-04-17",
-        "listed_date":  "2026-05-14",
-        "ticker":       "CBRS",
-    },
-    {
-        "company":      "Revolut",
-        "valuation_bn": 75,
-        "status":       "신청완료",
-        "source":       "Bloomberg 2026",
-        "filed_date":   None,
-        "listed_date":  None,
-        "ticker":       None,
-    },
-    {
-        "company":      "Discord",
-        "valuation_bn": 15,
-        "status":       "신청완료",
-        "source":       "Bloomberg 2026",
+        "active_date":  "2026-05-01",   # Q3 2026 S-1 예정 보도
+        "source":       "tech-insider.org 2026-05",
         "filed_date":   None,
         "listed_date":  None,
         "ticker":       None,
@@ -151,7 +142,6 @@ HEADERS: dict[str, str] = {
         "+https://github.com/kunil-choi/market-warning-dashboard)"
     )
 }
-
 
 # ──────────────────────────────────────────────
 # 유틸리티 함수
@@ -169,7 +159,6 @@ def parse_valuation(raw: str) -> Optional[float]:
         return float(m.group(1))
     return None
 
-
 def normalize_status(raw: str) -> str:
     if not raw:
         return "루머"
@@ -184,6 +173,28 @@ def normalize_status(raw: str) -> str:
         return "검토중"
     return "루머"
 
+def _is_active(item: dict) -> bool:
+    """
+    Fix9: active_date 또는 filed_date 가 ACTIVE_FROM(2026-05-01) 이후인지 확인.
+    날짜 정보가 없으면 포함(보수적 접근).
+    """
+    for key in ("active_date", "filed_date", "listed_date"):
+        val = item.get(key)
+        if val:
+            try:
+                d = date.fromisoformat(str(val)[:10])
+                if d >= ACTIVE_FROM:
+                    return True
+            except ValueError:
+                continue
+    # 날짜 정보가 전혀 없으면 포함 (누락 방지)
+    has_any_date = any(item.get(k) for k in ("active_date", "filed_date", "listed_date"))
+    return not has_any_date
+
+def _is_large(item: dict) -> bool:
+    """Fix10: $50B 이상만 대형 IPO로 분류."""
+    val = item.get("valuation_bn") or 0.0
+    return val >= LARGE_IPO_THRESHOLD_BN
 
 # ──────────────────────────────────────────────
 # EDGAR 수집
@@ -194,10 +205,9 @@ def fetch_edgar_rss() -> list[dict]:
         "https://efts.sec.gov/LATEST/search-index"
         "?q=%22S-1%22"
         "&dateRange=custom"
-        "&startdt=2026-01-01"
+        "&startdt=2026-05-01"
         "&forms=S-1%2CS-1%2FA"
     )
-
     headers = {
         "User-Agent": (
             "MarketDashboard/1.0 (contact: dashboard@example.com; "
@@ -206,7 +216,6 @@ def fetch_edgar_rss() -> list[dict]:
         "Accept": "application/json",
         "Accept-Encoding": "gzip, deflate",
     }
-
     results: list[dict] = []
     try:
         resp = requests.get(url, headers=headers, timeout=15)
@@ -223,6 +232,7 @@ def fetch_edgar_rss() -> list[dict]:
                 "company":      company,
                 "valuation_bn": None,
                 "status":       "신청완료",
+                "active_date":  src.get("display_date_filed"),
                 "source":       "SEC EDGAR",
                 "filed_date":   src.get("display_date_filed"),
                 "listed_date":  None,
@@ -233,15 +243,11 @@ def fetch_edgar_rss() -> list[dict]:
         logger.warning("EDGAR 수집 실패: %s", exc)
     return results
 
-
 # ──────────────────────────────────────────────
 # 데이터 병합
 # ──────────────────────────────────────────────
 
-def merge_ipo_lists(
-    edgar:    list[dict],
-    fallback: list[dict],
-) -> list[dict]:
+def merge_ipo_lists(edgar: list[dict], fallback: list[dict]) -> list[dict]:
     merged: dict[str, dict] = {}
 
     def _upsert(item: dict) -> None:
@@ -268,26 +274,19 @@ def merge_ipo_lists(
 
     return list(merged.values())
 
-
 # ──────────────────────────────────────────────
-# 점수 계산 (Fix8: 시총 대비 비율 방식)
+# 점수 계산
 # ──────────────────────────────────────────────
 
 def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     """
-    IPO 파이프라인 리스트를 받아 위험 점수(0-100)를 계산한다.
-
-    Fix8: 절대금액 임계치 → 미국 시총 대비 비율 방식으로 전환
-    역사적 근거:
-      1999 닷컴버블:  IPO $64.8B / 시총 $17.6조 = 0.37%
-      2000 버블붕괴:  IPO $64.8B / 시총 $14.2조 = 0.45%
-      2021 SPAC 붐:   IPO $119.4B / 시총 $52.3조 = 0.23%
-      2026 현재:      가중 $2,523B / 시총 $69조  = 3.66%
+    Fix9:  2026-05-01 이후 액션 기업만 포함
+    Fix10: $50B 이상 대형 IPO만 포함
+    Fix11: 가중치 재설계 (루머 0.0 / 검토중 0.1 / 신청완료 0.7 / 가격확정 1.0)
+    Fix8:  미국 시총 대비 비율 방식
     """
     if not isinstance(ipo_list, list):
-        logger.error(
-            "calculate_ipo_score: list 를 받아야 하지만 %s 수신", type(ipo_list)
-        )
+        logger.error("calculate_ipo_score: list 를 받아야 하지만 %s 수신", type(ipo_list))
         ipo_list = []
 
     total_valuation_bn: float = 0.0
@@ -298,40 +297,46 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
 
     for item in ipo_list:
         if not isinstance(item, dict):
-            logger.warning("calculate_ipo_score: dict 아닌 항목 무시 (%s)", type(item))
             continue
 
         company = item.get("company", "알 수 없음")
-        status  = item.get("status",  "루머")
+        status  = item.get("status", "루머")
         val_bn  = item.get("valuation_bn") or 0.0
-        weight  = STATUS_WEIGHT.get(status, 0.0)
 
+        # 상장완료 제외
         if status == "상장완료":
             signals.append(f"✅ {company}: 상장 완료 (점수 제외)")
             continue
 
+        # Fix9: 기산 시점 이후 액션 없으면 제외
+        if not _is_active(item):
+            signals.append(f"⏸ {company}: 2026-05-01 이전 액션 — 제외")
+            continue
+
+        # Fix10: $50B 미만 소형 IPO 제외
+        if not _is_large(item):
+            signals.append(f"⏸ {company}: ${val_bn:.0f}B — $50B 미만 제외")
+            continue
+
+        weight       = STATUS_WEIGHT.get(status, 0.0)
         weighted_val = val_bn * weight
         total_valuation_bn += weighted_val
 
-        if status == "신청완료":
-            filed_count += 1
-            signals.append(f"📋 {company}: S-1 제출 완료 (${val_bn:.0f}B)")
-        elif status == "가격확정":
+        if status == "가격확정":
             priced_count += 1
-            signals.append(f"💰 {company}: 가격 확정 (${val_bn:.0f}B)")
+            signals.append(f"🚨 {company}: 가격 확정 — 상장 임박 (${val_bn:.0f}B × {weight})")
+        elif status == "신청완료":
+            filed_count += 1
+            signals.append(f"📋 {company}: S-1 제출 완료 (${val_bn:.0f}B × {weight})")
         elif status == "검토중":
-            signals.append(f"🔍 {company}: IPO 검토 중 (${val_bn:.0f}B)")
+            signals.append(f"🔍 {company}: IPO 검토 중 (${val_bn:.0f}B × {weight})")
         else:
-            signals.append(f"💬 {company}: 루머 단계 (${val_bn:.0f}B)")
+            signals.append(f"💬 {company}: 루머 단계 — 점수 제외")
 
-    # ✅ Fix8: 시총 대비 비율 계산
+    # Fix8: 시총 대비 비율 계산
     pipeline_ratio_pct = round(total_valuation_bn / US_MARKET_CAP_BN * 100, 4)
 
-    # ✅ Fix8: 비율 기반 기본 점수
-    # < 0.15%  → 정상  (2010~16년 회복기)
-    # 0.15~0.25% → 주의  (2021 SPAC 붐)
-    # 0.25~0.45% → 경고  (1999~2000 닷컴버블)
-    # 0.45% 이상 → 위험  (닷컴버블 초과, 전례 없음)
+    # 비율 기반 기본 점수 (역사적 근거)
     if pipeline_ratio_pct >= 0.45:
         base_score = 75
         alerts.append(
@@ -353,8 +358,8 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     else:
         base_score = 10
 
-    # 보너스: 신청완료·가격확정 건수 (각 5점, 최대 20점)
-    bonus     = min(filed_count * 5 + priced_count * 5, 20)
+    # 보너스: 가격확정 × 10점, 신청완료 × 5점 (최대 20점)
+    bonus     = min(priced_count * 10 + filed_count * 5, 20)
     raw_score = min(base_score + bonus, 100)
 
     if raw_score >= 80:
@@ -372,40 +377,29 @@ def calculate_ipo_score(ipo_list: list[dict]) -> dict:
     )
 
     return {
-        "score":                raw_score,
-        "grade":                grade,
-        "color":                color,
-        "total_valuation_bn":   round(total_valuation_bn, 1),
-        "pipeline_ratio_pct":   pipeline_ratio_pct,
-        "us_market_cap_bn":     US_MARKET_CAP_BN,
-        "filed_count":          filed_count,
-        "priced_count":         priced_count,
-        "signals":              signals,
-        "alerts":               alerts,
-        "ipo_list":             ipo_list,
-        "timestamp":            datetime.now(timezone.utc).isoformat(),
+        "score":              raw_score,
+        "grade":              grade,
+        "color":              color,
+        "total_valuation_bn": round(total_valuation_bn, 1),
+        "pipeline_ratio_pct": pipeline_ratio_pct,
+        "us_market_cap_bn":   US_MARKET_CAP_BN,
+        "filed_count":        filed_count,
+        "priced_count":       priced_count,
+        "signals":            signals,
+        "alerts":             alerts,
+        "ipo_list":           ipo_list,
+        "timestamp":          datetime.now(timezone.utc).isoformat(),
     }
-
 
 # ──────────────────────────────────────────────
 # 메인 수집 함수
 # ──────────────────────────────────────────────
 
 def collect_ipo_data() -> dict:
-    """
-    IPO 데이터를 수집하고 점수를 계산해 반환한다.
-    신뢰 소스: EDGAR(공식 S-1 제출) + Fallback(검증된 언론 데이터)
-    Google News RSS는 데이터 오염 위험으로 사용하지 않음.
-    """
     logger.info("IPO 데이터 수집 시작")
-
     edgar_data = fetch_edgar_rss()
-
-    # ✅ Google News RSS 완전 비활성화
     logger.info("Google News RSS 비활성화 — fallback 데이터 사용")
-
     merged = merge_ipo_lists(edgar_data, MEGA_IPO_FALLBACK)
     logger.info("병합 후 총 %d개 기업", len(merged))
-
     result = calculate_ipo_score(merged)
     return result
