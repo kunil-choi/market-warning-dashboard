@@ -29,6 +29,20 @@ jobs:
       - name: Install Dependencies
         run: pip install -r backend/requirements.txt
 
+      - name: Diagnose Anthropic API Connection
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          echo "=== 네트워크 진단 시작 ==="
+          echo "--- DNS 확인 ---"
+          nslookup api.anthropic.com || echo "DNS 실패"
+          echo "--- HTTPS 연결 확인 ---"
+          curl -v --max-time 10 https://api.anthropic.com/v1/models \
+            -H "x-api-key: ${ANTHROPIC_API_KEY}" \
+            -H "anthropic-version: 2023-06-01" \
+            2>&1 | tail -30 || echo "curl 실패"
+          echo "=== 진단 완료 ==="
+
       - name: Run Data Pipeline
         env:
           FRED_API_KEY:      ${{ secrets.FRED_API_KEY }}
