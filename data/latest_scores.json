@@ -31,12 +31,25 @@
     "score": 15,
     "grade": "정상",
     "color": "green",
+    "bdc_nav_discount": 3.5,
+    "bdc_nav_date": "2026-05-30",
+    "sloos_ci_pct": 14.5,
+    "sloos_source": "fallback",
+    "ci_delq_pct": 1.55,
+    "ci_delq_source": "fallback",
     "hy_bps": 272.0,
     "ig_bps": 73.0,
     "hy_change_bps": -57.0,
+    "s_bdc": 5,
+    "s_sloos": 40,
+    "s_ci": 20,
+    "s_hy_level": 15,
+    "s_hy_change": 0,
     "signals": [
-      "📢 HY 스프레드 272 bps — 주의 구간",
-      "✅ IG 스프레드 73 bps — 타이트 (하위 10%)"
+      "✅ BDC NAV 할인율 3.5% — 시장이 사모 마크 신뢰",
+      "⚠️ C&I 대출 긴축 14.5% — 신용 공급 수축 진행",
+      "✅ C&I 연체율 1.55% — 정상 범위",
+      "📊 HY 스프레드 272 bps — 정상 (후행 보조)"
     ],
     "timestamp": "2026-05-31T15:44:31.005183+00:00"
   },
