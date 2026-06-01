@@ -291,42 +291,62 @@ function buildFrontContent(prefix, score, raw) {
       <div class="front-advice">💡 ${advice}</div>`;
   }
 
-  /* ────────── W3: 사모신용 압박 ────────── */
+  /* ────────── W3: 사모크레딧 환매 위험 ────────── */
   if (prefix === "w3") {
-    // Fix16: JSON 실제 키는 hy_bps, ig_bps, hy_change_bps
-    const hy     = raw?.hy_bps    ?? raw?.hy_spread    ?? raw?.high_yield_spread      ?? 0;
-    const ig     = raw?.ig_bps    ?? raw?.ig_spread    ?? raw?.investment_grade_spread ?? 0;
-    const hyChg  = raw?.hy_change_bps ?? raw?.hy_spread_change_1m ?? raw?.hy_change  ?? 0;
-    const stress = raw?.stress_level ?? "";
+    const bdcDisc  = raw?.bdc_nav_discount ?? null;
+    const bdcDate  = raw?.bdc_nav_date     ?? "";
+    const sloos    = raw?.sloos_ci_pct     ?? null;
+    const ciDelq   = raw?.ci_delq_pct      ?? null;
+    const hy       = raw?.hy_bps ?? raw?.hy_spread ?? 0;
+    const ig       = raw?.ig_bps ?? raw?.ig_spread ?? 0;
+    const hyChg    = raw?.hy_change_bps ?? raw?.hy_spread_change_1m ?? 0;
 
+    // 상황 판단: 주 지표(BDC 할인, SLOOS) 우선
     let sitColor = "GREEN", sitText = "";
-    if      (hy >= 600 || hyChg >= 100) { sitColor = "RED";    sitText = "🚨 신용시장 붕괴 수준: 하이일드 스프레드가 금융위기 수준에 도달했습니다. 즉각적인 위험 관리가 필요합니다."; }
-    else if (hy >= 350 || hyChg >= 50)  { sitColor = "ORANGE"; sitText = "⚠️ 신용 스트레스 심화: 하이일드 시장에서 의미있는 위험 회피가 발생하고 있습니다."; }
-    else if (hy >= 300 || hyChg >= 20)  { sitColor = "YELLOW"; sitText = "📢 신용 경계 구간: 하이일드 스프레드가 평균을 상회하고 있습니다. 추이를 주시해야 합니다."; }
-    else                                { sitText  = "✅ 신용시장 안정: 하이일드·투자등급 스프레드 모두 건강한 수준입니다."; }
+    if      (bdcDisc >= 25 || sloos >= 50) {
+      sitColor = "RED";
+      sitText  = "🚨 사모크레딧 위기: BDC 할인율 급등 또는 은행 C&I 긴축이 위기 수준입니다. 환매 게이팅 발생 가능성이 높습니다.";
+    } else if (bdcDisc >= 15 || sloos >= 30) {
+      sitColor = "ORANGE";
+      sitText  = "⚠️ 사모크레딧 스트레스: 유동성 미스매치 위험이 쌓이고 있습니다. 인터벌 펀드·비상장 BDC 익스포저를 점검하세요.";
+    } else if (bdcDisc >= 5 || sloos >= 15 || hy >= 350) {
+      sitColor = "YELLOW";
+      sitText  = "📢 사모크레딧 경계: HY 스프레드는 안정적이지만 구조적 유동성 위험 신호가 소폭 감지됩니다.";
+    } else {
+      sitText  = "✅ 사모크레딧 안정: BDC 할인율·대출 긴축 모두 정상 범위. 공개시장 스프레드도 타이트.";
+    }
 
     let advice = "";
-    if      (score >= 70) advice = "📌 하이일드 채권 전면 회피. 투자등급 이하 회사채 즉시 축소. 현금 및 국채 비중 확대.";
-    else if (score >= 40) advice = "📌 하이일드 비중 점진적 축소. 신용등급 BB 이하 종목 익스포저 관리 강화.";
-    else                  advice = "📌 신용시장 안정. 단기 하이일드 일부 편입으로 수익률 제고 가능.";
+    if      (score >= 70) advice = "📌 비상장 BDC·인터벌 펀드 환매 지연 위험. 사모크레딧 익스포저 즉시 점검. 유동성 확보 최우선.";
+    else if (score >= 40) advice = "📌 사모크레딧 신규 편입 자제. 분기 환매 한도(게이팅) 발동 여부 모니터링.";
+    else                  advice = "📌 사모크레딧 환경 양호. BDC 할인율과 SLOOS 추이를 분기별로 확인하세요.";
+
+    const bdcColor  = bdcDisc >= 15 ? "val-red" : bdcDisc >= 5 ? "val-yellow" : "val-green";
+    const sloosColor = sloos >= 30 ? "val-red" : sloos >= 15 ? "val-yellow" : sloos <= -10 ? "val-green" : "val-green";
+    const ciColor   = ciDelq >= 3.0 ? "val-red" : ciDelq >= 2.0 ? "val-yellow" : "val-green";
+    const hyColor   = hy >= 400 ? "val-red" : hy >= 300 ? "val-yellow" : "val-green";
 
     return `
       <div class="front-metrics-block">
         <div class="front-metric-row">
-          <span class="front-metric-label">HY 스프레드</span>
-          <span class="front-metric-val ${hy>=600?'val-red':hy>=350?'val-orange':hy>=300?'val-yellow':'val-green'}">${hy} bps</span>
+          <span class="front-metric-label">BDC NAV 할인율 <span style="font-size:0.65rem;color:#64748b">주</span></span>
+          <span class="front-metric-val ${bdcColor}">${bdcDisc != null ? bdcDisc.toFixed(1)+'%' : '—'}${bdcDate ? ` <span style="font-size:0.65rem;color:#64748b">(${bdcDate})</span>` : ''}</span>
         </div>
         <div class="front-metric-row">
-          <span class="front-metric-label">IG 스프레드</span>
-          <span class="front-metric-val ${ig>=200?'val-red':ig>=150?'val-yellow':'val-green'}">${ig} bps</span>
+          <span class="front-metric-label">C&I 대출 긴축(SLOOS) <span style="font-size:0.65rem;color:#64748b">주</span></span>
+          <span class="front-metric-val ${sloosColor}">${sloos != null ? sloos.toFixed(1)+'%' : '—'}</span>
         </div>
         <div class="front-metric-row">
-          <span class="front-metric-label">HY 1개월 변화</span>
+          <span class="front-metric-label">C&I 연체율 <span style="font-size:0.65rem;color:#64748b">주</span></span>
+          <span class="front-metric-val ${ciColor}">${ciDelq != null ? ciDelq.toFixed(2)+'%' : '—'}</span>
+        </div>
+        <div class="front-metric-row">
+          <span class="front-metric-label">HY 스프레드 <span style="font-size:0.65rem;color:#64748b">보조</span></span>
+          <span class="front-metric-val ${hyColor}">${hy} bps</span>
+        </div>
+        <div class="front-metric-row">
+          <span class="front-metric-label">HY 1개월 변화 <span style="font-size:0.65rem;color:#64748b">보조</span></span>
           <span class="front-metric-val ${hyChg>=50?'val-red':hyChg>=20?'val-yellow':hyChg<0?'val-green':'val-orange'}">${hyChg>0?'+':''}${hyChg} bps</span>
-        </div>
-        <div class="front-metric-row">
-          <span class="front-metric-label">스트레스 수준</span>
-          <span class="front-metric-val ${stress==='high'?'val-red':stress==='medium'?'val-yellow':'val-green'}">${stress||'—'}</span>
         </div>
       </div>
       <div class="front-situation ${sitColor}">${sitText}</div>
@@ -447,23 +467,40 @@ function buildBackContent(prefix, score, raw) {
     return `
       <div class="back-content">
         <div class="back-section">
-          <h4>📐 수치 해설</h4>
-          <div class="back-metric"><span class="back-label">HY 스프레드</span><span class="back-value">하이일드 채권 vs 국채 금리 차이 (신용 공포 지수)</span></div>
-          <div class="back-metric"><span class="back-label">IG 스프레드</span><span class="back-value">투자등급 회사채 vs 국채 금리 차이</span></div>
-          <div class="back-metric"><span class="back-label">HY 1개월 변화</span><span class="back-value">최근 한 달 스프레드 변동 — 급등이 핵심 신호</span></div>
+          <h4>⚠️ HY/IG 스프레드의 한계</h4>
+          <p style="font-size:0.76rem;color:#94a3b8;line-height:1.5">
+            HY/IG 스프레드는 매일 시가평가(mark-to-market)되는 공개시장 채권을 봅니다.
+            사모크레딧은 모델 평가(mark-to-model)라 마크가 매끄럽게(smoothed) 움직이고,
+            환매 중단(게이팅)은 신용 사건이 아니라 <strong>유동성 사건</strong>이므로
+            스프레드가 멀쩡해도 런(run)이 발생할 수 있습니다.
+            이 카드는 HY/IG를 보조 지표로만 씁니다.
+          </p>
+        </div>
+        <div class="back-section">
+          <h4>📐 주 지표 해설</h4>
+          <div class="back-metric"><span class="back-label">BDC NAV 할인율</span><span class="back-value">상장 BDC 주가 vs 운용사 NAV 차이. 시장이 사모 마크를 못 믿으면 할인 확대. 실시간에 가장 가까운 신호.</span></div>
+          <div class="back-metric"><span class="back-label">C&I 대출 긴축(SLOOS)</span><span class="back-value">연준 은행 대출 담당자 설문. 은행 신용 수축 → NBFI(사모) 전이 경로. 분기 업데이트.</span></div>
+          <div class="back-metric"><span class="back-label">C&I 연체율</span><span class="back-value">기업 대출 연체율. 사모크레딧 기초 포트폴리오 신용 품질 프록시. 분기 업데이트.</span></div>
         </div>
         <div class="back-section">
           <h4>📌 위험 기준</h4>
-          <div class="back-metric"><span class="back-label">HY &lt; 300 bps</span><span class="back-value" style="color:#34d399">정상 — 역사적 저점권</span></div>
-          <div class="back-metric"><span class="back-label">300 ~ 350 bps</span><span class="back-value" style="color:#fbbf24">주의 — 평균 상회</span></div>
-          <div class="back-metric"><span class="back-label">350 ~ 600 bps</span><span class="back-value" style="color:#f97316">경고 — 스트레스 구간</span></div>
-          <div class="back-metric"><span class="back-label">600 bps 이상</span><span class="back-value" style="color:#f87171">위험 — 금융위기 수준</span></div>
+          <div class="back-metric"><span class="back-label">BDC 할인 &lt; 5%</span><span class="back-value" style="color:#34d399">정상 — 시장이 사모 마크 신뢰</span></div>
+          <div class="back-metric"><span class="back-label">BDC 할인 5 ~ 15%</span><span class="back-value" style="color:#fbbf24">주의 — 마크 불신 시작</span></div>
+          <div class="back-metric"><span class="back-label">BDC 할인 15 ~ 25%</span><span class="back-value" style="color:#f97316">경고 — 환매 압력 심화</span></div>
+          <div class="back-metric"><span class="back-label">BDC 할인 25% 이상</span><span class="back-value" style="color:#f87171">위험 — 2008·2020 위기 수준</span></div>
+          <div class="back-metric"><span class="back-label">SLOOS 긴축 30% 이상</span><span class="back-value" style="color:#f97316">경고 — 은행→NBFI 전이 위험</span></div>
         </div>
         <div class="back-section">
           <h4>🔢 점수 산출</h4>
           <div class="back-formula">
-            <p>HY 절대치 <strong>50%</strong> + HY 1개월 변화 <strong>30%</strong> + IG 수준 <strong>20%</strong></p>
+            <p>BDC 할인율 <strong>25%</strong> + SLOOS 긴축 <strong>25%</strong> + C&I 연체율 <strong>15%</strong> + HY 수준 <strong>20%</strong> + HY 변화 <strong>15%</strong></p>
           </div>
+        </div>
+        <div class="back-section">
+          <h4>📋 추가 모니터링 권장</h4>
+          <div class="back-metric"><span class="back-label">인터벌 펀드 환매 충족률</span><span class="back-value">분기 환매 요청이 한도 초과 시 비례배분(게이팅 직접 증거)</span></div>
+          <div class="back-metric"><span class="back-label">PIK 이자 비중</span><span class="back-value">현금 대신 추가 부채로 이자 지급 — 부실 은폐 신호</span></div>
+          <div class="back-metric"><span class="back-label">CLO BB 트랜치 스프레드</span><span class="back-value">레버리지론 시장 — 사모크레딧과 가장 인접한 공개시장</span></div>
         </div>
       </div>`;
   }
@@ -708,7 +745,7 @@ const FALLBACK_DATA = {
   timestamp: new Date().toISOString(),
   w1: { score: 20, spy_ytd: 5.0, rsp_ytd: 3.5, current_spread: 1.5, spread_percentile: 40, rsp_1w_return: 0.8, rsp_is_negative_while_spy_positive: false },
   w2: { score: 35, us10y_yield: 4.3, us2y_yield: 4.1, term_spread: 0.2, tips_10y_real_yield: 1.8, is_inverted: false, rate_hike_concern: false },
-  w3: { score: 25, hy_spread: 310, ig_spread: 90, hy_spread_change_1m: 15, stress_level: "low" },
+  w3: { score: 15, bdc_nav_discount: 3.5, bdc_nav_date: "2026-05-30", sloos_ci_pct: 14.5, ci_delq_pct: 1.55, hy_bps: 272, ig_bps: 74, hy_change_bps: -10 },
   w4: {
     score: 90, grade: "위험", color: "red",
     total_valuation_bn: 2506.3,
