@@ -1,12 +1,10 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 데이터와 전반적으로 일치하며, 장단기 스프레드 정상화 및 HY 스프레드 축소는 위험선호 환경을 반영함",
-  "anomalies": [
-    "IPO 가격확정 0건으로 시장 활동 일시 위축"
-  ],
+  "overall_assessment": "2025년 중반 시장 환경과 부합하는 데이터로, 수익률 곡선 정상화·HY스프레드 축소·IPO 회복세가 위험선호 분위기를 반영함",
+  "anomalies": [],
   "recommendations": [
-    "IPO 파이프라인 실행률 모니터링 강화"
+    "IPO 가격확정 0건 단기 모니터링 필요"
   ],
-  "validated_at": "2026-06-03T23:29:16.184555+00:00",
+  "validated_at": "2026-06-04T23:04:12.689556+00:00",
   "model": "claude-sonnet-4-6"
 }

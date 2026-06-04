@@ -23,3 +23,4 @@
 {"date": "2026-06-01", "score": 34.4, "composite_score": 34.4, "w1_score": 12, "w2_score": 30, "w3_score": 12, "w4_score": 80, "grade": "GREEN", "validation_passed": true}
 {"date": "2026-06-02", "score": 34.4, "composite_score": 34.4, "w1_score": 12, "w2_score": 30, "w3_score": 12, "w4_score": 80, "grade": "GREEN", "validation_passed": true}
 {"date": "2026-06-03", "score": 34.4, "composite_score": 34.4, "w1_score": 12, "w2_score": 30, "w3_score": 12, "w4_score": 80, "grade": "GREEN", "validation_passed": true}
+{"date": "2026-06-04", "score": 32.6, "composite_score": 32.6, "w1_score": 5, "w2_score": 30, "w3_score": 12, "w4_score": 80, "grade": "GREEN", "validation_passed": true}
