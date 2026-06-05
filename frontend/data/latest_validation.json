@@ -1,10 +1,10 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 상반기 시장 데이터와 부합하며 장단기 스프레드 정상화, HY스프레드 축소 등 위험선호 환경 반영.",
+  "overall_assessment": "SPY/RSP 괴리 최소화로 시장 균형 신호, 장단기 스프레드 정상화 및 HY스프레드 축소로 위험선호 지속 확인",
   "anomalies": [],
   "recommendations": [
     "IPO 가격확정 0건 모니터링 지속"
   ],
-  "validated_at": "2026-06-05T06:26:31.847702+00:00",
+  "validated_at": "2026-06-05T23:01:35.536003+00:00",
   "model": "claude-sonnet-4-6"
 }
