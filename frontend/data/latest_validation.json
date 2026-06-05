@@ -1,10 +1,10 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 환경과 부합하는 데이터로, 수익률 곡선 정상화·HY스프레드 축소·IPO 회복세가 위험선호 분위기를 반영함",
+  "overall_assessment": "2025년 상반기 시장 데이터와 부합하며 장단기 스프레드 정상화, HY스프레드 축소 등 위험선호 환경 반영.",
   "anomalies": [],
   "recommendations": [
-    "IPO 가격확정 0건 단기 모니터링 필요"
+    "IPO 가격확정 0건 모니터링 지속"
   ],
-  "validated_at": "2026-06-04T23:04:12.689556+00:00",
+  "validated_at": "2026-06-05T06:26:31.847702+00:00",
   "model": "claude-sonnet-4-6"
 }
