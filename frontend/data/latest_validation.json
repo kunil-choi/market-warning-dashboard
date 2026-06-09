@@ -1,10 +1,12 @@
 {
   "validation_passed": true,
-  "overall_assessment": "SPY/RSP 괴리율 최소화로 시장 균형 확인, 장단기 스프레드 정상화 및 HY 스프레드 축소로 위험선호 환경 유효",
-  "anomalies": [],
-  "recommendations": [
-    "IPO 가격확정 0건 모니터링 지속"
+  "overall_assessment": "전반적으로 현재 시장 상황과 부합하며, RSP>SPY는 중소형주 강세를 반영하고 HY스프레드 축소는 위험선호 심리를 나타냄",
+  "anomalies": [
+    "가격확정건수 0건으로 IPO시장 일시 소강"
   ],
-  "validated_at": "2026-06-08T23:09:43.981094+00:00",
+  "recommendations": [
+    "TIPS 2.21% 기반 기대인플레이션 재확인 필요"
+  ],
+  "validated_at": "2026-06-09T23:14:50.694055+00:00",
   "model": "claude-sonnet-4-6"
 }
