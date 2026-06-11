@@ -1,7 +1,7 @@
 {
   "composite_score": 43.4,
   "grade": "YELLOW",
-  "timestamp": "2026-06-10T23:21:07.406634+00:00",
+  "timestamp": "2026-06-11T23:17:38.227836+00:00",
   "w1_score": 30,
   "w2_score": 45,
   "w3_score": 12,
@@ -9,23 +9,23 @@
   "w1": {
     "score": 30,
     "grade": "GREEN",
-    "spy_ytd": 6.67,
-    "rsp_ytd": 8.28,
-    "current_spread": -1.61,
+    "spy_ytd": 8.48,
+    "rsp_ytd": 9.96,
+    "current_spread": -1.48,
     "spread_percentile": 38,
-    "rsp_1w_return": -1.3,
+    "rsp_1w_return": -0.51,
     "rsp_is_negative_while_spy_positive": true,
-    "timestamp": "2026-06-10T23:21:02.627343+00:00"
+    "timestamp": "2026-06-11T23:17:33.572261+00:00"
   },
   "w2": {
     "score": 45,
     "grade": "YELLOW",
-    "us10y_yield": 4.53,
+    "us10y_yield": 4.55,
     "us2y_yield": 4.13,
-    "term_spread": 0.4,
-    "tips_10y_real_yield": 2.2,
+    "term_spread": 0.42,
+    "tips_10y_real_yield": 2.21,
     "is_inverted": false,
-    "timestamp": "2026-06-10T23:21:04.367721+00:00"
+    "timestamp": "2026-06-11T23:17:35.017499+00:00"
   },
   "w3": {
     "score": 12,
@@ -37,7 +37,7 @@
     "sloos_source": "FRED",
     "ci_delq_pct": 1.55,
     "ci_delq_source": "fallback",
-    "hy_bps": 278.0,
+    "hy_bps": 280.0,
     "ig_bps": 75.0,
     "hy_change_bps": -44.0,
     "s_bdc": 5,
@@ -49,9 +49,9 @@
       "✅ BDC NAV 할인율 3.5% — 시장이 사모 마크 신뢰",
       "📢 C&I 대출 긴축 8.1% — 소폭 긴축",
       "✅ C&I 연체율 1.55% — 정상 범위",
-      "📊 HY 스프레드 278 bps — 정상 (후행 보조)"
+      "📊 HY 스프레드 280 bps — 정상 (후행 보조)"
     ],
-    "timestamp": "2026-06-10T23:21:07.119953+00:00"
+    "timestamp": "2026-06-11T23:17:38.022313+00:00"
   },
   "w4": {
     "score": 80,
@@ -78,7 +78,7 @@
         "valuation_bn": 1800,
         "status": "상장완료",
         "active_date": "2026-05-20",
-        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-10",
+        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-11",
         "filed_date": "2026-05-20",
         "listed_date": "2026-06-12",
         "ticker": "CBRS"
@@ -114,16 +114,18 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-10T23:21:07.406620+00:00"
+    "timestamp": "2026-06-11T23:17:38.227803+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "2025년 초 시장 데이터와 부합하며 균등가중(RSP) 아웃퍼폼, 정상 장단기스프레드, HY스프레드 축소 등 위험선호 환경 반영",
-    "anomalies": [],
-    "recommendations": [
-      "IPO 가격확정 0건 모니터링 지속"
+    "overall_assessment": "2025년 초 시장 데이터와 전반적으로 일치하며 RSP>SPY는 동일가중 강세, 장단기 정상화, HY스프레드 축소로 위험선호 환경 반영",
+    "anomalies": [
+      "가격확정건수 0은 IPO활동 저조 주의"
     ],
-    "validated_at": "2026-06-10T23:21:14.221553+00:00",
+    "recommendations": [
+      "IPO파이프라인 대비 실제 확정건수 모니터링 강화"
+    ],
+    "validated_at": "2026-06-11T23:17:45.244205+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
