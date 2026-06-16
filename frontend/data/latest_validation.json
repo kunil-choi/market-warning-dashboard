@@ -1,12 +1,14 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 데이터와 전반적으로 일치하며 정상 범위 내 수치 확인",
+  "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 양호",
   "anomalies": [
-    "가격확정건수 0건으로 IPO 활동 일시 저조"
+    "RSP>SPY 괴리 소폭 역전(동일가중 초과)",
+    "IPO 가격확정 0건으로 시장 관망세"
   ],
   "recommendations": [
-    "IPO 파이프라인 대비 확정건수 추이 모니터링 지속"
+    "HY스프레드 -31bps 급축소 배경 확인 필요",
+    "IPO 파이프라인 대비 실행률 모니터링"
   ],
-  "validated_at": "2026-06-15T23:30:10.503654+00:00",
+  "validated_at": "2026-06-16T23:19:23.897720+00:00",
   "model": "claude-sonnet-4-6"
 }
