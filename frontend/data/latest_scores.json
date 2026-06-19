@@ -1,7 +1,7 @@
 {
   "composite_score": 37.6,
   "grade": "GREEN",
-  "timestamp": "2026-06-18T23:30:29.139609+00:00",
+  "timestamp": "2026-06-19T22:49:16.210711+00:00",
   "w1_score": 13,
   "w2_score": 40,
   "w3_score": 12,
@@ -9,13 +9,13 @@
   "w1": {
     "score": 13,
     "grade": "GREEN",
-    "spy_ytd": 9.8,
+    "spy_ytd": 10.09,
     "rsp_ytd": 10.07,
-    "current_spread": -0.27,
+    "current_spread": 0.02,
     "spread_percentile": 38,
     "rsp_1w_return": 0.1,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-18T23:30:07.208336+00:00"
+    "timestamp": "2026-06-19T22:49:11.185278+00:00"
   },
   "w2": {
     "score": 40,
@@ -25,7 +25,7 @@
     "term_spread": 0.29,
     "tips_10y_real_yield": 2.23,
     "is_inverted": false,
-    "timestamp": "2026-06-18T23:30:16.586171+00:00"
+    "timestamp": "2026-06-19T22:49:12.710919+00:00"
   },
   "w3": {
     "score": 12,
@@ -51,7 +51,7 @@
       "✅ C&I 연체율 1.55% — 정상 범위",
       "📊 HY 스프레드 263 bps — 정상 (후행 보조)"
     ],
-    "timestamp": "2026-06-18T23:30:28.529308+00:00"
+    "timestamp": "2026-06-19T22:49:15.723369+00:00"
   },
   "w4": {
     "score": 80,
@@ -78,7 +78,7 @@
         "valuation_bn": 1800,
         "status": "상장완료",
         "active_date": "2026-05-20",
-        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-18",
+        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-19",
         "filed_date": "2026-05-20",
         "listed_date": "2026-06-12",
         "ticker": "CBRS"
@@ -114,18 +114,16 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-18T23:30:29.139595+00:00"
+    "timestamp": "2026-06-19T22:49:16.210697+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "2025년 중반 시장 데이터와 전반적으로 일치하며, 장단기 스프레드 정상화(+29bp) 및 HY 스프레드 축소(-31bp)는 위험선호 환경을 반영함",
-    "anomalies": [
-      "IPO 가격확정 0건은 일시적 시장 관망 신호"
-    ],
+    "overall_assessment": "SPY/RSP 괴리율 0.02%로 균형적 시장, 장단기스프레드 정상화(+29bp), HY스프레드 축소(-31bp)로 위험선호 확인",
+    "anomalies": [],
     "recommendations": [
-      "IPO 파이프라인 실행률 모니터링 지속"
+      "IPO 가격확정 0건 모니터링 지속"
     ],
-    "validated_at": "2026-06-18T23:30:36.265902+00:00",
+    "validated_at": "2026-06-19T22:49:22.411199+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
