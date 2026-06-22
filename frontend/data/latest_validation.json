@@ -1,10 +1,12 @@
 {
   "validation_passed": true,
-  "overall_assessment": "SPY/RSP 괴리율 0.02%로 균형적 시장, 장단기스프레드 정상화(+29bp), HY스프레드 축소(-31bp)로 위험선호 확인",
-  "anomalies": [],
-  "recommendations": [
-    "IPO 가격확정 0건 모니터링 지속"
+  "overall_assessment": "SPY/RSP 수익률 동조, 금리·스프레드 정상 범위, 데이터 일관성 양호",
+  "anomalies": [
+    "IPO 가격확정 0건으로 시장 활동 저조"
   ],
-  "validated_at": "2026-06-19T22:49:22.411199+00:00",
+  "recommendations": [
+    "IPO 파이프라인 실시간 재확인 권고"
+  ],
+  "validated_at": "2026-06-22T23:18:11.570033+00:00",
   "model": "claude-sonnet-4-6"
 }
