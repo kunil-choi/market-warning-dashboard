@@ -23,7 +23,8 @@
 const DATA_URL    = "./data/latest_scores.json";
 const HISTORY_URL = "./data/history.jsonl";
 
-const WEIGHTS = { w1: 0.25, w2: 0.30, w3: 0.20, w4: 0.25 };
+const WEIGHTS    = { w1: 0.25, w2: 0.30, w3: 0.20, w4: 0.25 };
+const KR_WEIGHTS = { k1: 0.25, k2: 0.30, k3: 0.20, k4: 0.25 };
 
 // Fix10: 가중치 재설계
 const STATUS_WEIGHT = {
@@ -85,6 +86,25 @@ window.addEventListener("resize", () => {
   clearTimeout(window._eqTimer);
   window._eqTimer = setTimeout(equalizeCardHeights, 150);
 });
+
+/* ── 탭 전환 (🇺🇸 / 🇰🇷) ─────────────────────────────────── */
+function switchTab(tab) {
+  const usSection  = document.getElementById("us-section");
+  const krSection  = document.getElementById("kr-section");
+  const usBtnFlag  = document.getElementById("tab-us");
+  const krBtnFlag  = document.getElementById("tab-kr");
+  if (tab === "us") {
+    usSection.style.display = "";
+    krSection.style.display = "none";
+    usBtnFlag.classList.add("tab-active");
+    krBtnFlag.classList.remove("tab-active");
+  } else {
+    usSection.style.display = "none";
+    krSection.style.display = "";
+    usBtnFlag.classList.remove("tab-active");
+    krBtnFlag.classList.add("tab-active");
+  }
+}
 
 /* ── 플립 ────────────────────────────────────────────────── */
 function toggleFlip(prefix) {
@@ -1012,6 +1032,67 @@ function renderComposite(data) {
   renderWarningBars(scores);
 }
 
+/* ── 한국 종합점수 카드 렌더 ────────────────────────────────── */
+function renderKrComposite(data) {
+  const comp  = data.kr_composite_score ?? 0;
+  const grade = data.kr_grade ?? "GREEN";
+
+  drawScoreRing("kr-composite-ring", comp);
+
+  const numEl = document.getElementById("kr-composite-number");
+  if (numEl) { numEl.textContent = comp.toFixed(1); numEl.style.color = scoreColor(comp); }
+
+  const cardEl = document.getElementById("kr-composite-card");
+  if (cardEl) cardEl.className = `composite-card grade-${grade}`;
+
+  const labelEl = document.getElementById("kr-overall-label");
+  if (labelEl) {
+    const labels = { RED: "🚨 위험 — 한국 시장 복합 위기 신호", YELLOW: "⚠️ 경계 — 한국 주요 지표 이상 감지", GREEN: "✅ 안정 — 한국 시장 위험 낮음" };
+    labelEl.textContent = labels[grade] ?? "—";
+    labelEl.style.color = scoreColor(comp);
+  }
+
+  const recEl = document.getElementById("kr-action-rec");
+  if (recEl) {
+    if      (comp >= 70) recEl.textContent = "한국 주식 비중 즉시 점검. 코스피 위험자산 축소 및 방어 포지션 구축 권장.";
+    else if (comp >= 40) recEl.textContent = "코스피 지표 모니터링 강화. 신규 한국 주식 진입 시 신중한 접근 요구.";
+    else                 recEl.textContent = "한국 시장 전반적으로 안정적. 기존 전략 유지하되 PF·금리 지표 주시.";
+  }
+
+  const sigBadge = document.getElementById("kr-algo-signal-badge");
+  const sigDesc  = document.getElementById("kr-algo-signal-desc");
+  if (sigBadge && sigDesc) {
+    if      (comp >= 70) { sigBadge.textContent = "RISK ON";  sigBadge.style.background = "#ef4444"; sigDesc.textContent = "한국 위험 경보 — 방어적 포지션 전환"; }
+    else if (comp >= 40) { sigBadge.textContent = "CAUTION";  sigBadge.style.background = "#f59e0b"; sigDesc.textContent = "한국 경계 모드 — 선별적 포지션 관리"; }
+    else                 { sigBadge.textContent = "SAFE";     sigBadge.style.background = "#10b981"; sigDesc.textContent = "한국 안전 모드 — 정상적 시장 환경"; }
+  }
+
+  const hedgeEl = document.getElementById("kr-hedge-rec");
+  if (hedgeEl) {
+    if      (comp >= 70) hedgeEl.textContent = "💼 헤지 권고: 원화 약세 헤지 / 코스피 인버스 ETF / 국내 채권 비중 확대";
+    else if (comp >= 40) hedgeEl.textContent = "💼 부분 헤지: 한국 포트폴리오 10~20%를 현금·채권으로 전환 고려";
+    else                 hedgeEl.textContent = "💼 헤지 불필요: 현재 한국 시장 환경 안정적";
+  }
+
+  // 한국 경고 바
+  const container = document.getElementById("kr-warning-bars");
+  if (container) {
+    const items = [
+      { key: "k1", label: "선도주" }, { key: "k2", label: "국고채" },
+      { key: "k3", label: "PF" },     { key: "k4", label: "공모주" },
+    ];
+    container.innerHTML = items.map(({ key, label }) => {
+      const s   = data[key]?.score ?? 0;
+      const col = scoreColor(s);
+      return `<div class="warning-bar-item">
+        <span class="warning-bar-label">${label}</span>
+        <div class="warning-bar-track"><div class="warning-bar-fill" style="width:${s}%;background:${col}"></div></div>
+        <span class="warning-bar-val" style="color:${col}">${s}</span>
+      </div>`;
+    }).join("");
+  }
+}
+
 /* ── 개별 카드 렌더 ──────────────────────────────────────── */
 function renderCard(prefix, scoreObj, rawObj) {
   const score = scoreObj?.score ?? 0;
@@ -1184,11 +1265,17 @@ async function init() {
     renderCard(prefix, data[prefix] ?? {score: 0}, data[prefix] ?? {});
   });
 
+  // 한국 종합점수 카드
+  renderKrComposite(data);
+
   // 히스토리 차트
   await renderHistoryChart();
 
   // 카드 높이 균등화
   setTimeout(equalizeCardHeights, 100);
+
+  // 탭 초기화: 기본 미국 탭 표시
+  switchTab("us");
 }
 
 document.addEventListener("DOMContentLoaded", init);
