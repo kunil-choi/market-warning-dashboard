@@ -87,19 +87,19 @@ def collect_k1_data() -> dict:
 
         # 상위 5 종목 비중: 삼성전자(005930.KS), SK하이닉스, LG에너지솔루션, 삼성바이오, 현대차
         top5_tickers = ["005930.KS", "000660.KS", "373220.KS", "207940.KS", "005380.KS"]
-        top5_caps_usd = []
+        # yfinance 한국 종목 market_cap은 KRW 단위로 반환됨 → KRW로 통일해서 비교
+        kospi_cap_krw = KR_MARKET_CAP_TR * 1e12  # 2,200조원 → KRW
+        top5_caps_krw = []
         for t in top5_tickers:
             try:
                 info = yf.Ticker(t).fast_info
                 mc = getattr(info, "market_cap", 0) or 0
-                top5_caps_usd.append(mc)
+                top5_caps_krw.append(mc)
             except Exception:
-                top5_caps_usd.append(0)
+                top5_caps_krw.append(0)
 
-        # yfinance 시총은 USD 기준 → 코스피 전체 시총도 USD로 환산해서 비교
-        kospi_cap_usd = KR_MARKET_CAP_TR * 1e12 / 1350
-        top5_sum_usd = sum(top5_caps_usd)
-        top5_weight = round(top5_sum_usd / kospi_cap_usd * 100, 1) if kospi_cap_usd > 0 and top5_sum_usd > 0 else 38.5
+        top5_sum_krw = sum(top5_caps_krw)
+        top5_weight = round(top5_sum_krw / kospi_cap_krw * 100, 1) if kospi_cap_krw > 0 and top5_sum_krw > 0 else 38.5
 
         # 동일가중 프록시: KODEX 200 ETF (069500.KS)
         kodex = yf.Ticker("069500.KS")
@@ -343,4 +343,5 @@ def collect_korea_data() -> dict:
         "kr_grade":           kr_grade,
         "k1": k1, "k2": k2, "k3": k3, "k4": k4,
     }
+
 
