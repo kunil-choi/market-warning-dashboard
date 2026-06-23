@@ -562,7 +562,7 @@ function buildFrontContent(prefix, score, raw) {
       <div class="front-metrics-block">
         <div class="front-metric-row">
           <span class="front-metric-label">부동산 PF 연체율 <span style="font-size:0.65rem;color:#64748b">주</span></span>
-          <span class="front-metric-val ${pfColor}">${pfDelq != null ? pfDelq.toFixed(2)+'%' : '—'}${pfDate ? \` <span style="font-size:0.65rem;color:#64748b">(${pfDate})</span>\` : ''}</span>
+          <span class="front-metric-val ${pfColor}">${pfDelq != null ? pfDelq.toFixed(2)+'%' : '—'}${pfDate ? ' ('+pfDate+')' : ''}</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">메자닌 펀드 할인율 <span style="font-size:0.65rem;color:#64748b">주</span></span>
@@ -607,45 +607,46 @@ function buildFrontContent(prefix, score, raw) {
       return st !== "상장완료" && st !== "Trading";
     });
 
-    let ipoHtml = filteredIpo.length ? \`
-      <div class="ipo-table-wrapper">
-        <table class="ipo-table">
-          <thead><tr><th>기업</th><th>공모규모</th><th>상태</th></tr></thead>
-          <tbody>\${filteredIpo.slice(0,4).map(ipo => {
-            const val = (ipo.valuation_bn || 0);
-            const st  = ipo.status || "검토중";
-            const cls = st === "가격확정" ? "status-가격확정" : st === "제출완료" ? "status-제출완료" : "status-검토중";
-            return \`<tr>
-              <td style="font-weight:600">\${ipo.company||'—'}</td>
-              <td style="font-family:monospace">\${val>=1000?(val/1000).toFixed(1)+'조':''+val+'B'}</td>
-              <td><span class="status-badge \${cls}">\${st}</span></td>
-            </tr>\`;
-          }).join('')}</tbody>
-        </table>
-      </div>\` : "<p style='font-size:0.74rem;color:#64748b'>표시할 공모주 없음</p>";
+    let ipoRows = "";
+    filteredIpo.slice(0, 4).forEach(function(ipo) {
+      const val = ipo.valuation_bn || 0;
+      const st  = ipo.status || "검토중";
+      const cls = st === "가격확정" ? "status-가격확정" : st === "제출완료" ? "status-제출완료" : "status-검토중";
+      const valStr = val >= 1000 ? (val/1000).toFixed(1) + "조" : val + "B";
+      ipoRows += "<tr><td style='font-weight:600'>" + (ipo.company||"—") + "</td><td style='font-family:monospace'>" + valStr + "</td><td><span class='status-badge " + cls + "'>" + st + "</span></td></tr>";
+    });
+    let ipoHtml = filteredIpo.length
+      ? "<div class='ipo-table-wrapper'><table class='ipo-table'><thead><tr><th>기업</th><th>공모규모</th><th>상태</th></tr></thead><tbody>" + ipoRows + "</tbody></table></div>"
+      : "<p style='font-size:0.74rem;color:#64748b'>표시할 공모주 없음</p>";
 
-    return \`
+    const ratioClass = ratio>=0.40 ? "val-red" : ratio>=0.20 ? "val-orange" : ratio>=0.10 ? "val-yellow" : "val-green";
+    const totalValStr = totalVal >= 1 ? totalVal.toFixed(1) + "조" : totalVal.toFixed(0) + "B";
+    const situationHtml = alerts.length
+      ? `<div class="front-situation ${sitColor}">${alerts[0]}</div>`
+      : `<div class="front-situation ${sitColor}">${sitText}</div>`;
+
+    return `
       <div class="front-metrics-block">
         <div class="front-metric-row">
           <span class="front-metric-label">가중 파이프라인</span>
-          <span class="front-metric-val \${ratio>=0.40?'val-red':ratio>=0.20?'val-orange':ratio>=0.10?'val-yellow':'val-green'}">\${totalVal>=1?(totalVal).toFixed(1)+'조':totalVal.toFixed(0)+'B'}</span>
+          <span class="front-metric-val ${ratioClass}">${totalValStr}</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">코스피 시총 대비</span>
-          <span class="front-metric-val \${ratio>=0.40?'val-red':ratio>=0.20?'val-orange':ratio>=0.10?'val-yellow':'val-green'}">\${ratio.toFixed(4)}%</span>
+          <span class="front-metric-val ${ratioClass}">${ratio.toFixed(4)}%</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">가격확정 건수</span>
-          <span class="front-metric-val \${priced>0?'val-red':'val-green'}">\${priced}건</span>
+          <span class="front-metric-val ${priced>0?'val-red':'val-green'}">${priced}건</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">제출완료 건수</span>
-          <span class="front-metric-val \${filed>0?'val-orange':'val-green'}">\${filed}건</span>
+          <span class="front-metric-val ${filed>0?'val-orange':'val-green'}">${filed}건</span>
         </div>
       </div>
-      \${ipoHtml}
-      \${alerts.length ? \`<div class="front-situation \${sitColor}">\${alerts[0]}</div>\` : \`<div class="front-situation \${sitColor}">\${sitText}</div>\`}
-      <div class="front-advice">💡 \${advice}</div>\`;
+      ${ipoHtml}
+      ${situationHtml}
+      <div class="front-advice">💡 ${advice}</div>`;
   }
 
   return "";
