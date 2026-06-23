@@ -555,8 +555,6 @@ function buildFrontContent(prefix, score, raw) {
     const pfDate   = raw?.pf_update_date      ?? "";
     const kbdcDisc = raw?.kbdc_discount_pct   ?? null;
     const dsrRatio = raw?.dsr_avg_pct         ?? null;
-    const pfAlert  = raw?.pf_gate_news        ?? null;
-    const hasAlert = pfAlert?.has_event        ?? false;
 
     let sitColor = "GREEN", sitText = "";
     if      (pfDelq >= 5.0 || (kbdcDisc != null && kbdcDisc >= 20)) {
@@ -591,10 +589,6 @@ function buildFrontContent(prefix, score, raw) {
         <div class="front-metric-row">
           <span class="front-metric-label">가계 DSR 비율 <span style="font-size:0.65rem;color:#64748b">보조</span></span>
           <span class="front-metric-val ${dsrColor}">${dsrRatio != null ? dsrRatio.toFixed(1)+'%' : '—'}</span>
-        </div>
-        <div class="front-metric-row">
-          <span class="front-metric-label">PF 환매 제한 뉴스 <span style="font-size:0.65rem;color:#64748b">AI</span></span>
-          <span class="front-metric-val ${hasAlert?'val-red':'val-green'}">${hasAlert?'🚨 발생':'✅ 미감지'}</span>
         </div>
       </div>
       <div class="front-situation ${sitColor}">${sitText}</div>
@@ -873,7 +867,6 @@ function buildBackContent(prefix, score, raw) {
           <div class="back-metric"><span class="back-label">부동산 PF 연체율</span><span class="back-value">금융감독원 공시 부동산 프로젝트파이낸싱 연체율. 1.5% 미만 = 정상 / 3% 이상 = 위험.</span></div>
           <div class="back-metric"><span class="back-label">메자닌 펀드 할인율</span><span class="back-value">사모 부동산 펀드·메자닌 채권 펀드의 기준가 대비 실거래 할인율. 사모크레딧 BDC 개념 유사.</span></div>
           <div class="back-metric"><span class="back-label">가계 DSR 비율</span><span class="back-value">연간 원리금 상환액 ÷ 연소득. 40% 이상 = 고위험 차주 비중 증가. 금리 상승 시 직접 충격.</span></div>
-          <div class="back-metric"><span class="back-label">PF 환매 제한 뉴스</span><span class="back-value">Claude AI 웹검색으로 최근 한국 부동산 PF 환매 제한·게이팅 뉴스 탐지.</span></div>
         </div>
         <div class="back-section">
           <h4>📌 위험 기준</h4>
@@ -885,7 +878,7 @@ function buildBackContent(prefix, score, raw) {
         <div class="back-section">
           <h4>🔢 점수 산출</h4>
           <div class="back-formula">
-            <p>PF 연체율 <strong>35%</strong> + 메자닌 할인율 <strong>25%</strong> + DSR 비율 <strong>20%</strong> + 뉴스 이벤트 <strong>가산(최대 20점)</strong></p>
+            <p>PF 연체율 <strong>45%</strong> + 메자닌 할인율 <strong>30%</strong> + DSR 비율 <strong>25%</strong></p>
           </div>
         </div>
       </div>`;
@@ -1279,3 +1272,4 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
