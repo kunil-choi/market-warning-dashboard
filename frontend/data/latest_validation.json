@@ -1,12 +1,12 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 환경과 부합하며 데이터 일관성 확인됨",
+  "overall_assessment": "2025년 중반 시장 환경과 부합하며 주요 지표 정상 범위 내 위치",
   "anomalies": [
-    "가격확정건수 0건으로 IPO활동 일시 정체"
+    "HY스프레드 61bps 급감은 단기 이상치 가능성"
   ],
   "recommendations": [
-    "IPO파이프라인 대비 확정건수 추이 모니터링"
+    "HY변화 재확인 필요"
   ],
-  "validated_at": "2026-06-23T06:55:28.110212+00:00",
+  "validated_at": "2026-06-23T07:40:38.083803+00:00",
   "model": "claude-sonnet-4-6"
 }
