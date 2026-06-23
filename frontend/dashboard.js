@@ -428,19 +428,31 @@ function buildFrontContent(prefix, score, raw) {
     else if (score >= 40) advice = "📌 IPO 공모 선별 참여. 상장 초기 변동성 확대 가능성 감안하여 분할 매수 전략 적용.";
     else                  advice = "📌 IPO 시장 정상 수준. 우량 IPO 공모 참여 가능.";
 
+    // 상장완료 제외한 파이프라인 기업 테이블
+    const filteredIpoW4 = ipoList.filter(ipo => ipo.status !== "상장완료" && ipo.status !== "Trading");
+    let ipoRowsW4 = "";
+    filteredIpoW4.slice(0, 4).forEach(function(ipo) {
+      const val = ipo.valuation_bn || 0;
+      const st  = ipo.status || "검토중";
+      const cls = st === "가격확정" ? "status-가격확정" : st === "제출완료" ? "status-제출완료" : "status-검토중";
+      const valStr = val >= 1000 ? "$" + (val/1000).toFixed(1) + "T" : "$" + val + "B";
+      ipoRowsW4 += "<tr><td style='font-weight:600'>" + (ipo.company||"—") + "</td><td style='font-family:monospace'>" + valStr + "</td><td><span class='status-badge " + cls + "'>" + st + "</span></td></tr>";
+    });
+    const ipoHtmlW4 = filteredIpoW4.length
+      ? "<div class='ipo-table-wrapper'><table class='ipo-table'><thead><tr><th>기업</th><th>규모</th><th>상태</th></tr></thead><tbody>" + ipoRowsW4 + "</tbody></table></div>"
+      : "<p style='font-size:0.74rem;color:#64748b'>표시할 IPO 없음</p>";
+
+    const ratioColorW4 = ratio>=0.45?'val-red':ratio>=0.25?'val-orange':ratio>=0.15?'val-yellow':'val-green';
+
     return `
       <div class="front-metrics-block">
         <div class="front-metric-row">
           <span class="front-metric-label">가중 파이프라인</span>
-          <span class="front-metric-val ${ratio>=0.45?'val-red':ratio>=0.25?'val-orange':ratio>=0.15?'val-yellow':'val-green'}">$${totalVal.toFixed(0)}B</span>
+          <span class="front-metric-val ${ratioColorW4}">$${totalVal.toFixed(0)}B</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">시총 대비 비율</span>
-          <span class="front-metric-val ${ratio>=0.45?'val-red':ratio>=0.25?'val-orange':ratio>=0.15?'val-yellow':'val-green'}">${ratio.toFixed(4)}%</span>
-        </div>
-        <div class="front-metric-row">
-          <span class="front-metric-label">기준 시총</span>
-          <span class="front-metric-val val-green">$${(mktCap/1000).toFixed(0)}조</span>
+          <span class="front-metric-val ${ratioColorW4}">${ratio.toFixed(4)}%</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">가격확정 건수</span>
@@ -451,6 +463,7 @@ function buildFrontContent(prefix, score, raw) {
           <span class="front-metric-val ${filed>0?'val-orange':'val-green'}">${filed}건</span>
         </div>
       </div>
+      ${ipoHtmlW4}
       ${alerts.length ? `<div class="front-situation ${sitColor}">${alerts[0]}</div>` : `<div class="front-situation ${sitColor}">${sitText}</div>`}
       <div class="front-advice">💡 ${advice}</div>`;
   }
