@@ -9,12 +9,9 @@ K4: 대형 공모주 유동성  (수동 관리)
 """
 
 import logging
-import re
-import json
 from datetime import datetime, timezone, date
 
 import yfinance as yf
-import anthropic
 
 from backend.data_pipeline.fred_client import get_latest_value
 
@@ -90,20 +87,19 @@ def collect_k1_data() -> dict:
 
         # 상위 5 종목 비중: 삼성전자(005930.KS), SK하이닉스, LG에너지솔루션, 삼성바이오, 현대차
         top5_tickers = ["005930.KS", "000660.KS", "373220.KS", "207940.KS", "005380.KS"]
-        top5_caps = []
-        total_kospi_cap = 0
+        top5_caps_usd = []
         for t in top5_tickers:
             try:
                 info = yf.Ticker(t).fast_info
                 mc = getattr(info, "market_cap", 0) or 0
-                top5_caps.append(mc)
-                total_kospi_cap += mc
+                top5_caps_usd.append(mc)
             except Exception:
-                top5_caps.append(0)
+                top5_caps_usd.append(0)
 
-        # 코스피 전체 시총으로 나누기 (근사: KR_MARKET_CAP_TR × 1e12 KRW, 환율 1350 적용)
+        # yfinance 시총은 USD 기준 → 코스피 전체 시총도 USD로 환산해서 비교
         kospi_cap_usd = KR_MARKET_CAP_TR * 1e12 / 1350
-        top5_weight = round(sum(top5_caps) / kospi_cap_usd * 100, 1) if kospi_cap_usd > 0 else 38.5
+        top5_sum_usd = sum(top5_caps_usd)
+        top5_weight = round(top5_sum_usd / kospi_cap_usd * 100, 1) if kospi_cap_usd > 0 and top5_sum_usd > 0 else 38.5
 
         # 동일가중 프록시: KODEX 200 ETF (069500.KS)
         kodex = yf.Ticker("069500.KS")
@@ -206,55 +202,21 @@ def collect_k2_data() -> dict:
 
 # ── K3: 한국 PF & 사모펀드 위험 + 뉴스검색 ──────────────
 
-def search_kr_pf_news() -> dict:
-    """Claude AI 웹검색으로 한국 부동산 PF·사모펀드 환매 제한 뉴스 탐지"""
-    try:
-        client = anthropic.Anthropic()
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=512,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            messages=[{
-                "role": "user",
-                "content": (
-                    "Search for recent news (within 3 months) about: "
-                    "1) Korean real estate PF (부동산 PF) delinquency or default crisis 2025 2026 "
-                    "2) Korean private fund (사모펀드) redemption suspension or gating 2025 2026 "
-                    "3) Korean construction company default or workout 2025 2026. "
-                    "Return ONLY JSON: "
-                    "{\"has_event\": bool, "
-                    "\"risk_level\": \"none\"|\"low\"|\"medium\"|\"high\", "
-                    "\"events\": [max 3 brief descriptions in Korean], "
-                    "\"summary\": \"one sentence in Korean\"}"
-                )
-            }],
-        )
-        full_text = " ".join(b.text for b in response.content if hasattr(b, "text"))
-        match = re.search(r"\{.*\}", full_text, re.S)
-        if match:
-            result = json.loads(match.group(0))
-            bump = {"none": 0, "low": 5, "medium": 15, "high": 25}.get(result.get("risk_level","none"), 0)
-            return {**result, "risk_bump": bump}
-    except Exception as e:
-        logger.warning("K3 뉴스 검색 실패: %s", e)
-    return {"has_event": False, "risk_level": "none", "events": [], "summary": "검색 불가", "risk_bump": 0}
-
 
 def collect_k3_data() -> dict:
     logger.info("K3 사모펀드 & PF 위험 수집 시작")
 
-    pf_news = search_kr_pf_news()
     pf_delq = PF_DELINQUENCY_PCT
     kbdc    = KBDC_DISCOUNT_PCT
     dsr     = DSR_AVG_PCT
 
-    # 점수
+    # 점수 (가중치 합계 1.0)
     s_pf   = 100 if pf_delq >= 5 else 70 if pf_delq >= 3 else 40 if pf_delq >= 1.5 else 10
     s_kbdc = 80 if kbdc >= 20 else 50 if kbdc >= 10 else 25 if kbdc >= 5 else 5
     s_dsr  = 70 if dsr >= 50 else 40 if dsr >= 45 else 20 if dsr >= 40 else 5
 
-    score = round(s_pf * 0.35 + s_kbdc * 0.25 + s_dsr * 0.20)
-    score = min(score + pf_news.get("risk_bump", 0), 100)
+    score = round(s_pf * 0.45 + s_kbdc * 0.30 + s_dsr * 0.25)
+    score = min(score, 100)
     grade = "위험" if score >= 70 else "경고" if score >= 55 else "주의" if score >= 40 else "정상"
 
     return {
@@ -264,7 +226,6 @@ def collect_k3_data() -> dict:
         "pf_update_date":      PF_UPDATE_DATE,
         "kbdc_discount_pct":   kbdc,
         "dsr_avg_pct":         dsr,
-        "pf_gate_news":        pf_news,
         "timestamp":           datetime.now(timezone.utc).isoformat(),
     }
 
@@ -382,3 +343,4 @@ def collect_korea_data() -> dict:
         "kr_grade":           kr_grade,
         "k1": k1, "k2": k2, "k3": k3, "k4": k4,
     }
+
