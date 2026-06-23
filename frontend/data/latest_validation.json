@@ -1,10 +1,14 @@
 {
   "validation_passed": true,
-  "overall_assessment": "전반적으로 현재 시장 상황과 부합하며 이상값 없음",
-  "anomalies": [],
-  "recommendations": [
-    "HY스프레드 61bps 급축소 지속 모니터링 필요"
+  "overall_assessment": "RSP>SPY 역전 및 HY스프레드 급축소(-63bps)가 주목되나 전반적 데이터 일관성 양호",
+  "anomalies": [
+    "RSP YTD가 SPY 초과(동일가중 강세)",
+    "HY스프레드 단기 -63bps 급축소 요인 확인 필요"
   ],
-  "validated_at": "2026-06-23T07:52:56.114044+00:00",
+  "recommendations": [
+    "HY스프레드 변화 기간 명확화",
+    "IPO 가격확정 0건 모니터링"
+  ],
+  "validated_at": "2026-06-23T22:27:01.406903+00:00",
   "model": "claude-sonnet-4-6"
 }
