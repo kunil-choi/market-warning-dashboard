@@ -20,11 +20,20 @@
       <div class="subtitle">Global Stock Market Crisis Alert Dashboard</div>
     </div>
   </div>
+  <div class="tab-switcher">
+    <button id="tab-us" class="tab-btn tab-active" onclick="switchTab('us')">
+      <span class="tab-flag">🇺🇸</span><span class="tab-label">미국</span>
+    </button>
+    <button id="tab-kr" class="tab-btn" onclick="switchTab('kr')">
+      <span class="tab-flag">🇰🇷</span><span class="tab-label">한국</span>
+    </button>
+  </div>
   <div id="last-updated" class="last-updated">데이터 로딩 중...</div>
 </header>
 
 <div class="container">
 
+  <div id="us-section">
   <!-- ══════════════════════════════════════════
        STORM BANNER (score >= 80 시 표시)
        ══════════════════════════════════════════ -->
@@ -372,11 +381,184 @@
        HISTORY CHART
        ══════════════════════════════════════════ -->
   <section class="history-section">
-    <div class="section-title">📈 복합 위험 점수 추이 (최근 30일)</div>
+    <div class="section-title">📈 미국 복합 위험 점수 추이 (최근 30일)</div>
     <div class="history-chart-wrapper">
       <canvas id="history-chart"></canvas>
     </div>
   </section>
+  </div><!-- /us-section -->
+
+  <!-- ══════════════════════════════════════════
+       한국 섹션
+       ══════════════════════════════════════════ -->
+  <div id="kr-section" style="display:none">
+
+    <!-- 한국 종합점수 카드 -->
+    <section class="composite-section">
+      <div class="composite-card" id="kr-composite-card">
+        <div class="score-ring-wrapper">
+          <canvas id="kr-composite-ring" width="160" height="160"></canvas>
+          <div class="score-center">
+            <span class="score-number" id="kr-composite-number">—</span>
+            <span class="score-label">/ 100</span>
+          </div>
+        </div>
+        <div class="composite-right">
+          <div class="overall-label" id="kr-overall-label">한국 종합 위험도 계산 중...</div>
+          <div class="action-rec" id="kr-action-rec">데이터를 불러오는 중입니다...</div>
+          <div class="algo-signal-box">
+            <span class="signal-badge" id="kr-algo-signal-badge">—</span>
+            <span class="signal-desc" id="kr-algo-signal-desc"></span>
+          </div>
+          <div class="hedge-rec" id="kr-hedge-rec"></div>
+          <div class="warning-bars" id="kr-warning-bars"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 한국 카드 4장 -->
+    <section class="warnings-section">
+      <div class="warnings-grid">
+
+        <!-- K1 -->
+        <div class="card-flip-wrapper" id="flip-k1" onclick="toggleFlip('k1')">
+          <div class="card-flip-inner">
+            <div class="card-front" id="front-k1">
+              <div class="card-header">
+                <div class="card-header-top">
+                  <span class="card-icon">📉</span>
+                  <div class="card-title-block">
+                    <div class="card-title">K1 · 선도주 압축</div>
+                    <div class="card-subtitle">KOSPI Lead-Stock Compression</div>
+                  </div>
+                </div>
+                <div class="card-header-bottom">
+                  <span class="card-weight-badge" id="weight-k1">가중치 25%</span>
+                  <span class="card-score-badge grade-green" id="score-k1">—</span>
+                </div>
+              </div>
+              <div class="chart-wrapper"><canvas id="bar-k1"></canvas></div>
+              <div class="signals-list" id="signals-k1"></div>
+              <div id="front-body-k1"></div>
+              <div class="flip-hint-btn">해설 보기 <span class="flip-hint-icon">▶</span></div>
+            </div>
+            <div class="card-back" id="back-k1">
+              <div class="back-header">
+                <span class="back-title">📉 선도주 압축(KR) — 지표 해설</span>
+                <button class="flip-btn" onclick="event.stopPropagation();toggleFlip('k1')">◀ 돌아가기</button>
+              </div>
+              <div id="back-body-k1"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- K2 -->
+        <div class="card-flip-wrapper" id="flip-k2" onclick="toggleFlip('k2')">
+          <div class="card-flip-inner">
+            <div class="card-front" id="front-k2">
+              <div class="card-header">
+                <div class="card-header-top">
+                  <span class="card-icon">📊</span>
+                  <div class="card-title-block">
+                    <div class="card-title">K2 · 국고채 감시 &amp; 금리</div>
+                    <div class="card-subtitle">KTB Watchdog &amp; Rates</div>
+                  </div>
+                </div>
+                <div class="card-header-bottom">
+                  <span class="card-weight-badge" id="weight-k2">가중치 30%</span>
+                  <span class="card-score-badge grade-green" id="score-k2">—</span>
+                </div>
+              </div>
+              <div class="chart-wrapper"><canvas id="bar-k2"></canvas></div>
+              <div class="signals-list" id="signals-k2"></div>
+              <div id="front-body-k2"></div>
+              <div class="flip-hint-btn">해설 보기 <span class="flip-hint-icon">▶</span></div>
+            </div>
+            <div class="card-back" id="back-k2">
+              <div class="back-header">
+                <span class="back-title">📊 국고채 &amp; 금리(KR) — 지표 해설</span>
+                <button class="flip-btn" onclick="event.stopPropagation();toggleFlip('k2')">◀ 돌아가기</button>
+              </div>
+              <div id="back-body-k2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- K3 -->
+        <div class="card-flip-wrapper" id="flip-k3" onclick="toggleFlip('k3')">
+          <div class="card-flip-inner">
+            <div class="card-front" id="front-k3">
+              <div class="card-header">
+                <div class="card-header-top">
+                  <span class="card-icon">🏗️</span>
+                  <div class="card-title-block">
+                    <div class="card-title">K3 · 사모펀드 &amp; PF 위험</div>
+                    <div class="card-subtitle">Private Fund &amp; PF Risk</div>
+                  </div>
+                </div>
+                <div class="card-header-bottom">
+                  <span class="card-weight-badge" id="weight-k3">가중치 20%</span>
+                  <span class="card-score-badge grade-green" id="score-k3">—</span>
+                </div>
+              </div>
+              <div class="chart-wrapper"><canvas id="bar-k3"></canvas></div>
+              <div class="signals-list" id="signals-k3"></div>
+              <div id="front-body-k3"></div>
+              <div class="flip-hint-btn">해설 보기 <span class="flip-hint-icon">▶</span></div>
+            </div>
+            <div class="card-back" id="back-k3">
+              <div class="back-header">
+                <span class="back-title">🏗️ 사모펀드 &amp; PF — 지표 해설</span>
+                <button class="flip-btn" onclick="event.stopPropagation();toggleFlip('k3')">◀ 돌아가기</button>
+              </div>
+              <div id="back-body-k3"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- K4 -->
+        <div class="card-flip-wrapper" id="flip-k4" onclick="toggleFlip('k4')">
+          <div class="card-flip-inner">
+            <div class="card-front" id="front-k4">
+              <div class="card-header">
+                <div class="card-header-top">
+                  <span class="card-icon">🏦</span>
+                  <div class="card-title-block">
+                    <div class="card-title">K4 · 대형 공모주 유동성</div>
+                    <div class="card-subtitle">Large-IPO Liquidity (KR)</div>
+                  </div>
+                </div>
+                <div class="card-header-bottom">
+                  <span class="card-weight-badge" id="weight-k4">가중치 25%</span>
+                  <span class="card-score-badge grade-green" id="score-k4">—</span>
+                </div>
+              </div>
+              <div class="chart-wrapper"><canvas id="bar-k4"></canvas></div>
+              <div class="signals-list" id="signals-k4"></div>
+              <div id="front-body-k4"></div>
+              <div class="flip-hint-btn">해설 보기 <span class="flip-hint-icon">▶</span></div>
+            </div>
+            <div class="card-back" id="back-k4">
+              <div class="back-header">
+                <span class="back-title">🏦 대형 공모주(KR) — 지표 해설</span>
+                <button class="flip-btn" onclick="event.stopPropagation();toggleFlip('k4')">◀ 돌아가기</button>
+              </div>
+              <div id="back-body-k4"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="history-section">
+      <div class="section-title">📈 한국 복합 위험 점수 추이 (최근 30일)</div>
+      <div class="history-chart-wrapper">
+        <canvas id="kr-history-chart"></canvas>
+      </div>
+    </section>
+
+  </div><!-- /kr-section -->
 
 </div>
 
