@@ -253,7 +253,6 @@ body {
 
 /* 신호 리스트 */
 .signals-list {
-  flex: 1;
   overflow-y: auto;
   min-height: 0;
 }
@@ -518,3 +517,4 @@ body {
 
 /* ── 한국 섹션 구분선 ────────────────────────────────────── */
 #kr-section .composite-section { margin-top: 1rem; }
+
