@@ -1,7 +1,7 @@
 {
   "composite_score": 44.3,
   "grade": "YELLOW",
-  "timestamp": "2026-06-23T07:40:32.030330+00:00",
+  "timestamp": "2026-06-23T07:52:50.617901+00:00",
   "w1_score": 30,
   "w2_score": 40,
   "w3_score": 24,
@@ -15,7 +15,7 @@
     "spread_percentile": 38,
     "rsp_1w_return": -0.58,
     "rsp_is_negative_while_spy_positive": true,
-    "timestamp": "2026-06-23T07:40:08.250424+00:00"
+    "timestamp": "2026-06-23T07:52:10.878036+00:00"
   },
   "w2": {
     "score": 40,
@@ -25,7 +25,7 @@
     "term_spread": 0.27,
     "tips_10y_real_yield": 2.21,
     "is_inverted": false,
-    "timestamp": "2026-06-23T07:40:09.631351+00:00"
+    "timestamp": "2026-06-23T07:52:12.414131+00:00"
   },
   "w3": {
     "score": 24,
@@ -71,7 +71,7 @@
       "📊 HY 스프레드 266 bps — 정상 (후행 보조)",
       "✅ 실질 환매 제한 이벤트 미감지 (뉴스 검색 불가)"
     ],
-    "timestamp": "2026-06-23T07:40:29.501731+00:00"
+    "timestamp": "2026-06-23T07:52:47.473469+00:00"
   },
   "w4": {
     "score": 80,
@@ -134,7 +134,7 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-23T07:40:29.717651+00:00"
+    "timestamp": "2026-06-23T07:52:47.640331+00:00"
   },
   "kr_composite_score": 24.8,
   "kr_grade": "GREEN",
@@ -145,8 +145,8 @@
     "keqw_ytd": 113.14,
     "current_spread": -22.78,
     "spread_percentile": 20,
-    "top5_weight_pct": 253232.2,
-    "timestamp": "2026-06-23T07:40:31.164493+00:00"
+    "top5_weight_pct": 187.6,
+    "timestamp": "2026-06-23T07:52:49.760074+00:00"
   },
   "k2": {
     "score": 35,
@@ -156,7 +156,7 @@
     "term_spread": 1.54,
     "is_inverted": false,
     "cd91_rate": 3.42,
-    "timestamp": "2026-06-23T07:40:32.030004+00:00"
+    "timestamp": "2026-06-23T07:52:50.617626+00:00"
   },
   "k3": {
     "score": 30,
@@ -165,7 +165,7 @@
     "pf_update_date": "2026-Q1",
     "kbdc_discount_pct": 6.5,
     "dsr_avg_pct": 41.2,
-    "timestamp": "2026-06-23T07:40:32.030225+00:00"
+    "timestamp": "2026-06-23T07:52:50.617816+00:00"
   },
   "k4": {
     "score": 10,
@@ -207,18 +207,16 @@
         "ticker": "443060.KS"
       }
     ],
-    "timestamp": "2026-06-23T07:40:32.030314+00:00"
+    "timestamp": "2026-06-23T07:52:50.617889+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "2025년 중반 시장 환경과 부합하며 주요 지표 정상 범위 내 위치",
-    "anomalies": [
-      "HY스프레드 61bps 급감은 단기 이상치 가능성"
-    ],
+    "overall_assessment": "전반적으로 현재 시장 상황과 부합하며 이상값 없음",
+    "anomalies": [],
     "recommendations": [
-      "HY변화 재확인 필요"
+      "HY스프레드 61bps 급축소 지속 모니터링 필요"
     ],
-    "validated_at": "2026-06-23T07:40:38.083803+00:00",
+    "validated_at": "2026-06-23T07:52:56.114044+00:00",
     "model": "claude-sonnet-4-6"
   }
 }

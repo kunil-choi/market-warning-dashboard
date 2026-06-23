@@ -1,12 +1,10 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 환경과 부합하며 주요 지표 정상 범위 내 위치",
-  "anomalies": [
-    "HY스프레드 61bps 급감은 단기 이상치 가능성"
-  ],
+  "overall_assessment": "전반적으로 현재 시장 상황과 부합하며 이상값 없음",
+  "anomalies": [],
   "recommendations": [
-    "HY변화 재확인 필요"
+    "HY스프레드 61bps 급축소 지속 모니터링 필요"
   ],
-  "validated_at": "2026-06-23T07:40:38.083803+00:00",
+  "validated_at": "2026-06-23T07:52:56.114044+00:00",
   "model": "claude-sonnet-4-6"
 }
