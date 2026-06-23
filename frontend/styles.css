@@ -486,3 +486,35 @@ body {
   font-size: .75rem;
   color: var(--text-muted);
 }
+
+/* ── 탭 전환 버튼 (🇺🇸 / 🇰🇷) ───────────────────────────── */
+.tab-switcher {
+  display: flex;
+  gap: .4rem;
+  align-items: center;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .4rem .85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.tab-btn:hover { border-color: var(--blue); color: var(--text); }
+.tab-btn.tab-active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.tab-flag { font-size: 1.3rem; line-height: 1; }
+.tab-label { font-size: .8rem; }
+
+/* ── 한국 섹션 구분선 ────────────────────────────────────── */
+#kr-section .composite-section { margin-top: 1rem; }
