@@ -466,3 +466,23 @@ body {
   .warnings-grid  { grid-template-columns: 1fr; }
   .site-header h1 { font-size: .95rem; }
 }
+
+/* ── 한국 시장 섹션 타이틀 ──────────────────────────────── */
+.kr-section-title-wrapper {
+  margin: 2rem 0 1rem 0;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(90deg, rgba(0,75,138,0.25) 0%, rgba(205,46,58,0.15) 100%);
+  border: 1px solid #1e3a5f;
+  border-left: 4px solid #3b82f6;
+  border-radius: var(--radius);
+}
+.kr-section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: .2rem;
+}
+.kr-section-sub {
+  font-size: .75rem;
+  color: var(--text-muted);
+}
