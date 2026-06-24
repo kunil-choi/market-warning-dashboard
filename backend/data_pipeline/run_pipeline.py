@@ -124,15 +124,17 @@ def run_pipeline():
 
     try:
         history_entry = {
-            "date":              datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "score":             scores.get("composite_score"),   # dashboard.js / charts.js 호환
-            "composite_score":   scores.get("composite_score"),   # 하위 호환 유지
-            "w1_score":          scores.get("w1_score"),
-            "w2_score":          scores.get("w2_score"),
-            "w3_score":          scores.get("w3_score"),
-            "w4_score":          scores.get("w4_score"),
-            "grade":             scores.get("grade"),
-            "validation_passed": passed,
+            "date":                datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "score":               scores.get("composite_score"),   # dashboard.js / charts.js 호환
+            "composite_score":     scores.get("composite_score"),   # 하위 호환 유지
+            "w1_score":            scores.get("w1_score"),
+            "w2_score":            scores.get("w2_score"),
+            "w3_score":            scores.get("w3_score"),
+            "w4_score":            scores.get("w4_score"),
+            "grade":               scores.get("grade"),
+            "kr_composite_score":  scores.get("kr_composite_score"),
+            "kr_grade":            scores.get("kr_grade"),
+            "validation_passed":   passed,
         }
         _update_history(history_entry)
         logger.info(f"히스토리 업데이트: {HISTORY_JSONL.resolve()}")
