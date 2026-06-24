@@ -1,12 +1,12 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 상반기 시장 데이터와 부합하며 장단기 스프레드 정상화, HY스프레드 축소 등 위험선호 환경 반영",
+  "overall_assessment": "RSP>SPY 괴리는 동일가중 강세 반영, 장단기 정상화(+34bp), HY스프레드 축소(-63bp)로 위험선호 환경 일치",
   "anomalies": [
-    "가격확정건수 0으로 IPO활동 저조"
+    "IPO 가격확정 0건으로 실질 IPO 활동 부재"
   ],
   "recommendations": [
-    "IPO파이프라인 재확인"
+    "IPO 파이프라인 데이터 최신화 확인"
   ],
-  "validated_at": "2026-06-24T04:13:54.908802+00:00",
+  "validated_at": "2026-06-24T22:29:01.233817+00:00",
   "model": "claude-sonnet-4-6"
 }

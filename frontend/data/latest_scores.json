@@ -1,31 +1,31 @@
 {
-  "composite_score": 48.8,
+  "composite_score": 45.8,
   "grade": "YELLOW",
-  "timestamp": "2026-06-24T04:13:48.654727+00:00",
+  "timestamp": "2026-06-24T22:28:54.478014+00:00",
   "w1_score": 30,
-  "w2_score": 55,
+  "w2_score": 45,
   "w3_score": 24,
   "w4_score": 80,
   "w1": {
     "score": 30,
     "grade": "GREEN",
-    "spy_ytd": 8.15,
-    "rsp_ytd": 9.94,
-    "current_spread": -1.79,
+    "spy_ytd": 8.1,
+    "rsp_ytd": 10.72,
+    "current_spread": -2.62,
     "spread_percentile": 38,
-    "rsp_1w_return": -1.49,
+    "rsp_1w_return": -0.46,
     "rsp_is_negative_while_spy_positive": true,
-    "timestamp": "2026-06-24T04:13:21.651763+00:00"
+    "timestamp": "2026-06-24T22:28:25.905251+00:00"
   },
   "w2": {
-    "score": 55,
+    "score": 45,
     "grade": "YELLOW",
-    "us10y_yield": 4.51,
-    "us2y_yield": 4.24,
-    "term_spread": 0.27,
-    "tips_10y_real_yield": 2.28,
+    "us10y_yield": 4.5,
+    "us2y_yield": 4.16,
+    "term_spread": 0.34,
+    "tips_10y_real_yield": 2.29,
     "is_inverted": false,
-    "timestamp": "2026-06-24T04:13:23.077950+00:00"
+    "timestamp": "2026-06-24T22:28:27.435341+00:00"
   },
   "w3": {
     "score": 24,
@@ -37,14 +37,14 @@
     "sloos_source": "FRED",
     "ci_delq_pct": 1.55,
     "ci_delq_source": "fallback",
-    "hy_bps": 265.0,
+    "hy_bps": 271.0,
     "ig_bps": 74.0,
     "hy_change_bps": -63.0,
     "interval_fund_redemption_rate": 95.0,
     "interval_fund_date": "2026-03-31",
     "pik_ratio_pct": 6.5,
     "pik_update_date": "2026-03-31",
-    "clo_bb_bps": 1374.0,
+    "clo_bb_bps": 1380.0,
     "clo_bb_source": "FRED(CCC proxy)",
     "gate_news": {
       "has_gate_event": false,
@@ -67,11 +67,11 @@
       "✅ C&I 연체율 1.55% — 정상 범위",
       "📢 인터벌펀드 환매 충족율 95% — 소폭 지연",
       "⚠️ PIK 이자 비중 6.5% — 현금흐름 압박 신호",
-      "🚨 CLO BB 스프레드 1374 bps — 레버리지론 시장 심각",
-      "📊 HY 스프레드 265 bps — 정상 (후행 보조)",
+      "🚨 CLO BB 스프레드 1380 bps — 레버리지론 시장 심각",
+      "📊 HY 스프레드 271 bps — 정상 (후행 보조)",
       "✅ 실질 환매 제한 이벤트 미감지 (뉴스 검색 불가)"
     ],
-    "timestamp": "2026-06-24T04:13:47.601665+00:00"
+    "timestamp": "2026-06-24T22:28:53.225732+00:00"
   },
   "w4": {
     "score": 80,
@@ -134,17 +134,17 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-24T04:13:47.769260+00:00"
+    "timestamp": "2026-06-24T22:28:53.438995+00:00"
   },
   "kr_composite_score": 30.9,
   "kr_grade": "GREEN",
   "k1": {
     "score": 9,
     "grade": "정상",
-    "kospi_ytd": 92.01,
-    "mom_30d": 5.45,
+    "kospi_ytd": 90.36,
+    "mom_30d": 4.97,
     "top5_weight_pct": 33.2,
-    "timestamp": "2026-06-24T04:13:47.848073+00:00"
+    "timestamp": "2026-06-24T22:28:53.532328+00:00"
   },
   "k2": {
     "score": 58,
@@ -155,7 +155,7 @@
     "term_premium": 1.58,
     "is_inverted": false,
     "cd91_rate": 3.42,
-    "timestamp": "2026-06-24T04:13:48.654390+00:00"
+    "timestamp": "2026-06-24T22:28:54.477701+00:00"
   },
   "k3": {
     "score": 44,
@@ -164,7 +164,7 @@
     "pf_update_date": "2026-Q1",
     "kbdc_discount_pct": 6.5,
     "dsr_avg_pct": 41.2,
-    "timestamp": "2026-06-24T04:13:48.654612+00:00"
+    "timestamp": "2026-06-24T22:28:54.477924+00:00"
   },
   "k4": {
     "score": 10,
@@ -215,18 +215,18 @@
         "ticker": "443060.KS"
       }
     ],
-    "timestamp": "2026-06-24T04:13:48.654710+00:00"
+    "timestamp": "2026-06-24T22:28:54.477998+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "2025년 상반기 시장 데이터와 부합하며 장단기 스프레드 정상화, HY스프레드 축소 등 위험선호 환경 반영",
+    "overall_assessment": "RSP>SPY 괴리는 동일가중 강세 반영, 장단기 정상화(+34bp), HY스프레드 축소(-63bp)로 위험선호 환경 일치",
     "anomalies": [
-      "가격확정건수 0으로 IPO활동 저조"
+      "IPO 가격확정 0건으로 실질 IPO 활동 부재"
     ],
     "recommendations": [
-      "IPO파이프라인 재확인"
+      "IPO 파이프라인 데이터 최신화 확인"
     ],
-    "validated_at": "2026-06-24T04:13:54.908802+00:00",
+    "validated_at": "2026-06-24T22:29:01.233817+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
