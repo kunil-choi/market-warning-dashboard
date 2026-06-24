@@ -26,6 +26,10 @@ KR_10Y_FALLBACK = 2.85
 KR_3Y_FALLBACK  = 2.65
 CD91_FALLBACK   = 3.42
 
+# 한국은행 기준금리 (수동 관리 — 변경 시 업데이트)
+# 2024-10: 3.50% → 2024-11: 3.25% → 2025-01: 3.00% → 2025-02: 2.75% → 2025-08: 2.50%
+KR_BASE_RATE = 2.50
+
 # ── 수동 관리 지표 ────────────────────────────────────────
 # 부동산 PF 연체율 (금융감독원, 2026-Q1)
 PF_DELINQUENCY_PCT   = 2.15
@@ -39,7 +43,15 @@ DSR_AVG_PCT          = 41.2
 KR_IPO_LIST = [
     {
         "company":      "케이뱅크",
-        "valuation_bn": 2.5,   # 조원
+        "valuation_bn": 5.0,   # 조원 (2026년 재추진 목표 시총)
+        "status":       "검토중",
+        "active_date":  "2026-01-01",
+        "listed_date":  None,
+        "ticker":       None,
+    },
+    {
+        "company":      "DN솔루션즈",
+        "valuation_bn": 3.0,   # 조원
         "status":       "검토중",
         "active_date":  "2026-01-01",
         "listed_date":  None,
@@ -69,134 +81,143 @@ KR_MARKET_CAP_TR = 2_200.0  # 코스피 시총 약 2,200조원
 # ── K1: 코스피 선도주 압축 ────────────────────────────────
 
 def collect_k1_data() -> dict:
-    """코스피 시가총액 가중 vs 동일가중 스프레드 측정"""
+    """코스피 선도주 압축 측정
+    수정 근거:
+    - 기존 코드에서 yfinance fast_info.market_cap의 단위 불일치로
+      top5_weight=187.6% 같은 비정상 값이 발생 → top5 계산 제거
+    - 대신 KRX 공시 기반 반기 업데이트값(수동)과 코스피 30일 모멘텀으로 단순화
+    - top5 집중도 임계값: 역사적 정상 30~38%, 주의 38~45%, 위험 45%+
+    """
     logger.info("K1 코스피 선도주 압축 수집 시작")
 
-    # yfinance로 코스피 + 삼성전자(대형주 대표) + KODEX200(동일가중 프록시)
+    # ── 코스피 YTD 및 30일 모멘텀 ──────────────────────────
     try:
-        ks11  = yf.Ticker("^KS11")
+        ks11    = yf.Ticker("^KS11")
         hist_ks = ks11.history(period="1y")
 
-        # 연초 대비 수익률
-        this_year = str(datetime.now().year)
+        this_year  = str(datetime.now().year)
         year_start = hist_ks[hist_ks.index >= f"{this_year}-01-01"]
         if len(year_start) >= 2:
-            kospi_ytd = round((year_start["Close"].iloc[-1] / year_start["Close"].iloc[0] - 1) * 100, 2)
+            kospi_ytd = round(
+                (year_start["Close"].iloc[-1] / year_start["Close"].iloc[0] - 1) * 100, 2
+            )
         else:
             kospi_ytd = 0.0
 
-        # 상위 5 종목 비중: 삼성전자(005930.KS), SK하이닉스, LG에너지솔루션, 삼성바이오, 현대차
-        top5_tickers = ["005930.KS", "000660.KS", "373220.KS", "207940.KS", "005380.KS"]
-        # yfinance 한국 종목 market_cap은 KRW 단위로 반환됨 → KRW로 통일해서 비교
-        kospi_cap_krw = KR_MARKET_CAP_TR * 1e12  # 2,200조원 → KRW
-        top5_caps_krw = []
-        for t in top5_tickers:
-            try:
-                info = yf.Ticker(t).fast_info
-                mc = getattr(info, "market_cap", 0) or 0
-                top5_caps_krw.append(mc)
-            except Exception:
-                top5_caps_krw.append(0)
-
-        top5_sum_krw = sum(top5_caps_krw)
-        top5_weight = round(top5_sum_krw / kospi_cap_krw * 100, 1) if kospi_cap_krw > 0 and top5_sum_krw > 0 else 38.5
-
-        # 동일가중 프록시: KODEX 200 ETF (069500.KS)
-        kodex = yf.Ticker("069500.KS")
-        hist_kodex = kodex.history(period="1y")
-        year_kodex = hist_kodex[hist_kodex.index >= f"{this_year}-01-01"]
-        if len(year_kodex) >= 2:
-            keqw_ytd = round((year_kodex["Close"].iloc[-1] / year_kodex["Close"].iloc[0] - 1) * 100, 2)
+        # 30일 모멘텀 (급락 감지)
+        if len(hist_ks) >= 22:
+            mom_30d = round(
+                (hist_ks["Close"].iloc[-1] / hist_ks["Close"].iloc[-22] - 1) * 100, 2
+            )
         else:
-            keqw_ytd = kospi_ytd * 0.85  # 근사
-
-        spread = round(kospi_ytd - keqw_ytd, 2)
+            mom_30d = 0.0
 
     except Exception as e:
         logger.warning("K1 yfinance 수집 실패, 폴백: %s", e)
-        kospi_ytd   = 8.5
-        keqw_ytd    = 5.2
-        spread      = 3.3
-        top5_weight = 38.5
+        kospi_ytd = 12.8   # 2026-06 추정치
+        mom_30d   = 0.0
 
-    # 백분위 (간이 계산: 역사적 평균 대비)
-    spread_percentile = min(int(abs(spread) / 10 * 100), 95) if spread > 0 else 20
+    # ── TOP5 집중도: KRX 공시 기반 수동 관리값 ────────────
+    # 출처: KRX 시가총액 상위 종목 비중 (반기 업데이트)
+    # 2026-06 기준: 삼성전자14.5%+SK하이닉스7.5%+삼성바이오4.2%+LG엔솔3.9%+현대차3.1% ≈ 33.2%
+    TOP5_WEIGHT_MANUAL = 33.2   # ← 반기마다 수동 업데이트 (KRX 공시 확인)
 
-    # 점수 산출
-    if spread >= 8:
-        s_spread = 80
-    elif spread >= 5:
-        s_spread = 60
-    elif spread >= 3:
-        s_spread = 35
-    elif spread >= 1:
-        s_spread = 15
-    else:
-        s_spread = 5
+    # ── 점수 산출 ──────────────────────────────────────────
+    # top5 집중도 (가중 60%)
+    # 역사적 기준: 정상 <38%, 주의 38~45%, 위험 45%+
+    s_top5 = (
+        80 if TOP5_WEIGHT_MANUAL >= 45 else
+        45 if TOP5_WEIGHT_MANUAL >= 38 else
+        15
+    )
 
-    s_pct    = min(int(spread_percentile * 0.8), 80)
-    s_top5   = 80 if top5_weight >= 45 else 50 if top5_weight >= 40 else 25 if top5_weight >= 30 else 10
+    # 30일 모멘텀 급락 (가중 40%)
+    # -10% 이상 급락이면 위험, -5% 경고, 그 외 정상
+    s_momentum = (
+        80 if mom_30d <= -10 else
+        50 if mom_30d <= -5  else
+        20 if mom_30d <= -2  else
+        0
+    )
 
-    score = round(s_spread * 0.50 + s_pct * 0.30 + s_top5 * 0.20)
+    score = round(s_top5 * 0.60 + s_momentum * 0.40)
     score = min(score, 100)
     grade = "위험" if score >= 70 else "경고" if score >= 55 else "주의" if score >= 40 else "정상"
 
     return {
-        "score":              score,
-        "grade":              grade,
-        "kospi_ytd":          kospi_ytd,
-        "keqw_ytd":           keqw_ytd,
-        "current_spread":     spread,
-        "spread_percentile":  spread_percentile,
-        "top5_weight_pct":    top5_weight,
-        "timestamp":          datetime.now(timezone.utc).isoformat(),
+        "score":             score,
+        "grade":             grade,
+        "kospi_ytd":         kospi_ytd,
+        "mom_30d":           mom_30d,
+        "top5_weight_pct":   TOP5_WEIGHT_MANUAL,
+        "timestamp":         datetime.now(timezone.utc).isoformat(),
     }
 
 
 # ── K2: 국고채 감시 & 금리 ───────────────────────────────
 
 def collect_k2_data() -> dict:
+    """한국 국고채 감시 & 금리
+    수정 근거:
+    - 10년물 4.08%는 한국은행 기준금리(2.5%) 대비 1.58%p 가산 → 재정/인플레 프리미엄
+    - 역사적 기준: 정상 <2.8%, 주의 2.8~3.3%, 경고 3.3~3.8%, 위험 3.8%+
+    - term premium(10Y - 기준금리)도 별도 반영: 1.5%p 이상이면 경고
+    - CD91일물 기준 상향: 3.5% 이상이면 기업 단기조달 부담
+    """
     logger.info("K2 국고채 & 금리 수집 시작")
 
     kr10y = get_latest_value(KR_10Y_SERIES, fallback=KR_10Y_FALLBACK)
     kr3y  = get_latest_value(KR_3Y_SERIES,  fallback=KR_3Y_FALLBACK)
     cd91  = CD91_FALLBACK  # FRED에 CD91일물 없음 → 수동
 
-    term_spread = round(kr10y - kr3y, 2)
-    is_inverted = term_spread < 0
+    term_spread   = round(kr10y - kr3y, 2)
+    is_inverted   = term_spread < 0
+    term_premium  = round(kr10y - KR_BASE_RATE, 2)   # 기준금리 대비 장기프리미엄
 
-    # 점수
-    if kr10y >= 4.0:
-        s_rate = 80
-    elif kr10y >= 3.5:
-        s_rate = 55
-    elif kr10y >= 3.0:
-        s_rate = 30
-    else:
-        s_rate = 10
+    # 10년물 절대금리 점수 (가중 40%)
+    # 역사적 기준: 위험 3.8%+, 경고 3.3~3.8%, 주의 2.8~3.3%, 정상 <2.8%
+    s_rate = (
+        80 if kr10y >= 3.8 else
+        55 if kr10y >= 3.3 else
+        30 if kr10y >= 2.8 else
+        10
+    )
 
-    if is_inverted:
-        s_inv = 80
-    elif term_spread < 0.2:
-        s_inv = 40
-    else:
-        s_inv = 5
+    # term premium (10Y - 기준금리) 점수 (가중 35%)
+    # 1.5%p 이상: 재정/인플레 불안, 경고
+    # 1.0%p 이상: 주의
+    s_premium = (
+        70 if term_premium >= 1.5 else
+        45 if term_premium >= 1.0 else
+        20 if term_premium >= 0.5 else
+        5
+    )
 
-    s_cd = 50 if cd91 >= 4.0 else 25 if cd91 >= 3.5 else 5
+    # CD91일물 점수 (가중 15%)
+    # 3.5% 이상이면 기업 단기조달 부담
+    s_cd = (
+        50 if cd91 >= 4.0 else
+        30 if cd91 >= 3.5 else
+        10
+    )
 
-    score = round(s_rate * 0.40 + s_inv * 0.40 + s_cd * 0.20)
+    # 장단기 역전 보너스 (가중 10%)
+    s_inv = 80 if is_inverted else 40 if term_spread < 0.2 else 5
+
+    score = round(s_rate * 0.40 + s_premium * 0.35 + s_cd * 0.15 + s_inv * 0.10)
     score = min(score, 100)
     grade = "위험" if score >= 70 else "경고" if score >= 55 else "주의" if score >= 40 else "정상"
 
     return {
-        "score":        score,
-        "grade":        grade,
-        "kr10y_yield":  round(kr10y, 2),
-        "kr3y_yield":   round(kr3y,  2),
-        "term_spread":  term_spread,
-        "is_inverted":  is_inverted,
-        "cd91_rate":    cd91,
-        "timestamp":    datetime.now(timezone.utc).isoformat(),
+        "score":         score,
+        "grade":         grade,
+        "kr10y_yield":   round(kr10y, 2),
+        "kr3y_yield":    round(kr3y,  2),
+        "term_spread":   term_spread,
+        "term_premium":  term_premium,
+        "is_inverted":   is_inverted,
+        "cd91_rate":     cd91,
+        "timestamp":     datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -204,16 +225,45 @@ def collect_k2_data() -> dict:
 
 
 def collect_k3_data() -> dict:
+    """한국 PF & 사모펀드 위험
+    수정 근거:
+    - PF 연체율 2.15%: 금감원 공식 경고 기준 1.5% 초과 → 주의 구간 진입
+      (2023년 2.9%에서 위기 본격화, 2024년 4.6% 피크)
+    - DSR 41.2%: 한국은행 거시건전성 위험 임계치 40% 초과 → 가계부채 부담 구간
+    - KBDC 할인율 6.5%: 정상 0~3%, 주의 3~8%, 위험 8%+ (기존과 동일)
+    """
     logger.info("K3 사모펀드 & PF 위험 수집 시작")
 
     pf_delq = PF_DELINQUENCY_PCT
     kbdc    = KBDC_DISCOUNT_PCT
     dsr     = DSR_AVG_PCT
 
-    # 점수 (가중치 합계 1.0)
-    s_pf   = 100 if pf_delq >= 5 else 70 if pf_delq >= 3 else 40 if pf_delq >= 1.5 else 10
-    s_kbdc = 80 if kbdc >= 20 else 50 if kbdc >= 10 else 25 if kbdc >= 5 else 5
-    s_dsr  = 70 if dsr >= 50 else 40 if dsr >= 45 else 20 if dsr >= 40 else 5
+    # PF 연체율 점수 (가중 45%)
+    # 금감원 기준: 1.5%+ 경보, 3.0%+ 위험, 5.0%+ 위기
+    s_pf = (
+        100 if pf_delq >= 5.0 else
+        75  if pf_delq >= 3.0 else
+        55  if pf_delq >= 2.0 else
+        35  if pf_delq >= 1.5 else
+        10
+    )
+
+    # KBDC 할인율 점수 (가중 30%)
+    s_kbdc = (
+        80 if kbdc >= 20 else
+        55 if kbdc >= 10 else
+        35 if kbdc >= 5  else
+        10
+    )
+
+    # 가계 DSR 점수 (가중 25%)
+    # 한국은행 임계치 40% 기준: 40% 초과면 이미 위험 구간
+    s_dsr = (
+        75 if dsr >= 50 else
+        50 if dsr >= 43 else
+        35 if dsr >= 40 else
+        10
+    )
 
     score = round(s_pf * 0.45 + s_kbdc * 0.30 + s_dsr * 0.25)
     score = min(score, 100)
