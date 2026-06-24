@@ -1120,6 +1120,71 @@ function renderCard(prefix, scoreObj, rawObj) {
   if (backEl) backEl.innerHTML = buildBackContent(prefix, score, rawObj);
 }
 
+/* ── 한국 히스토리 차트 ──────────────────────────────────── */
+async function renderKrHistoryChart() {
+  try {
+    const res  = await fetch(HISTORY_URL);
+    const text = await res.text();
+    const rows = text.trim().split("\n").map(l => {
+      try { return JSON.parse(l); } catch { return null; }
+    }).filter(Boolean).filter(r => r.kr_composite_score != null);
+
+    const canvas = document.getElementById("kr-history-chart");
+    if (!canvas) return;
+
+    if (rows.length === 0) {
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#64748b";
+      ctx.font = "13px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("히스토리 데이터 없음", canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    const recent = rows.slice(-30);
+    const labels = recent.map(r => r.date?.slice(5) ?? "");
+    const data   = recent.map(r => r.kr_composite_score ?? 0);
+
+    if (window._krHistChart) window._krHistChart.destroy();
+    window._krHistChart = new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "한국 종합위험점수",
+          data,
+          borderColor: "#a78bfa",
+          backgroundColor: "rgba(167,139,250,0.08)",
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: data.map(v => scoreColor(v)),
+          tension: 0.3,
+          fill: true,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            ticks: { color: "#64748b", font: { size: 10 } },
+            grid:  { color: "#1e3a5f55" },
+          },
+          y: {
+            min: 0, max: 100,
+            ticks: { color: "#64748b", font: { size: 10 } },
+            grid:  { color: "#1e3a5f55" },
+          },
+        },
+      },
+    });
+  } catch (e) {
+    console.warn("한국 히스토리 차트 로드 실패:", e);
+  }
+}
+
 /* ── 히스토리 차트 ───────────────────────────────────────── */
 async function renderHistoryChart() {
   try {
@@ -1276,6 +1341,7 @@ async function init() {
 
   // 히스토리 차트
   await renderHistoryChart();
+  await renderKrHistoryChart();
 
   // 카드 높이 균등화
   setTimeout(equalizeCardHeights, 100);
@@ -1285,4 +1351,5 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
 
