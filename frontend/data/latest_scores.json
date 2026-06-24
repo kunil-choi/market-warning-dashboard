@@ -1,7 +1,7 @@
 {
   "composite_score": 48.8,
   "grade": "YELLOW",
-  "timestamp": "2026-06-23T22:26:54.060686+00:00",
+  "timestamp": "2026-06-24T04:13:48.654727+00:00",
   "w1_score": 30,
   "w2_score": 55,
   "w3_score": 24,
@@ -15,7 +15,7 @@
     "spread_percentile": 38,
     "rsp_1w_return": -1.49,
     "rsp_is_negative_while_spy_positive": true,
-    "timestamp": "2026-06-23T22:26:29.003447+00:00"
+    "timestamp": "2026-06-24T04:13:21.651763+00:00"
   },
   "w2": {
     "score": 55,
@@ -25,7 +25,7 @@
     "term_spread": 0.27,
     "tips_10y_real_yield": 2.28,
     "is_inverted": false,
-    "timestamp": "2026-06-23T22:26:30.506936+00:00"
+    "timestamp": "2026-06-24T04:13:23.077950+00:00"
   },
   "w3": {
     "score": 24,
@@ -71,7 +71,7 @@
       "📊 HY 스프레드 265 bps — 정상 (후행 보조)",
       "✅ 실질 환매 제한 이벤트 미감지 (뉴스 검색 불가)"
     ],
-    "timestamp": "2026-06-23T22:26:49.663689+00:00"
+    "timestamp": "2026-06-24T04:13:47.601665+00:00"
   },
   "w4": {
     "score": 80,
@@ -98,7 +98,7 @@
         "valuation_bn": 1800,
         "status": "상장완료",
         "active_date": "2026-05-20",
-        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-23",
+        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-24",
         "filed_date": "2026-05-20",
         "listed_date": "2026-06-12",
         "ticker": "CBRS"
@@ -134,49 +134,49 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-23T22:26:50.231527+00:00"
+    "timestamp": "2026-06-24T04:13:47.769260+00:00"
   },
-  "kr_composite_score": 24.8,
+  "kr_composite_score": 30.9,
   "kr_grade": "GREEN",
   "k1": {
-    "score": 23,
+    "score": 9,
     "grade": "정상",
-    "kospi_ytd": 111.49,
-    "keqw_ytd": 113.14,
-    "current_spread": -1.65,
-    "spread_percentile": 20,
-    "top5_weight_pct": 187.6,
-    "timestamp": "2026-06-23T22:26:53.204162+00:00"
+    "kospi_ytd": 92.01,
+    "mom_30d": 5.45,
+    "top5_weight_pct": 33.2,
+    "timestamp": "2026-06-24T04:13:47.848073+00:00"
   },
   "k2": {
-    "score": 35,
-    "grade": "정상",
+    "score": 58,
+    "grade": "경고",
     "kr10y_yield": 4.08,
     "kr3y_yield": 2.54,
     "term_spread": 1.54,
+    "term_premium": 1.58,
     "is_inverted": false,
     "cd91_rate": 3.42,
-    "timestamp": "2026-06-23T22:26:54.060404+00:00"
+    "timestamp": "2026-06-24T04:13:48.654390+00:00"
   },
   "k3": {
-    "score": 30,
-    "grade": "정상",
+    "score": 44,
+    "grade": "주의",
     "pf_delinquency_pct": 2.15,
     "pf_update_date": "2026-Q1",
     "kbdc_discount_pct": 6.5,
     "dsr_avg_pct": 41.2,
-    "timestamp": "2026-06-23T22:26:54.060583+00:00"
+    "timestamp": "2026-06-24T04:13:48.654612+00:00"
   },
   "k4": {
     "score": 10,
     "grade": "정상",
-    "total_valuation_tn": 1.51,
-    "pipeline_ratio_pct": 0.0686,
+    "total_valuation_tn": 2.06,
+    "pipeline_ratio_pct": 0.0936,
     "kr_market_cap_tr": 2200.0,
     "filed_count": 0,
     "priced_count": 0,
     "signals": [
-      "🔍 케이뱅크: 검토중 (2.5조 × 0.1)",
+      "🔍 케이뱅크: 검토중 (5.0조 × 0.1)",
+      "🔍 DN솔루션즈: 검토중 (3.0조 × 0.1)",
       "📊 LG CNS: 상장완료 (2.1조 × 0.6)",
       "📊 HD현대마린솔루션: 상장완료 (1.8조 × 0.0)"
     ],
@@ -184,7 +184,15 @@
     "ipo_list": [
       {
         "company": "케이뱅크",
-        "valuation_bn": 2.5,
+        "valuation_bn": 5.0,
+        "status": "검토중",
+        "active_date": "2026-01-01",
+        "listed_date": null,
+        "ticker": null
+      },
+      {
+        "company": "DN솔루션즈",
+        "valuation_bn": 3.0,
         "status": "검토중",
         "active_date": "2026-01-01",
         "listed_date": null,
@@ -207,20 +215,18 @@
         "ticker": "443060.KS"
       }
     ],
-    "timestamp": "2026-06-23T22:26:54.060673+00:00"
+    "timestamp": "2026-06-24T04:13:48.654710+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "RSP>SPY 역전 및 HY스프레드 급축소(-63bps)가 주목되나 전반적 데이터 일관성 양호",
+    "overall_assessment": "2025년 상반기 시장 데이터와 부합하며 장단기 스프레드 정상화, HY스프레드 축소 등 위험선호 환경 반영",
     "anomalies": [
-      "RSP YTD가 SPY 초과(동일가중 강세)",
-      "HY스프레드 단기 -63bps 급축소 요인 확인 필요"
+      "가격확정건수 0으로 IPO활동 저조"
     ],
     "recommendations": [
-      "HY스프레드 변화 기간 명확화",
-      "IPO 가격확정 0건 모니터링"
+      "IPO파이프라인 재확인"
     ],
-    "validated_at": "2026-06-23T22:27:01.406903+00:00",
+    "validated_at": "2026-06-24T04:13:54.908802+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
