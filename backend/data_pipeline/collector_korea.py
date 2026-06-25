@@ -95,8 +95,8 @@ def collect_k1_data() -> dict:
         ks11    = yf.Ticker("^KS11")
         hist_ks = ks11.history(period="1y")
 
-        this_year  = str(datetime.now().year)
-        year_start = hist_ks[hist_ks.index >= f"{this_year}-01-01"]
+        this_year  = datetime.now().year
+        year_start = hist_ks[hist_ks.index.year == this_year]
         if len(year_start) >= 2:
             kospi_ytd = round(
                 (year_start["Close"].iloc[-1] / year_start["Close"].iloc[0] - 1) * 100, 2
@@ -393,5 +393,6 @@ def collect_korea_data() -> dict:
         "kr_grade":           kr_grade,
         "k1": k1, "k2": k2, "k3": k3, "k4": k4,
     }
+
 
 
