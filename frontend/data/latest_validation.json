@@ -1,12 +1,14 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 데이터와 전반적으로 일치하며, 장단기 스프레드 정상화 및 HY 스프레드 축소는 위험선호 환경을 반영함",
+  "overall_assessment": "전반적으로 현실적인 데이터이나 RSP>SPY 역전 및 HY스프레드 급축소(-63bps)는 모니터링 필요",
   "anomalies": [
-    "RSP>SPY 괴리율 역전은 대형주 약세 또는 중소형주 강세 국면 확인 필요"
+    "RSP YTD 10.72% > SPY 8.1% 비정상적 역전",
+    "HY스프레드 단기 -63bps 급축소"
   ],
   "recommendations": [
-    "IPO 가격확정 0건 모니터링 지속"
+    "RSP/SPY 데이터 수집 기간 일치 여부 재확인",
+    "HY변화 기준일 명확화"
   ],
-  "validated_at": "2026-06-25T07:12:07.056049+00:00",
+  "validated_at": "2026-06-25T07:40:17.421737+00:00",
   "model": "claude-sonnet-4-6"
 }
