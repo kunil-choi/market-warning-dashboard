@@ -96,7 +96,15 @@ def collect_k1_data() -> dict:
 
         # YTD: period='ytd' 로 명시적으로 연초~현재 데이터만 가져옴
         hist_ytd = ks11.history(period="ytd")
+        logger.info("K1 hist_ytd 행수=%d", len(hist_ytd))
         if len(hist_ytd) >= 2:
+            ytd_first_date  = str(hist_ytd.index[0].date())
+            ytd_last_date   = str(hist_ytd.index[-1].date())
+            ytd_first_close = round(hist_ytd["Close"].iloc[0], 2)
+            ytd_last_close  = round(hist_ytd["Close"].iloc[-1], 2)
+            logger.info("K1 YTD 기준가: %s=%.2f  현재가: %s=%.2f",
+                        ytd_first_date, ytd_first_close,
+                        ytd_last_date,  ytd_last_close)
             kospi_ytd = round(
                 (hist_ytd["Close"].iloc[-1] / hist_ytd["Close"].iloc[0] - 1) * 100, 2
             )
@@ -393,6 +401,7 @@ def collect_korea_data() -> dict:
         "kr_grade":           kr_grade,
         "k1": k1, "k2": k2, "k3": k3, "k4": k4,
     }
+
 
 
 
