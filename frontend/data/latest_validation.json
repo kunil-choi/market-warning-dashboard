@@ -1,12 +1,12 @@
 {
   "validation_passed": true,
-  "overall_assessment": "RSP>SPY 괴리는 동일가중 강세 반영, 장단기 정상화(+34bp), HY스프레드 축소(-63bp)로 위험선호 환경 일치",
+  "overall_assessment": "RSP>SPY 역전(동일가중 아웃퍼폼), 장단기 정상화(+34bp), HY스프레드 축소(-63bp)로 위험선호 환경 확인",
   "anomalies": [
-    "IPO 가격확정 0건으로 실질 IPO 활동 부재"
+    "가격확정건수 0건으로 IPO시장 실질 활동 미미"
   ],
   "recommendations": [
-    "IPO 파이프라인 데이터 최신화 확인"
+    "IPO파이프라인 대비 실제 확정건수 괴리 모니터링"
   ],
-  "validated_at": "2026-06-24T22:29:01.233817+00:00",
+  "validated_at": "2026-06-25T06:11:16.806213+00:00",
   "model": "claude-sonnet-4-6"
 }
