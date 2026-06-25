@@ -1,31 +1,31 @@
 {
-  "composite_score": 45.8,
-  "grade": "YELLOW",
-  "timestamp": "2026-06-25T07:40:09.760238+00:00",
-  "w1_score": 30,
-  "w2_score": 45,
+  "composite_score": 35.0,
+  "grade": "GREEN",
+  "timestamp": "2026-06-25T22:31:08.127045+00:00",
+  "w1_score": 5,
+  "w2_score": 30,
   "w3_score": 24,
   "w4_score": 80,
   "w1": {
-    "score": 30,
+    "score": 5,
     "grade": "GREEN",
-    "spy_ytd": 8.1,
-    "rsp_ytd": 10.72,
-    "current_spread": -2.62,
+    "spy_ytd": 8.25,
+    "rsp_ytd": 11.44,
+    "current_spread": -3.19,
     "spread_percentile": 38,
-    "rsp_1w_return": -0.46,
-    "rsp_is_negative_while_spy_positive": true,
-    "timestamp": "2026-06-25T07:39:37.771078+00:00"
+    "rsp_1w_return": 1.71,
+    "rsp_is_negative_while_spy_positive": false,
+    "timestamp": "2026-06-25T22:30:46.202746+00:00"
   },
   "w2": {
-    "score": 45,
-    "grade": "YELLOW",
-    "us10y_yield": 4.5,
-    "us2y_yield": 4.16,
-    "term_spread": 0.34,
-    "tips_10y_real_yield": 2.29,
+    "score": 30,
+    "grade": "GREEN",
+    "us10y_yield": 4.41,
+    "us2y_yield": 4.11,
+    "term_spread": 0.3,
+    "tips_10y_real_yield": 2.23,
     "is_inverted": false,
-    "timestamp": "2026-06-25T07:39:39.253735+00:00"
+    "timestamp": "2026-06-25T22:30:47.624343+00:00"
   },
   "w3": {
     "score": 24,
@@ -37,14 +37,14 @@
     "sloos_source": "FRED",
     "ci_delq_pct": 1.55,
     "ci_delq_source": "fallback",
-    "hy_bps": 271.0,
-    "ig_bps": 74.0,
+    "hy_bps": 276.0,
+    "ig_bps": 75.0,
     "hy_change_bps": -63.0,
     "interval_fund_redemption_rate": 95.0,
     "interval_fund_date": "2026-03-31",
     "pik_ratio_pct": 6.5,
     "pik_update_date": "2026-03-31",
-    "clo_bb_bps": 1380.0,
+    "clo_bb_bps": 1381.0,
     "clo_bb_source": "FRED(CCC proxy)",
     "gate_news": {
       "has_gate_event": false,
@@ -67,11 +67,11 @@
       "✅ C&I 연체율 1.55% — 정상 범위",
       "📢 인터벌펀드 환매 충족율 95% — 소폭 지연",
       "⚠️ PIK 이자 비중 6.5% — 현금흐름 압박 신호",
-      "🚨 CLO BB 스프레드 1380 bps — 레버리지론 시장 심각",
-      "📊 HY 스프레드 271 bps — 정상 (후행 보조)",
+      "🚨 CLO BB 스프레드 1381 bps — 레버리지론 시장 심각",
+      "📊 HY 스프레드 276 bps — 정상 (후행 보조)",
       "✅ 실질 환매 제한 이벤트 미감지 (뉴스 검색 불가)"
     ],
-    "timestamp": "2026-06-25T07:40:08.631991+00:00"
+    "timestamp": "2026-06-25T22:31:06.314134+00:00"
   },
   "w4": {
     "score": 80,
@@ -134,17 +134,17 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-25T07:40:08.850187+00:00"
+    "timestamp": "2026-06-25T22:31:06.518140+00:00"
   },
   "kr_composite_score": 30.9,
   "kr_grade": "GREEN",
   "k1": {
     "score": 9,
     "grade": "정상",
-    "kospi_ytd": 107.22,
-    "mom_30d": 10.97,
+    "kospi_ytd": null,
+    "mom_30d": null,
     "top5_weight_pct": 33.2,
-    "timestamp": "2026-06-25T07:40:08.993516+00:00"
+    "timestamp": "2026-06-25T22:31:07.273384+00:00"
   },
   "k2": {
     "score": 58,
@@ -155,7 +155,7 @@
     "term_premium": 1.58,
     "is_inverted": false,
     "cd91_rate": 3.42,
-    "timestamp": "2026-06-25T07:40:09.759926+00:00"
+    "timestamp": "2026-06-25T22:31:08.126665+00:00"
   },
   "k3": {
     "score": 44,
@@ -164,7 +164,7 @@
     "pf_update_date": "2026-Q1",
     "kbdc_discount_pct": 6.5,
     "dsr_avg_pct": 41.2,
-    "timestamp": "2026-06-25T07:40:09.760145+00:00"
+    "timestamp": "2026-06-25T22:31:08.126906+00:00"
   },
   "k4": {
     "score": 10,
@@ -215,20 +215,16 @@
         "ticker": "443060.KS"
       }
     ],
-    "timestamp": "2026-06-25T07:40:09.760220+00:00"
+    "timestamp": "2026-06-25T22:31:08.127027+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "전반적으로 현실적인 데이터이나 RSP>SPY 역전 및 HY스프레드 급축소(-63bps)는 모니터링 필요",
-    "anomalies": [
-      "RSP YTD 10.72% > SPY 8.1% 비정상적 역전",
-      "HY스프레드 단기 -63bps 급축소"
-    ],
+    "overall_assessment": "RSP>SPY 아웃퍼폼으로 동일가중 강세, 금리정상화 진행중, HY스프레드 축소로 위험선호 확인",
+    "anomalies": [],
     "recommendations": [
-      "RSP/SPY 데이터 수집 기간 일치 여부 재확인",
-      "HY변화 기준일 명확화"
+      "IPO 가격확정 0건 모니터링 지속"
     ],
-    "validated_at": "2026-06-25T07:40:17.421737+00:00",
+    "validated_at": "2026-06-25T22:31:14.859111+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
