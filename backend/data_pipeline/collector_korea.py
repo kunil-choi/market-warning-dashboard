@@ -91,39 +91,45 @@ def collect_k1_data() -> dict:
     logger.info("K1 코스피 선도주 압축 수집 시작")
 
     # ── 코스피 YTD 및 30일 모멘텀 ──────────────────────────
+    # ^KS11 이 yfinance에서 비정상값(8000pt대)을 반환하는 문제 확인됨
+    # -> ^KOSPI 심볼로 교체, 값 범위 검증(1500~5000pt) 추가
+    # -> 검증 실패 시 None 처리 (가짜 데이터 표시 방지)
+    kospi_ytd = None
+    mom_30d   = None
     try:
-        ks11 = yf.Ticker("^KS11")
+        ks = yf.Ticker("^KOSPI")
+        hist_ytd = ks.history(period="ytd")
+        hist_3mo = ks.history(period="3mo")
 
-        # YTD: period='ytd' 로 명시적으로 연초~현재 데이터만 가져옴
-        hist_ytd = ks11.history(period="ytd")
-        logger.info("K1 hist_ytd 행수=%d", len(hist_ytd))
-        if len(hist_ytd) >= 2:
-            ytd_first_date  = str(hist_ytd.index[0].date())
-            ytd_last_date   = str(hist_ytd.index[-1].date())
-            ytd_first_close = round(hist_ytd["Close"].iloc[0], 2)
-            ytd_last_close  = round(hist_ytd["Close"].iloc[-1], 2)
-            logger.info("K1 YTD 기준가: %s=%.2f  현재가: %s=%.2f",
-                        ytd_first_date, ytd_first_close,
-                        ytd_last_date,  ytd_last_close)
+        def _valid_kospi(series):
+            """코스피 포인트 범위(1500~5000) 검증"""
+            return (
+                len(series) >= 2
+                and 1500 <= series.iloc[0] <= 5000
+                and 1500 <= series.iloc[-1] <= 5000
+            )
+
+        if _valid_kospi(hist_ytd["Close"]):
             kospi_ytd = round(
                 (hist_ytd["Close"].iloc[-1] / hist_ytd["Close"].iloc[0] - 1) * 100, 2
             )
+            logger.info("K1 YTD 기준가=%.2f 현재가=%.2f -> YTD=%.2f%%",
+                        hist_ytd["Close"].iloc[0], hist_ytd["Close"].iloc[-1], kospi_ytd)
         else:
-            kospi_ytd = 0.0
+            logger.warning("K1 ^KOSPI YTD 값 범위 이상 -- None 처리 (첫값=%.2f 끝값=%.2f)",
+                           hist_ytd["Close"].iloc[0] if len(hist_ytd) else 0,
+                           hist_ytd["Close"].iloc[-1] if len(hist_ytd) else 0)
 
-        # 30일 모멘텀: period='3mo' 로 별도 가져와서 마지막 22 거래일 사용
-        hist_3mo = ks11.history(period="3mo")
-        if len(hist_3mo) >= 22:
+        if _valid_kospi(hist_3mo["Close"]) and len(hist_3mo) >= 22:
             mom_30d = round(
                 (hist_3mo["Close"].iloc[-1] / hist_3mo["Close"].iloc[-22] - 1) * 100, 2
             )
+            logger.info("K1 30일모멘텀=%.2f%%", mom_30d)
         else:
-            mom_30d = 0.0
+            logger.warning("K1 ^KOSPI 3mo 값 범위 이상 -- None 처리")
 
     except Exception as e:
-        logger.warning("K1 yfinance 수집 실패, 폴백: %s", e)
-        kospi_ytd = 0.0
-        mom_30d   = 0.0
+        logger.warning("K1 yfinance 수집 실패: %s", e)
 
     # ── TOP5 집중도: KRX 공시 기반 수동 관리값 ────────────
     # 출처: KRX 시가총액 상위 종목 비중 (반기 업데이트)
@@ -141,12 +147,16 @@ def collect_k1_data() -> dict:
 
     # 30일 모멘텀 급락 (가중 40%)
     # -10% 이상 급락이면 위험, -5% 경고, 그 외 정상
-    s_momentum = (
-        80 if mom_30d <= -10 else
-        50 if mom_30d <= -5  else
-        20 if mom_30d <= -2  else
-        0
-    )
+    # mom_30d가 None(수집 실패)이면 중립값 0점 처리
+    if mom_30d is None:
+        s_momentum = 0
+    else:
+        s_momentum = (
+            80 if mom_30d <= -10 else
+            50 if mom_30d <= -5  else
+            20 if mom_30d <= -2  else
+            0
+        )
 
     score = round(s_top5 * 0.60 + s_momentum * 0.40)
     score = min(score, 100)
@@ -401,6 +411,7 @@ def collect_korea_data() -> dict:
         "kr_grade":           kr_grade,
         "k1": k1, "k2": k2, "k3": k3, "k4": k4,
     }
+
 
 
 
