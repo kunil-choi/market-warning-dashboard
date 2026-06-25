@@ -92,29 +92,29 @@ def collect_k1_data() -> dict:
 
     # ── 코스피 YTD 및 30일 모멘텀 ──────────────────────────
     try:
-        ks11    = yf.Ticker("^KS11")
-        hist_ks = ks11.history(period="1y")
+        ks11 = yf.Ticker("^KS11")
 
-        this_year  = datetime.now().year
-        year_start = hist_ks[hist_ks.index.year == this_year]
-        if len(year_start) >= 2:
+        # YTD: period='ytd' 로 명시적으로 연초~현재 데이터만 가져옴
+        hist_ytd = ks11.history(period="ytd")
+        if len(hist_ytd) >= 2:
             kospi_ytd = round(
-                (year_start["Close"].iloc[-1] / year_start["Close"].iloc[0] - 1) * 100, 2
+                (hist_ytd["Close"].iloc[-1] / hist_ytd["Close"].iloc[0] - 1) * 100, 2
             )
         else:
             kospi_ytd = 0.0
 
-        # 30일 모멘텀 (급락 감지)
-        if len(hist_ks) >= 22:
+        # 30일 모멘텀: period='3mo' 로 별도 가져와서 마지막 22 거래일 사용
+        hist_3mo = ks11.history(period="3mo")
+        if len(hist_3mo) >= 22:
             mom_30d = round(
-                (hist_ks["Close"].iloc[-1] / hist_ks["Close"].iloc[-22] - 1) * 100, 2
+                (hist_3mo["Close"].iloc[-1] / hist_3mo["Close"].iloc[-22] - 1) * 100, 2
             )
         else:
             mom_30d = 0.0
 
     except Exception as e:
         logger.warning("K1 yfinance 수집 실패, 폴백: %s", e)
-        kospi_ytd = 12.8   # 2026-06 추정치
+        kospi_ytd = 0.0
         mom_30d   = 0.0
 
     # ── TOP5 집중도: KRX 공시 기반 수동 관리값 ────────────
@@ -393,6 +393,7 @@ def collect_korea_data() -> dict:
         "kr_grade":           kr_grade,
         "k1": k1, "k2": k2, "k3": k3, "k4": k4,
     }
+
 
 
 
