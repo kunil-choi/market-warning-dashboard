@@ -1,57 +1,61 @@
 {
-  "composite_score": 35.0,
-  "grade": "GREEN",
-  "timestamp": "2026-06-25T22:31:08.127045+00:00",
+  "composite_score": 41.0,
+  "grade": "YELLOW",
+  "timestamp": "2026-06-26T22:26:41.482421+00:00",
   "w1_score": 5,
   "w2_score": 30,
-  "w3_score": 24,
+  "w3_score": 54,
   "w4_score": 80,
   "w1": {
     "score": 5,
     "grade": "GREEN",
-    "spy_ytd": 8.25,
-    "rsp_ytd": 11.44,
-    "current_spread": -3.19,
+    "spy_ytd": 7.47,
+    "rsp_ytd": 10.69,
+    "current_spread": -3.22,
     "spread_percentile": 38,
-    "rsp_1w_return": 1.71,
+    "rsp_1w_return": 0.55,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-25T22:30:46.202746+00:00"
+    "timestamp": "2026-06-26T22:26:19.737160+00:00"
   },
   "w2": {
     "score": 30,
     "grade": "GREEN",
-    "us10y_yield": 4.41,
-    "us2y_yield": 4.11,
-    "term_spread": 0.3,
-    "tips_10y_real_yield": 2.23,
+    "us10y_yield": 4.4,
+    "us2y_yield": 4.09,
+    "term_spread": 0.31,
+    "tips_10y_real_yield": 2.19,
     "is_inverted": false,
-    "timestamp": "2026-06-25T22:30:47.624343+00:00"
+    "timestamp": "2026-06-26T22:26:21.157969+00:00"
   },
   "w3": {
-    "score": 24,
-    "grade": "정상",
-    "color": "green",
+    "score": 54,
+    "grade": "주의",
+    "color": "yellow",
     "bdc_nav_discount": 3.5,
     "bdc_nav_date": "2026-05-30",
     "sloos_ci_pct": 8.1,
     "sloos_source": "FRED",
     "ci_delq_pct": 1.55,
     "ci_delq_source": "fallback",
-    "hy_bps": 276.0,
-    "ig_bps": 75.0,
-    "hy_change_bps": -63.0,
+    "hy_bps": 278.0,
+    "ig_bps": 76.0,
+    "hy_change_bps": -34.0,
     "interval_fund_redemption_rate": 95.0,
     "interval_fund_date": "2026-03-31",
     "pik_ratio_pct": 6.5,
     "pik_update_date": "2026-03-31",
-    "clo_bb_bps": 1381.0,
+    "clo_bb_bps": 1383.0,
     "clo_bb_source": "FRED(CCC proxy)",
     "gate_news": {
-      "has_gate_event": false,
-      "events": [],
-      "summary": "뉴스 검색 불가",
-      "risk_level": "none",
-      "risk_bump": 0
+      "has_gate_event": true,
+      "events": [
+        "2026년 2월, Blue Owl Capital이 $16억 규모의 OBDC II 펀드에 대해 분기별 환매 창구를 영구 폐쇄하고 자본 분배 방식으로 전환함.",
+        "2026년 3월, Blackstone의 BCRED 펀드에 $38억(자산의 7.9%) 규모의 사상 최대 환매 요청이 쏟아졌으며, Apollo·Ares·BlackRock도 분기 환매를 5%로 제한함.",
+        "2025년 4분기~2026년 1분기, 비상장 BDC들의 평균 환매율이 NAV의 4.8%로 급등하고 공개 거래 BDC 주가는 NAV 대비 평균 약 80% 수준(약 20% 할인)으로 하락함."
+      ],
+      "summary": "2026년 초 프라이빗 크레딧 시장에서 다수의 대형 펀드가 환매 제한(게이팅)을 발동하고 BDC NAV 할인이 확대되는 등 유동성 위기가 현실화되고 있으며, AI의 SaaS 산업 위협과 높은 디폴트율이 핵심 촉발 요인으로 지목됨.",
+      "risk_level": "high",
+      "risk_bump": 30
     },
     "s_bdc": 5,
     "s_sloos": 20,
@@ -67,11 +71,13 @@
       "✅ C&I 연체율 1.55% — 정상 범위",
       "📢 인터벌펀드 환매 충족율 95% — 소폭 지연",
       "⚠️ PIK 이자 비중 6.5% — 현금흐름 압박 신호",
-      "🚨 CLO BB 스프레드 1381 bps — 레버리지론 시장 심각",
-      "📊 HY 스프레드 276 bps — 정상 (후행 보조)",
-      "✅ 실질 환매 제한 이벤트 미감지 (뉴스 검색 불가)"
+      "🚨 CLO BB 스프레드 1383 bps — 레버리지론 시장 심각",
+      "📊 HY 스프레드 278 bps — 정상 (후행 보조)",
+      "🚨 실질 환매 제한 이벤트 감지: 2026년 초 프라이빗 크레딧 시장에서 다수의 대형 펀드가 환매 제한(게이팅)을 발동하고 BDC NAV 할인이 확대되는 등 유동성 위기가 현실화되고 있으며, AI의 SaaS 산업 위협과 높은 디폴트율이 핵심 촉발 요인으로 지목됨.",
+      "   📰 2026년 2월, Blue Owl Capital이 $16억 규모의 OBDC II 펀드에 대해 분기별 환매 창구를 영구 폐쇄하고 자본 분배 방식으로 전환함.",
+      "   📰 2026년 3월, Blackstone의 BCRED 펀드에 $38억(자산의 7.9%) 규모의 사상 최대 환매 요청이 쏟아졌으며, Apollo·Ares·BlackRock도 분기 환매를 5%로 제한함."
     ],
-    "timestamp": "2026-06-25T22:31:06.314134+00:00"
+    "timestamp": "2026-06-26T22:26:39.864096+00:00"
   },
   "w4": {
     "score": 80,
@@ -98,7 +104,7 @@
         "valuation_bn": 1800,
         "status": "상장완료",
         "active_date": "2026-05-20",
-        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-25",
+        "source": "SEC EDGAR S-1 공개 2026-05-20 / yfinance 상장 확인 2026-06-26",
         "filed_date": "2026-05-20",
         "listed_date": "2026-06-12",
         "ticker": "CBRS"
@@ -134,7 +140,7 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-25T22:31:06.518140+00:00"
+    "timestamp": "2026-06-26T22:26:40.066460+00:00"
   },
   "kr_composite_score": 30.9,
   "kr_grade": "GREEN",
@@ -144,7 +150,7 @@
     "kospi_ytd": null,
     "mom_30d": null,
     "top5_weight_pct": 33.2,
-    "timestamp": "2026-06-25T22:31:07.273384+00:00"
+    "timestamp": "2026-06-26T22:26:40.701778+00:00"
   },
   "k2": {
     "score": 58,
@@ -155,7 +161,7 @@
     "term_premium": 1.58,
     "is_inverted": false,
     "cd91_rate": 3.42,
-    "timestamp": "2026-06-25T22:31:08.126665+00:00"
+    "timestamp": "2026-06-26T22:26:41.482092+00:00"
   },
   "k3": {
     "score": 44,
@@ -164,7 +170,7 @@
     "pf_update_date": "2026-Q1",
     "kbdc_discount_pct": 6.5,
     "dsr_avg_pct": 41.2,
-    "timestamp": "2026-06-25T22:31:08.126906+00:00"
+    "timestamp": "2026-06-26T22:26:41.482314+00:00"
   },
   "k4": {
     "score": 10,
@@ -215,16 +221,16 @@
         "ticker": "443060.KS"
       }
     ],
-    "timestamp": "2026-06-25T22:31:08.127027+00:00"
+    "timestamp": "2026-06-26T22:26:41.482406+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "RSP>SPY 아웃퍼폼으로 동일가중 강세, 금리정상화 진행중, HY스프레드 축소로 위험선호 확인",
+    "overall_assessment": "RSP>SPY 괴리는 중소형주 강세 반영, 장단기 스프레드 정상화·HY 스프레드 축소로 위험선호 환경 확인됨",
     "anomalies": [],
     "recommendations": [
       "IPO 가격확정 0건 모니터링 지속"
     ],
-    "validated_at": "2026-06-25T22:31:14.859111+00:00",
+    "validated_at": "2026-06-26T22:26:47.590039+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
