@@ -90,58 +90,30 @@ def collect_k1_data() -> dict:
     """
     logger.info("K1 코스피 선도주 압축 수집 시작")
 
-    # ── 코스피 YTD 및 30일 모멘텀 (수동 관리) ──────────────
-    # yfinance의 ^KOSPI / ^KS11 심볼이 GitHub Actions 환경에서
-    # 지속적으로 404 / 빈 데이터를 반환하여 자동 수집 불가.
-    # → KRX 공시 및 네이버 금융 기준으로 수동 업데이트.
-    # 업데이트 주기: 월 1~2회 (급등락 시 즉시)
-    # 출처: KRX (krx.co.kr) / 네이버 금융
-    # 마지막 업데이트: 2026-06-29
-    KOSPI_YTD_MANUAL  =  3.5   # 코스피 YTD 수익률 (%) — 2026-06-29 기준
-    MOM_30D_MANUAL    =  2.1   # 코스피 30일 모멘텀 (%) — 2026-06-29 기준
-
-    kospi_ytd = KOSPI_YTD_MANUAL
-    mom_30d   = MOM_30D_MANUAL
-    logger.info("K1 코스피 YTD=%.2f%% mom_30d=%.2f%% (수동관리값)", kospi_ytd, mom_30d)
-
     # ── TOP5 집중도: KRX 공시 기반 수동 관리값 ────────────
     # 출처: KRX 시가총액 상위 종목 비중 (반기 업데이트)
     # 2026-06 기준: 삼성전자14.5%+SK하이닉스7.5%+삼성바이오4.2%+LG엔솔3.9%+현대차3.1% ≈ 33.2%
+    # yfinance ^KOSPI/^KS11이 GitHub Actions에서 수집 불가하여
+    # KRX 공시 기반 top5 집중도만으로 점수 산출
     TOP5_WEIGHT_MANUAL = 33.2   # ← 반기마다 수동 업데이트 (KRX 공시 확인)
 
-    # ── 점수 산출 ──────────────────────────────────────────
-    # top5 집중도 (가중 60%)
+    # ── 점수 산출 (top5 집중도 100%) ─────────────────────
     # 역사적 기준: 정상 <38%, 주의 38~45%, 위험 45%+
-    s_top5 = (
+    score = (
         80 if TOP5_WEIGHT_MANUAL >= 45 else
         45 if TOP5_WEIGHT_MANUAL >= 38 else
         15
     )
-
-    # 30일 모멘텀 급락 (가중 40%)
-    # -10% 이상 급락이면 위험, -5% 경고, 그 외 정상
-    # mom_30d가 None(수집 실패)이면 중립값 0점 처리
-    if mom_30d is None:
-        s_momentum = 0
-    else:
-        s_momentum = (
-            80 if mom_30d <= -10 else
-            50 if mom_30d <= -5  else
-            20 if mom_30d <= -2  else
-            0
-        )
-
-    score = round(s_top5 * 0.60 + s_momentum * 0.40)
     score = min(score, 100)
     grade = "위험" if score >= 70 else "경고" if score >= 55 else "주의" if score >= 40 else "정상"
 
+    logger.info("K1 top5=%.1f%% 점수=%d(%s)", TOP5_WEIGHT_MANUAL, score, grade)
+
     return {
-        "score":             score,
-        "grade":             grade,
-        "kospi_ytd":         kospi_ytd,
-        "mom_30d":           mom_30d,
-        "top5_weight_pct":   TOP5_WEIGHT_MANUAL,
-        "timestamp":         datetime.now(timezone.utc).isoformat(),
+        "score":           score,
+        "grade":           grade,
+        "top5_weight_pct": TOP5_WEIGHT_MANUAL,
+        "timestamp":       datetime.now(timezone.utc).isoformat(),
     }
 
 
