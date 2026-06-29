@@ -24,16 +24,25 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # ── FRED 시리즈 (한국) ────────────────────────────────────
-KR_10Y_SERIES = "IRLTLT01KRM156N"   # 한국 10년물 국채금리
-KR_3Y_SERIES  = "IRSTCI01KRM156N"   # 한국 3년물 (단기 정책금리 근사)
+# IRLTLT01KRM156N: 한국 10년물 — 월별, IFS 기준 (최신성 낮음)
+# IRSTCI01KRM156N: 한국 3년물 — 월별, IFS 기준 (최신성 낮음)
+# → 두 시리즈 모두 월별 업데이트라 실시간 시장금리와 괴리 발생 가능
+#   실패 시 현재 시장 수준 폴백값 사용
+KR_10Y_SERIES = "IRLTLT01KRM156N"
+KR_3Y_SERIES  = "IRSTCI01KRM156N"
 
-# ── 폴백 값 ──────────────────────────────────────────────
-KR_10Y_FALLBACK = 2.85
-KR_3Y_FALLBACK  = 2.65
-CD91_FALLBACK   = 3.42
+# ── 폴백 값 (2026-06 시장 실제 수준) ────────────────────
+# 출처: investing.com / tradingeconomics 2026-06 기준
+# 10년물: 4.30% 수준 (FRED 5월 데이터 4.08% → 현재 4.3%대)
+# 3년물:  3.75% 수준 (FRED 5월 데이터 2.54% → 현재 3.7%대)
+# CD91:   3.70% 수준 (시장금리 상승 반영)
+KR_10Y_FALLBACK = 4.30
+KR_3Y_FALLBACK  = 3.75
+CD91_FALLBACK   = 3.70
 
 # 한국은행 기준금리 (수동 관리 — 변경 시 업데이트)
 # 2024-10: 3.50% → 2024-11: 3.25% → 2025-01: 3.00% → 2025-02: 2.75% → 2025-08: 2.50%
+# 2026 하반기 인상 사이클 예상 (현재 2.50% 동결)
 KR_BASE_RATE = 2.50
 
 # ── 수동 관리 지표 ────────────────────────────────────────
@@ -99,7 +108,9 @@ def collect_k1_data() -> dict:
     # ── TOP5 집중도: pykrx 자동 수집 (실패 시 수동 폴백) ──
     # 수동 폴백값: 2026-06 기준 약 42%
     # (삼성전자22% + SK하이닉스9% + LG엔솔4% + 삼성바이오3.5% + 현대차2.7%)
-    TOP5_WEIGHT_FALLBACK = 42.0
+    # 폴백값: 2026-06 기준 상위 4종목(삼성전자+SK하이닉스+삼성전자우+SK스퀘어)만
+    # 49.49% → 5종목 기준 약 52% 추정 (나무위키 2026-05-08 기준)
+    TOP5_WEIGHT_FALLBACK = 52.0
 
     top5_weight_pct = None
     top5_list = []
@@ -172,9 +183,29 @@ def collect_k2_data() -> dict:
     """
     logger.info("K2 국고채 & 금리 수집 시작")
 
-    kr10y = get_latest_value(KR_10Y_SERIES, fallback=KR_10Y_FALLBACK)
-    kr3y  = get_latest_value(KR_3Y_SERIES,  fallback=KR_3Y_FALLBACK)
-    cd91  = CD91_FALLBACK  # FRED에 CD91일물 없음 → 수동
+    # FRED 시리즈는 월별 업데이트 — 값이 현실과 크게 괴리될 수 있음
+    # 범위 검증: 한국 금리 합리적 범위 1.0~7.0% (이 밖이면 폴백 사용)
+    _KR_RATE_LO, _KR_RATE_HI = 1.0, 7.0
+
+    _kr10y_raw = get_latest_value(KR_10Y_SERIES, fallback=None)
+    if _kr10y_raw is not None and _KR_RATE_LO <= _kr10y_raw <= _KR_RATE_HI:
+        kr10y = _kr10y_raw
+        logger.info("K2 FRED 10년물 %.2f%% 사용", kr10y)
+    else:
+        kr10y = KR_10Y_FALLBACK
+        logger.warning("K2 FRED 10년물 범위 이상(%.2f) → 폴백 %.2f%% 사용",
+                       _kr10y_raw or 0, kr10y)
+
+    _kr3y_raw = get_latest_value(KR_3Y_SERIES, fallback=None)
+    if _kr3y_raw is not None and _KR_RATE_LO <= _kr3y_raw <= _KR_RATE_HI:
+        kr3y = _kr3y_raw
+        logger.info("K2 FRED 3년물 %.2f%% 사용", kr3y)
+    else:
+        kr3y = KR_3Y_FALLBACK
+        logger.warning("K2 FRED 3년물 범위 이상(%.2f) → 폴백 %.2f%% 사용",
+                       _kr3y_raw or 0, kr3y)
+
+    cd91 = CD91_FALLBACK  # FRED에 CD91일물 없음 → 수동
 
     term_spread   = round(kr10y - kr3y, 2)
     is_inverted   = term_spread < 0
