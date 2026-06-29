@@ -490,23 +490,23 @@ function buildFrontContent(prefix, score, raw) {
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">삼성전자</span>
-          <span class="front-metric-val val-green">14.5%</span>
+          <span class="front-metric-val val-yellow">~22%</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">SK하이닉스</span>
-          <span class="front-metric-val val-green">7.5%</span>
-        </div>
-        <div class="front-metric-row">
-          <span class="front-metric-label">삼성바이오로직스</span>
-          <span class="front-metric-val val-green">4.2%</span>
+          <span class="front-metric-val val-yellow">~9%</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">LG에너지솔루션</span>
-          <span class="front-metric-val val-green">3.9%</span>
+          <span class="front-metric-val val-green">~4%</span>
+        </div>
+        <div class="front-metric-row">
+          <span class="front-metric-label">삼성바이오로직스</span>
+          <span class="front-metric-val val-green">~3.5%</span>
         </div>
         <div class="front-metric-row">
           <span class="front-metric-label">현대차</span>
-          <span class="front-metric-val val-green">3.1%</span>
+          <span class="front-metric-val val-green">~2.7%</span>
         </div>
       </div>
       <div class="front-situation ${sitColor}">${sitText}</div>
