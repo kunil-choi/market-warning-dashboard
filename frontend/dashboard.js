@@ -470,44 +470,43 @@ function buildFrontContent(prefix, score, raw) {
 
   /* ────────── K1: 코스피 선도주 압축 ────────── */
   if (prefix === "k1") {
-    const kospiYtd  = raw?.kospi_ytd        != null ? parseFloat(raw.kospi_ytd).toFixed(2)  : "—";
-    const keqwYtd   = raw?.keqw_ytd         != null ? parseFloat(raw.keqw_ytd).toFixed(2)   : "—";
-    const spread    = raw?.current_spread    ?? 0;
-    const pct       = raw?.spread_percentile ?? "—";
-    const top5ratio = raw?.top5_weight_pct   ?? null;
+    const top5ratio = raw?.top5_weight_pct ?? null;
 
     let sitColor = "GREEN", sitText = "";
-    if      (spread >= 8) { sitColor = "RED";    sitText = "🚨 극단적 쏠림: 삼성전자 등 초대형주가 시장을 독점하고 있습니다. 반도체 사이클 하락 시 지수 급락 위험."; }
-    else if (spread >= 5) { sitColor = "RED";    sitText = "⚠️ 위험 수준 쏠림: 코스피200 상위 5종목 편중이 심화되고 있습니다."; }
-    else if (spread >= 3) { sitColor = "YELLOW"; sitText = "📢 주의 필요: 대형주-중소형주 간 수익률 격차가 확대되고 있습니다."; }
-    else                  { sitText  = "✅ 시장 균형 양호: 대형주·중소형주 간 고른 상승이 유지되고 있습니다."; }
+    if      (top5ratio >= 45) { sitColor = "RED";    sitText = "🚨 극단적 쏠림: 상위 5종목이 시장의 45% 이상을 차지합니다. 반도체 사이클 하락 시 지수 급락 위험."; }
+    else if (top5ratio >= 38) { sitColor = "YELLOW"; sitText = "📢 주의 필요: 상위 5종목 편중이 역사적 경계 수준에 진입했습니다."; }
+    else                      { sitText  = "✅ 집중도 정상: 상위 5종목 비중이 역사적 안전 범위 내에 있습니다."; }
 
     let advice = "";
     if      (score >= 70) advice = "📌 반도체·대형 수출주 집중 위험. ARIRANG 동일가중 ETF 또는 중소형 가치주로 분산 권장.";
-    else if (score >= 40) advice = "📌 쏠림 심화 모니터링 필요. 코스피200 vs KOSDAQ 수익률 비교 추적.";
-    else                  advice = "📌 현재 구조 안정적. 기존 전략 유지하되 반도체 사이클 지표 병행 확인.";
+    else if (score >= 40) advice = "📌 쏠림 심화 모니터링 필요. 상위 5종목 비중 추이를 추적하세요.";
+    else                  advice = "📌 현재 집중도 안정적. 기존 전략 유지하되 반도체 사이클 지표 병행 확인.";
 
     return `
       <div class="front-metrics-block">
         <div class="front-metric-row">
-          <span class="front-metric-label">코스피 YTD</span>
-          <span class="front-metric-val ${(parseFloat(kospiYtd)||0)>=0?'val-green':'val-red'}">${kospiYtd}%</span>
+          <span class="front-metric-label">코스피 상위 5종목 비중</span>
+          <span class="front-metric-val ${top5ratio>=45?'val-red':top5ratio>=38?'val-yellow':'val-green'}">${top5ratio != null ? top5ratio.toFixed(1)+'%' : '—'}</span>
         </div>
         <div class="front-metric-row">
-          <span class="front-metric-label">동일가중 YTD</span>
-          <span class="front-metric-val ${(parseFloat(keqwYtd)||0)>=0?'val-green':'val-red'}">${keqwYtd}%</span>
+          <span class="front-metric-label">삼성전자</span>
+          <span class="front-metric-val val-green">14.5%</span>
         </div>
         <div class="front-metric-row">
-          <span class="front-metric-label">대형-동일가중 스프레드</span>
-          <span class="front-metric-val ${spread>=5?'val-red':spread>=3?'val-yellow':'val-green'}">${spread.toFixed(2)}%p</span>
+          <span class="front-metric-label">SK하이닉스</span>
+          <span class="front-metric-val val-green">7.5%</span>
         </div>
         <div class="front-metric-row">
-          <span class="front-metric-label">스프레드 백분위</span>
-          <span class="front-metric-val ${pct>=80?'val-red':pct>=60?'val-yellow':'val-green'}">${pct}%ile</span>
+          <span class="front-metric-label">삼성바이오로직스</span>
+          <span class="front-metric-val val-green">4.2%</span>
         </div>
         <div class="front-metric-row">
-          <span class="front-metric-label">상위5종목 비중</span>
-          <span class="front-metric-val ${top5ratio>=40?'val-red':top5ratio>=30?'val-yellow':'val-green'}">${top5ratio != null ? top5ratio.toFixed(1)+'%' : '—'}</span>
+          <span class="front-metric-label">LG에너지솔루션</span>
+          <span class="front-metric-val val-green">3.9%</span>
+        </div>
+        <div class="front-metric-row">
+          <span class="front-metric-label">현대차</span>
+          <span class="front-metric-val val-green">3.1%</span>
         </div>
       </div>
       <div class="front-situation ${sitColor}">${sitText}</div>
@@ -823,22 +822,18 @@ function buildBackContent(prefix, score, raw) {
       <div class="back-content">
         <div class="back-section">
           <h4>📐 수치 해설</h4>
-          <div class="back-metric"><span class="back-label">코스피 YTD</span><span class="back-value">코스피 시가총액 가중 지수 연초 대비 수익률 (삼성전자·SK하이닉스 편중 반영)</span></div>
-          <div class="back-metric"><span class="back-label">동일가중 YTD</span><span class="back-value">코스피200 동일가중 ETF 수익률 — 클수록 쏠림 구조</span></div>
-          <div class="back-metric"><span class="back-label">스프레드</span><span class="back-value">두 지수 수익률 차이 — 한국은 반도체 사이클에 따라 특히 극단적으로 벌어짐</span></div>
-          <div class="back-metric"><span class="back-label">상위5종목 비중</span><span class="back-value">코스피 시총 상위 5개 종목의 전체 시장 비중 — 30% 이상 시 편중 위험</span></div>
+          <div class="back-metric"><span class="back-label">상위 5종목 비중</span><span class="back-value">코스피 시가총액 상위 5개 종목(삼성전자·SK하이닉스·삼성바이오·LG엔솔·현대차)이 전체 시장에서 차지하는 비중. 반기마다 KRX 공시 기준으로 업데이트.</span></div>
         </div>
         <div class="back-section">
           <h4>📌 위험 기준</h4>
-          <div class="back-metric"><span class="back-label">스프레드 &lt; 3%p</span><span class="back-value" style="color:#34d399">정상 — 균형 장세</span></div>
-          <div class="back-metric"><span class="back-label">3 ~ 5%p</span><span class="back-value" style="color:#fbbf24">주의 — 쏠림 시작</span></div>
-          <div class="back-metric"><span class="back-label">5 ~ 8%p</span><span class="back-value" style="color:#f97316">경고 — 반도체 쏠림 극단화</span></div>
-          <div class="back-metric"><span class="back-label">8%p 이상</span><span class="back-value" style="color:#f87171">위험 — 역사적 고점 수준</span></div>
+          <div class="back-metric"><span class="back-label">38% 미만</span><span class="back-value" style="color:#34d399">정상 — 역사적 안전 범위</span></div>
+          <div class="back-metric"><span class="back-label">38 ~ 45%</span><span class="back-value" style="color:#fbbf24">주의 — 집중도 경계 수준</span></div>
+          <div class="back-metric"><span class="back-label">45% 이상</span><span class="back-value" style="color:#f87171">위험 — 극단적 쏠림</span></div>
         </div>
         <div class="back-section">
           <h4>🔢 점수 산출</h4>
           <div class="back-formula">
-            <p>스프레드 크기 <strong>50%</strong> + 백분위 <strong>30%</strong> + 상위5 비중 <strong>20%</strong></p>
+            <p>상위 5종목 집중도 <strong>100%</strong> (KRX 공시 기준, 반기 업데이트)</p>
           </div>
         </div>
       </div>`;
