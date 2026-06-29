@@ -91,45 +91,55 @@ def collect_k1_data() -> dict:
     logger.info("K1 코스피 선도주 압축 수집 시작")
 
     # ── 코스피 YTD 및 30일 모멘텀 ──────────────────────────
-    # ^KS11 이 yfinance에서 비정상값(8000pt대)을 반환하는 문제 확인됨
-    # -> ^KOSPI 심볼로 교체, 값 범위 검증(1500~5000pt) 추가
-    # -> 검증 실패 시 None 처리 (가짜 데이터 표시 방지)
+    # 시도 순서:
+    #   1) ^KOSPI (범위 검증: 1500~5000pt)
+    #   2) ^KS11  (범위 검증: 1500~5000pt)
+    #   3) EWY    (iShares MSCI Korea ETF, 범위 검증: 20~100$)
+    # 모두 실패 시 None 처리 (가짜 데이터 표시 방지)
     kospi_ytd = None
     mom_30d   = None
-    try:
-        ks = yf.Ticker("^KOSPI")
-        hist_ytd = ks.history(period="ytd")
-        hist_3mo = ks.history(period="3mo")
 
-        def _valid_kospi(series):
-            """코스피 포인트 범위(1500~5000) 검증"""
-            return (
-                len(series) >= 2
-                and 1500 <= series.iloc[0] <= 5000
-                and 1500 <= series.iloc[-1] <= 5000
-            )
+    def _pct_change(hist, lo, hi, min_rows_3mo=22):
+        """종가 시리즈에서 YTD 수익률과 30일 모멘텀 계산. 범위 검증 포함."""
+        ytd_val = mom_val = None
+        close = hist["ytd"]["Close"] if hist["ytd"] is not None else None
+        close3 = hist["3mo"]["Close"] if hist["3mo"] is not None else None
 
-        if _valid_kospi(hist_ytd["Close"]):
-            kospi_ytd = round(
-                (hist_ytd["Close"].iloc[-1] / hist_ytd["Close"].iloc[0] - 1) * 100, 2
-            )
-            logger.info("K1 YTD 기준가=%.2f 현재가=%.2f -> YTD=%.2f%%",
-                        hist_ytd["Close"].iloc[0], hist_ytd["Close"].iloc[-1], kospi_ytd)
-        else:
-            logger.warning("K1 ^KOSPI YTD 값 범위 이상 -- None 처리 (첫값=%.2f 끝값=%.2f)",
-                           hist_ytd["Close"].iloc[0] if len(hist_ytd) else 0,
-                           hist_ytd["Close"].iloc[-1] if len(hist_ytd) else 0)
+        if close is not None and len(close) >= 2 and lo <= close.iloc[0] <= hi and lo <= close.iloc[-1] <= hi:
+            ytd_val = round((close.iloc[-1] / close.iloc[0] - 1) * 100, 2)
 
-        if _valid_kospi(hist_3mo["Close"]) and len(hist_3mo) >= 22:
-            mom_30d = round(
-                (hist_3mo["Close"].iloc[-1] / hist_3mo["Close"].iloc[-22] - 1) * 100, 2
-            )
-            logger.info("K1 30일모멘텀=%.2f%%", mom_30d)
-        else:
-            logger.warning("K1 ^KOSPI 3mo 값 범위 이상 -- None 처리")
+        if close3 is not None and len(close3) >= min_rows_3mo and lo <= close3.iloc[-min_rows_3mo] <= hi and lo <= close3.iloc[-1] <= hi:
+            mom_val = round((close3.iloc[-1] / close3.iloc[-min_rows_3mo] - 1) * 100, 2)
 
-    except Exception as e:
-        logger.warning("K1 yfinance 수집 실패: %s", e)
+        return ytd_val, mom_val
+
+    candidates = [
+        ("^KOSPI", 1500, 5000),
+        ("^KS11",  1500, 5000),
+        ("EWY",    20,   100),   # iShares MSCI Korea ETF (USD 기준)
+    ]
+
+    for sym, lo, hi in candidates:
+        try:
+            ticker = yf.Ticker(sym)
+            hist = {
+                "ytd": ticker.history(period="ytd"),
+                "3mo": ticker.history(period="3mo"),
+            }
+            ytd_val, mom_val = _pct_change(hist, lo, hi)
+            if ytd_val is not None:
+                kospi_ytd = ytd_val
+                mom_30d   = mom_val
+                logger.info("K1 [%s] YTD=%.2f%% mom_30d=%s", sym, kospi_ytd,
+                            f"{mom_30d:.2f}%" if mom_30d is not None else "None")
+                break
+            else:
+                logger.warning("K1 [%s] 범위(%d~%d) 검증 실패 — 다음 심볼 시도", sym, lo, hi)
+        except Exception as e:
+            logger.warning("K1 [%s] 수집 실패: %s — 다음 심볼 시도", sym, e)
+
+    if kospi_ytd is None:
+        logger.warning("K1 모든 심볼 실패 — kospi_ytd=None, mom_30d=None")
 
     # ── TOP5 집중도: KRX 공시 기반 수동 관리값 ────────────
     # 출처: KRX 시가총액 상위 종목 비중 (반기 업데이트)
