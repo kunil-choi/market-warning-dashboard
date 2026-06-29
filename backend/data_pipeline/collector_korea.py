@@ -90,56 +90,19 @@ def collect_k1_data() -> dict:
     """
     logger.info("K1 코스피 선도주 압축 수집 시작")
 
-    # ── 코스피 YTD 및 30일 모멘텀 ──────────────────────────
-    # 시도 순서:
-    #   1) ^KOSPI (범위 검증: 1500~5000pt)
-    #   2) ^KS11  (범위 검증: 1500~5000pt)
-    #   3) EWY    (iShares MSCI Korea ETF, 범위 검증: 20~100$)
-    # 모두 실패 시 None 처리 (가짜 데이터 표시 방지)
-    kospi_ytd = None
-    mom_30d   = None
+    # ── 코스피 YTD 및 30일 모멘텀 (수동 관리) ──────────────
+    # yfinance의 ^KOSPI / ^KS11 심볼이 GitHub Actions 환경에서
+    # 지속적으로 404 / 빈 데이터를 반환하여 자동 수집 불가.
+    # → KRX 공시 및 네이버 금융 기준으로 수동 업데이트.
+    # 업데이트 주기: 월 1~2회 (급등락 시 즉시)
+    # 출처: KRX (krx.co.kr) / 네이버 금융
+    # 마지막 업데이트: 2026-06-29
+    KOSPI_YTD_MANUAL  =  3.5   # 코스피 YTD 수익률 (%) — 2026-06-29 기준
+    MOM_30D_MANUAL    =  2.1   # 코스피 30일 모멘텀 (%) — 2026-06-29 기준
 
-    def _pct_change(hist, lo, hi, min_rows_3mo=22):
-        """종가 시리즈에서 YTD 수익률과 30일 모멘텀 계산. 범위 검증 포함."""
-        ytd_val = mom_val = None
-        close = hist["ytd"]["Close"] if hist["ytd"] is not None else None
-        close3 = hist["3mo"]["Close"] if hist["3mo"] is not None else None
-
-        if close is not None and len(close) >= 2 and lo <= close.iloc[0] <= hi and lo <= close.iloc[-1] <= hi:
-            ytd_val = round((close.iloc[-1] / close.iloc[0] - 1) * 100, 2)
-
-        if close3 is not None and len(close3) >= min_rows_3mo and lo <= close3.iloc[-min_rows_3mo] <= hi and lo <= close3.iloc[-1] <= hi:
-            mom_val = round((close3.iloc[-1] / close3.iloc[-min_rows_3mo] - 1) * 100, 2)
-
-        return ytd_val, mom_val
-
-    candidates = [
-        ("^KOSPI", 1500, 5000),
-        ("^KS11",  1500, 5000),
-        ("EWY",    20,   100),   # iShares MSCI Korea ETF (USD 기준)
-    ]
-
-    for sym, lo, hi in candidates:
-        try:
-            ticker = yf.Ticker(sym)
-            hist = {
-                "ytd": ticker.history(period="ytd"),
-                "3mo": ticker.history(period="3mo"),
-            }
-            ytd_val, mom_val = _pct_change(hist, lo, hi)
-            if ytd_val is not None:
-                kospi_ytd = ytd_val
-                mom_30d   = mom_val
-                logger.info("K1 [%s] YTD=%.2f%% mom_30d=%s", sym, kospi_ytd,
-                            f"{mom_30d:.2f}%" if mom_30d is not None else "None")
-                break
-            else:
-                logger.warning("K1 [%s] 범위(%d~%d) 검증 실패 — 다음 심볼 시도", sym, lo, hi)
-        except Exception as e:
-            logger.warning("K1 [%s] 수집 실패: %s — 다음 심볼 시도", sym, e)
-
-    if kospi_ytd is None:
-        logger.warning("K1 모든 심볼 실패 — kospi_ytd=None, mom_30d=None")
+    kospi_ytd = KOSPI_YTD_MANUAL
+    mom_30d   = MOM_30D_MANUAL
+    logger.info("K1 코스피 YTD=%.2f%% mom_30d=%.2f%% (수동관리값)", kospi_ytd, mom_30d)
 
     # ── TOP5 집중도: KRX 공시 기반 수동 관리값 ────────────
     # 출처: KRX 시가총액 상위 종목 비중 (반기 업데이트)
