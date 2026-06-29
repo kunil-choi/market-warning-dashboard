@@ -9,11 +9,17 @@ K4: 대형 공모주 유동성  (수동 관리)
 """
 
 import logging
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 
 import yfinance as yf
 
 from backend.data_pipeline.fred_client import get_latest_value
+
+try:
+    from pykrx import stock as krx_stock
+    PYKRX_AVAILABLE = True
+except ImportError:
+    PYKRX_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -90,32 +96,66 @@ def collect_k1_data() -> dict:
     """
     logger.info("K1 코스피 선도주 압축 수집 시작")
 
-    # ── TOP5 집중도: KRX 공시 기반 수동 관리값 ────────────
-    # 출처: KRX 시가총액 상위 종목 비중 (반기 업데이트)
-    # 2026-06 기준(코스피 시총 약 6,700조원):
-    #   삼성전자 470조(22%) + SK하이닉스 200조(9%) + LG엔솔 90조(4%)
-    #   + 삼성바이오 80조(3.5%) + 현대차 60조(2.7%) ≈ 42%
-    # 출처: KRX / ThorKit 2026-04말 기준, 반기마다 수동 업데이트
-    # yfinance ^KOSPI/^KS11이 GitHub Actions에서 수집 불가하여
-    # KRX 공시 기반 top5 집중도만으로 점수 산출
-    TOP5_WEIGHT_MANUAL = 42.0   # ← 반기마다 수동 업데이트 (KRX 공시 확인)
+    # ── TOP5 집중도: pykrx 자동 수집 (실패 시 수동 폴백) ──
+    # 수동 폴백값: 2026-06 기준 약 42%
+    # (삼성전자22% + SK하이닉스9% + LG엔솔4% + 삼성바이오3.5% + 현대차2.7%)
+    TOP5_WEIGHT_FALLBACK = 42.0
+
+    top5_weight_pct = None
+    top5_list = []
+
+    if PYKRX_AVAILABLE:
+        # 최근 영업일 순으로 최대 5일 시도
+        for days_back in range(1, 6):
+            target_date = (date.today() - timedelta(days=days_back)).strftime("%Y%m%d")
+            try:
+                df = krx_stock.get_market_cap_by_ticker(target_date, market="KOSPI")
+                if df is None or df.empty or "시가총액" not in df.columns:
+                    continue
+                total = df["시가총액"].sum()
+                if total <= 0:
+                    continue
+                top5 = df.nlargest(5, "시가총액")
+                top5_weight_pct = round(top5["시가총액"].sum() / total * 100, 1)
+                # 종목명 조회
+                for ticker in top5.index:
+                    try:
+                        name = krx_stock.get_market_ticker_name(ticker)
+                    except Exception:
+                        name = ticker
+                    cap = top5.loc[ticker, "시가총액"]
+                    pct = round(cap / total * 100, 1)
+                    top5_list.append({"ticker": ticker, "name": name, "weight_pct": pct})
+                logger.info("K1 pykrx [%s] top5=%.1f%% %s",
+                            target_date, top5_weight_pct,
+                            [(t["name"], t["weight_pct"]) for t in top5_list])
+                break
+            except Exception as e:
+                logger.warning("K1 pykrx [%s] 실패: %s", target_date, e)
+    else:
+        logger.warning("K1 pykrx 미설치 — 폴백값 사용")
+
+    if top5_weight_pct is None:
+        top5_weight_pct = TOP5_WEIGHT_FALLBACK
+        logger.warning("K1 pykrx 수집 실패 — 폴백값 %.1f%% 사용", TOP5_WEIGHT_FALLBACK)
 
     # ── 점수 산출 (top5 집중도 100%) ─────────────────────
     # 역사적 기준: 정상 <38%, 주의 38~45%, 위험 45%+
     score = (
-        80 if TOP5_WEIGHT_MANUAL >= 45 else
-        45 if TOP5_WEIGHT_MANUAL >= 38 else
+        80 if top5_weight_pct >= 45 else
+        45 if top5_weight_pct >= 38 else
         15
     )
     score = min(score, 100)
     grade = "위험" if score >= 70 else "경고" if score >= 55 else "주의" if score >= 40 else "정상"
 
-    logger.info("K1 top5=%.1f%% 점수=%d(%s)", TOP5_WEIGHT_MANUAL, score, grade)
+    logger.info("K1 top5=%.1f%% 점수=%d(%s)", top5_weight_pct, score, grade)
 
     return {
         "score":           score,
         "grade":           grade,
-        "top5_weight_pct": TOP5_WEIGHT_MANUAL,
+        "top5_weight_pct": top5_weight_pct,
+        "top5_list":       top5_list,
         "timestamp":       datetime.now(timezone.utc).isoformat(),
     }
 
