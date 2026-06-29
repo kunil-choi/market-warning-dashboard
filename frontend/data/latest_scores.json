@@ -1,7 +1,7 @@
 {
   "composite_score": 33.8,
   "grade": "GREEN",
-  "timestamp": "2026-06-29T04:44:02.841809+00:00",
+  "timestamp": "2026-06-29T04:47:08.313766+00:00",
   "w1_score": 5,
   "w2_score": 30,
   "w3_score": 24,
@@ -15,7 +15,7 @@
     "spread_percentile": 38,
     "rsp_1w_return": 0.55,
     "rsp_is_negative_while_spy_positive": false,
-    "timestamp": "2026-06-29T04:43:35.709575+00:00"
+    "timestamp": "2026-06-29T04:46:43.926490+00:00"
   },
   "w2": {
     "score": 30,
@@ -25,7 +25,7 @@
     "term_spread": 0.31,
     "tips_10y_real_yield": 2.19,
     "is_inverted": false,
-    "timestamp": "2026-06-29T04:43:37.115776+00:00"
+    "timestamp": "2026-06-29T04:46:45.355761+00:00"
   },
   "w3": {
     "score": 24,
@@ -71,7 +71,7 @@
       "📊 HY 스프레드 278 bps — 정상 (후행 보조)",
       "✅ 실질 환매 제한 이벤트 미감지 (뉴스 검색 불가)"
     ],
-    "timestamp": "2026-06-29T04:44:00.808179+00:00"
+    "timestamp": "2026-06-29T04:47:05.915927+00:00"
   },
   "w4": {
     "score": 75,
@@ -134,7 +134,7 @@
         "ticker": null
       }
     ],
-    "timestamp": "2026-06-29T04:44:00.998969+00:00"
+    "timestamp": "2026-06-29T04:47:06.125775+00:00"
   },
   "kr_composite_score": 30.9,
   "kr_grade": "GREEN",
@@ -144,7 +144,7 @@
     "kospi_ytd": null,
     "mom_30d": null,
     "top5_weight_pct": 33.2,
-    "timestamp": "2026-06-29T04:44:01.967100+00:00"
+    "timestamp": "2026-06-29T04:47:07.285791+00:00"
   },
   "k2": {
     "score": 58,
@@ -155,7 +155,7 @@
     "term_premium": 1.58,
     "is_inverted": false,
     "cd91_rate": 3.42,
-    "timestamp": "2026-06-29T04:44:02.841452+00:00"
+    "timestamp": "2026-06-29T04:47:08.313428+00:00"
   },
   "k3": {
     "score": 44,
@@ -164,7 +164,7 @@
     "pf_update_date": "2026-Q1",
     "kbdc_discount_pct": 6.5,
     "dsr_avg_pct": 41.2,
-    "timestamp": "2026-06-29T04:44:02.841712+00:00"
+    "timestamp": "2026-06-29T04:47:08.313672+00:00"
   },
   "k4": {
     "score": 10,
@@ -215,16 +215,18 @@
         "ticker": "443060.KS"
       }
     ],
-    "timestamp": "2026-06-29T04:44:02.841791+00:00"
+    "timestamp": "2026-06-29T04:47:08.313749+00:00"
   },
   "ai_validation": {
     "validation_passed": true,
-    "overall_assessment": "2025년 시장 데이터 정상 범위 내 확인, RSP>SPY 괴리는 중소형주 강세 반영, 장단기스프레드 정상화 및 HY 스프레드 축소는 위험선호 지속 시사",
-    "anomalies": [],
-    "recommendations": [
-      "IPO 가격확정 0건 모니터링 필요"
+    "overall_assessment": "2025년 중반 시장 데이터와 부합하며 RSP>SPY 역전은 중소형주 강세 반영, 정상 장단기 스프레드와 HY 스프레드 축소는 위험선호 환경 시사",
+    "anomalies": [
+      "IPO 가격확정 및 신청건수 0은 데이터 수집 오류 가능성"
     ],
-    "validated_at": "2026-06-29T04:44:09.376037+00:00",
+    "recommendations": [
+      "IPO 파이프라인 건수 데이터 소스 재확인 필요"
+    ],
+    "validated_at": "2026-06-29T04:47:15.406717+00:00",
     "model": "claude-sonnet-4-6"
   }
 }
