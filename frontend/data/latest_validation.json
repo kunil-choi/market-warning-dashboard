@@ -1,12 +1,12 @@
 {
   "validation_passed": true,
-  "overall_assessment": "2025년 중반 시장 데이터와 부합하며 RSP>SPY 역전은 중소형주 강세 반영, 정상 장단기 스프레드와 HY 스프레드 축소는 위험선호 환경 시사",
+  "overall_assessment": "2025년 중반 시장 데이터와 부합하며 RSP>SPY 아웃퍼폼은 중소형주 강세 반영, 장단기 스프레드 정상화 및 HY스프레드 축소는 위험선호 환경을 示사.",
   "anomalies": [
-    "IPO 가격확정 및 신청건수 0은 데이터 수집 오류 가능성"
+    "IPO 가격확정·신청 건수 0은 데이터 미수집 가능성"
   ],
   "recommendations": [
     "IPO 파이프라인 건수 데이터 소스 재확인 필요"
   ],
-  "validated_at": "2026-06-29T04:47:15.406717+00:00",
+  "validated_at": "2026-06-29T05:16:45.240590+00:00",
   "model": "claude-sonnet-4-6"
 }
